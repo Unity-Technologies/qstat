@@ -10105,6 +10105,7 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	unsigned num_players = 0;
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
+	char tmp[32];
 
 	server->n_servers++;
 	if ( server->server_name == NULL)
@@ -10132,8 +10133,9 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	protocolver = swap_long_from_little(ptr);
 	ptr += 4;
 
-	debug(2, "challenge: 0x%08X, protocol: %u.%u (0x%X)",
-		challenge, protocolver >> 16, protocolver & 0xFFFF, protocolver);
+	snprintf(tmp, sizeof(tmp), "%u.%u", protocolver >> 16, protocolver & 0xFFFF);
+	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)",
+		challenge, tmp, protocolver);
 
 	if(protocolver >> 16 != 1)
 	{
@@ -10143,6 +10145,7 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	server->protocol_version = protocolver;
+	add_rule( server, "protocol", tmp, NO_FLAGS );
 
 	while ( ptr < end )
 	{
@@ -10277,7 +10280,9 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 	if(end - ptr == 4)
 	{
-		debug( 2, "osmask %u", swap_long_from_little(ptr));
+		snprintf(tmp, sizeof(tmp), "0x%X", swap_long_from_little(ptr));
+		add_rule( server, "osmask", tmp, NO_FLAGS );
+		debug( 2, "osmask %s", tmp);
 		ptr += 4;
 	}
 	else
