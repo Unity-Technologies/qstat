@@ -6971,7 +6971,6 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
     /* 'players' response */
     else if ( rawpkt[4] == 'D' && server->players == NULL)  {
 	unsigned int n= 0, temp;
-	float *ingame= (float*) &temp;
 	struct player *player;
 	struct player **last_player= & server->players;
 	if ( (unsigned int)rawpkt[5] > server->num_players)
@@ -6992,9 +6991,8 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
 	    pkt+= 4;
 	    if ( big_endian)  {
 		player->frags= swap_long( &player->frags);
-		temp= swap_long( &temp);
 	    }
-	    player->connect_time= *ingame;
+	    player->connect_time= swap_float_from_little(&temp);
 	    *last_player= player;
 	    last_player= & player->next;
 	}
