@@ -72,7 +72,8 @@
 #define RAVENSHIELD_DEFAULT_PORT	8777
 #define SAVAGE_DEFAULT_PORT	11235
 #define FARCRY_DEFAULT_PORT	49001
-#define STEAM_MASTER_DEFAULT_PORT	27010 
+#define STEAM_MASTER_DEFAULT_PORT	27010
+#define D3_DEFAULT_PORT	27666
 
 #define Q_UNKNOWN_TYPE 0
 #define MASTER_SERVER 0x40000000
@@ -120,8 +121,11 @@
 #define STEAM_MASTER (41|MASTER_SERVER)
 #define JK3_SERVER 42
 #define JK3_MASTER (43|MASTER_SERVER)
+#define D3_SERVER 44
+#define D3_MASTER (45|MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  43
+
+#define LAST_BUILTIN_SERVER  45
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -173,6 +177,7 @@ void display_farcry_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
 void display_gs2_player_info( struct qserver *server);
+void display_d3_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -192,6 +197,7 @@ void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
 void raw_display_gs2_player_info( struct qserver *server);
+void raw_display_d3_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -213,6 +219,7 @@ void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
 void xml_display_eye_player_info( struct qserver *server);
 void xml_display_gs2_player_info( struct qserver *server);
+void xml_display_d3_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -235,6 +242,7 @@ void send_tribes2master_request_packet( struct qserver *server);
 void send_ghostrecon_request_packet( struct qserver *server);
 void send_eye_request_packet( struct qserver *server);
 void send_gs2_request_packet( struct qserver *server);
+void send_d3_request_packet( struct qserver *server);
 
 void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
@@ -260,6 +268,7 @@ void deal_with_descent3master_packet( struct qserver *server, char *pkt, int pkt
 void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_d3_packet( struct qserver *server, char *pkt, int pktlen);
 
 typedef struct _server_type  {
     int id;
@@ -359,6 +368,13 @@ struct {
     char command[8];
 } q3_serverinfo =
 { { '\377', '\377', '\377', '\377' }, { 'g', 'e', 't', 'i', 'n', 'f', 'o', '\n' } };
+
+/* DOOM 3 */
+struct {
+    char prefix[2];
+    char command[12];
+} d3_serverinfo =
+{ { '\377', '\377' }, { 'g', 'e', 't', 'I', 'n', 'f', 'o', '\0', '\0', '\0', '\0', '\0' } };
 
 /* HEXEN WORLD */
 struct {
@@ -542,7 +558,7 @@ unsigned char gs2_status_query[] = {
 // 2. Region ( 1 byte )
 // 3. ip ( string + null )
 // 4. Filter ( optional + null )
-// 
+//
 // Regions:
 // 0 = US East Coast
 // 1 = US West Coast
@@ -564,15 +580,15 @@ unsigned char gs2_status_query[] = {
 //
 // \map\[map] = Returns servers running the specified map
 // (e.g. de_dust2 or cs_italy)
-// 
+//
 // \linux\1 = Servers running on the Linux platform
-// 
+//
 // \empty\1 = Servers that are not empty
-// 
+//
 // \full\1 = Servers that are not full
-// 
+//
 // \proxy\1 = Servers that are spectator proxies
-// 
+//
 // End the filter with 0x00
 //
 unsigned char steam_masterquery_template[] = "1%c%s%c%s";
@@ -795,6 +811,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_qw_packet,	/* packet_func */
+},
+{
+    /* DOOM 3 */
+    D3_SERVER,						/* id */
+    "D3S",							/* type_prefix */
+    "d3s",							/* type_string */
+    "-d3s",							/* type_option */
+    "Doom 3",						/* game_name */
+    0,								/* master */
+    D3_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "fs_game",						/* game_rule */
+    "DOOM3",						/* template_var */
+    (char*) &d3_serverinfo,			/* status_packet */
+    sizeof( d3_serverinfo),			/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_d3_player_info,			/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_d3_player_info,		/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_d3_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_qwserver_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_d3_packet,			/* packet_func */
 },
 {
     /* RETURN TO CASTLE WOLFENSTEIN */
