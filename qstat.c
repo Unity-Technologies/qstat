@@ -4111,7 +4111,8 @@ send_qwmaster_request_packet( struct qserver *server)
 		( 
 			Q3_MASTER == server->type->id ||
 			RTCW_MASTER == server->type->id || 
-			STEF_MASTER == server->type->id
+			STEF_MASTER == server->type->id ||
+			JK3_MASTER == server->type->id
 		)
 	)
 	{

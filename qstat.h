@@ -66,6 +66,8 @@
 #define RTCW_MASTER_DEFAULT_PORT	27950
 #define STEF_DEFAULT_PORT		27960
 #define STEF_MASTER_DEFAULT_PORT	27953
+#define JK3_DEFAULT_PORT		29070
+#define JK3_MASTER_DEFAULT_PORT	29060
 #define GHOSTRECON_PLAYER_DEFAULT_PORT	2346
 #define RAVENSHIELD_DEFAULT_PORT	8777
 #define SAVAGE_DEFAULT_PORT	11235
@@ -116,8 +118,10 @@
 #define FARCRY_SERVER 39
 #define GAMESPY2_PROTOCOL_SERVER 40
 #define STEAM_MASTER (41|MASTER_SERVER)
+#define JK3_SERVER 42
+#define JK3_MASTER (43|MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  41
+#define LAST_BUILTIN_SERVER  43
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -413,6 +417,9 @@ char rtcw_master_default_protocol[] = "60";
 
 /* STAR TREK: ELITE FORCE */
 char stef_master_default_protocol[] = "24";
+
+/* JEDI KNIGHT: JEDI ACADEMY */
+char jk3_master_default_protocol[] = "26";
 
 /* HALF-LIFE MASTER */
 char hl_masterquery[4] = { 'e', '\0', '\0', '\0' };
@@ -836,6 +843,40 @@ server_type builtin_types[] = {
     TF_QUAKE3_NAMES /* TF_SINGLE_QUERY */,		/* flags */
     "game",			/* game_rule */
     "ELITEFORCE",		/* template_var */
+    (char*) &q3_serverinfo,	/* status_packet */
+    sizeof( q3_serverinfo),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    (char*) &q3_serverstatus,	/* rule_packet */
+    sizeof( q3_serverstatus),	/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_q2_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_q2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_q2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_qwserver_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_qw_packet,	/* packet_func */
+},
+{
+    /* JEDI KNIGHT: JEDI ACADEMY */
+    JK3_SERVER,		/* id */
+    "JK3S",			/* type_prefix */
+    "jk3s",			/* type_string */
+    "-jk3s",			/* type_option */
+    "Jedi Knight: Jedi Academy",	/* game_name */
+    0,				/* master */
+    JK3_DEFAULT_PORT,		/* default_port */
+    0,				/* port_offset */
+    TF_QUAKE3_NAMES /* TF_SINGLE_QUERY */,		/* flags */
+    "game",			/* game_rule */
+    "JEDIKNIGHT3",		/* template_var */
     (char*) &q3_serverinfo,	/* status_packet */
     sizeof( q3_serverinfo),	/* status_len */
     NULL,			/* player_packet */
@@ -1734,6 +1775,40 @@ server_type builtin_types[] = {
     0,				/* master_len */
     stef_master_default_protocol,	/* master_protocol */
     q3_master_default_query,		/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_qwmaster_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_qwmaster_packet,	/* packet_func */
+},
+{
+    /* JEDI KNIGHT 3 FORCE MASTER */
+    JK3_MASTER,		/* id */
+    "JK3M",			/* type_prefix */
+    "jk3m",			/* type_string */
+    "-jk3m",			/* type_option */
+    "Jedi Knight: Jedi Academy",	/* game_name */
+    JK3_SERVER,		/* master */
+    JK3_MASTER_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_OUTFILE | TF_QUERY_ARG,	/* flags */
+    "",				/* game_rule */
+    "JK3MASTER",		/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    q3_master_query_template,	/* master_packet */
+    0,				/* master_len */
+    jk3_master_default_protocol,	/* master_protocol */
+    NULL,		/* master_query */
     display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
