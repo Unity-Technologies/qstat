@@ -6285,7 +6285,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *s, *key, *value, *end;
     struct player *player= NULL;
-    int id_major, id_minor, final=0;
+    int id_major=0, id_minor=0, final=0;
 
 	server->n_servers++;
     if ( server->server_name == NULL)
@@ -6296,6 +6296,16 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 	{
 		gettimeofday( &server->packet_time1, NULL);
 	}
+
+    /* We're using the saved_data a bit differently here to track received
+       packets.
+       pkt_id is the id_major from the \queryid\
+       pkt_max is the total number of packets expected
+	   pkt_index is a bit mask of the packets received.  The id_minor of
+          \queryid\ provides packet numbers (1 through pkt_max).  
+    */
+	if ( server->saved_data.pkt_index == -1)
+	    server->saved_data.pkt_index= 0;
 
     rawpkt[pktlen]= '\0';
     end= &rawpkt[pktlen];
@@ -6358,7 +6368,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			// possible '\' in player name
 			if ( ! unreal_player_info_key( s+1, end))
 			{
-				// yep is was an escape in a player name
+				// yep there was an escape in the player name
 				s++;
 				// while we still have data and its not a '\'
 				while ( *s && *s != '\\')
@@ -6378,9 +6388,27 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			if ( strcmp( key, "final") == 0)
 			{
 				final= 1;
+				if ( id_minor > server->saved_data.pkt_max)
+					server->saved_data.pkt_max = id_minor;
 				continue;
 			}
 		}
+
+		/* This must be done before looking for player info because
+		   "queryid" is a valid according to unreal_player_info_key().
+		*/
+		if ( strcmp( key, "queryid") == 0)  {
+			sscanf( value, "%d.%d", &id_major, &id_minor);
+			if ( server->saved_data.pkt_id == 0)
+				server->saved_data.pkt_id= id_major;
+		    if ( id_major == server->saved_data.pkt_id)  {
+				if ( id_minor > 0)
+					server->saved_data.pkt_index |= 1 << (id_minor-1);
+				if ( final && id_minor > server->saved_data.pkt_max)
+					server->saved_data.pkt_max = id_minor;
+		    }
+		    continue;
+	    }
 
 		if ( player == NULL )
 		{
@@ -6425,11 +6453,11 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			server->game= strdup( value);
 			add_rule( server, key, value, NO_FLAGS);
 		}
-		else if ( strcmp( key, "queryid") == 0)
-			sscanf( value, "%d.%d", &id_major, &id_minor);
 		else if ( strcmp( key, "final") == 0)
 		{
 			final= 1;
+		    if ( id_minor > server->saved_data.pkt_max)
+				server->saved_data.pkt_max = id_minor;
 			continue;
 		}
 		else if ( strncmp( key, "player_", 7) == 0  || strncmp( key, "playername_", 11) == 0 )
@@ -6449,7 +6477,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				player->name= strdup( value);
 				player= NULL;
 			}
-			else if ( NULL == player && NULL != ( player = get_player_by_number( server, no ) ) )
+			else if ( NULL != ( player = get_player_by_number( server, no ) ) )
 			{
 				player->name= strdup( value);
 				player= NULL;
@@ -6491,7 +6519,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				player->frags= atoi( value);
 			}
 		}
-		else if ( player && strncmp( key, "team_", 5) == 0)
+		else if ( strncmp( key, "team_", 5) == 0)
 		{
 			player = get_player_by_number( server, atoi( key+5 ) );
 			if ( NULL != player )
@@ -6568,9 +6596,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			player->ship= atoi( value);
 		}
-		else if (
-			strncmp( key, "keyhash_", 8) == 0
-		)
+		else if ( strncmp( key, "keyhash_", 8) == 0)
 		{
 			// Ensure these dont make it into the rules
 		}
@@ -6581,10 +6607,23 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
     }
 
-    if ( final )
+/*
+printf( "final %d\n", final);
+printf( "pkt_id %d\n", server->saved_data.pkt_id);
+printf( "pkt_max %d\n", server->saved_data.pkt_max);
+printf( "pkt_index %x\n", server->saved_data.pkt_index);
+*/
+
+    if ( final && server->saved_data.pkt_id == 0)
 	{
 		cleanup_qserver( server, 1);
 	}
+    if ( server->saved_data.pkt_max)  {
+		if ( server->saved_data.pkt_index >=
+				((1<<(server->saved_data.pkt_max))-1) )
+			cleanup_qserver( server, 1);
+    }
+
     if ( server->num_players < 0 && id_minor >= 3)
 	{
 		cleanup_qserver( server, 1);
@@ -6598,7 +6637,7 @@ unreal_player_info_key( char *s, char *end)
 		"frags_", "team_", "ping_", "species_",
 		"race_", "deaths_", "score_", "enemy_",
 		"player_", "keyhash_", "teamname_",
-		"playername_", "keyhash_", "kills_"
+		"playername_", "keyhash_", "kills_", "queryid"
 	};
     int i;
 

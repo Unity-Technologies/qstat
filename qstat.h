@@ -1452,7 +1452,7 @@ server_type builtin_types[] = {
     "All Seeing Eye Protocol",	/* game_name */
     0,				/* master */
     0,				/* default_port */
-    123,			/* port_offset */
+    0,			/* port_offset */
     TF_SINGLE_QUERY,		/* flags */
     "gametype",				/* game_rule */
     "EYEPROTOCOL",		/* template_var */
