@@ -8635,7 +8635,8 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( 0 == strcmp( "G1", key ) )
 		{
-			// Unknown
+			// Password
+			add_rule( server, "Password", value, NO_FLAGS );
 		}
 		else if ( 0 == strcmp( "G2", key ) )
 		{
@@ -8647,7 +8648,8 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( 0 == strcmp( "H2", key ) )
 		{
-			// Unknown
+			// Number of Terrorists
+			add_rule( server, "nbTerro", value, NO_FLAGS );
 		}
 		else if ( 0 == strcmp( "I1", key ) )
 		{
@@ -8666,8 +8668,8 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( 0 == strcmp( "J2", key ) )
 		{
-			// Password
-			add_rule( server, "Password", value, NO_FLAGS);
+			// RotateMap
+			add_rule( server, "RotateMap", value, NO_FLAGS);
 		}
 		else if ( 0 == strcmp( "K1", key ) )
 		{
@@ -8677,8 +8679,8 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( 0 == strcmp( "K2", key ) )
 		{
-			// RotateMap
-			add_rule( server, "RotateMap", value, NO_FLAGS);
+			// Force First Person Weapon
+			add_rule( server, "ForceFPersonWeapon", value, NO_FLAGS);
 		}
 		else if ( 0 == strcmp( "L1", key ) )
 		{
