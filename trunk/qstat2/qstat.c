@@ -3301,7 +3301,11 @@ main( int argc, char *argv[])
 
 			if ( pktlen == SOCKET_ERROR)
 			{
-				if ( connection_refused())
+				if(errno == EAGAIN)
+				{
+					malformed_packet(server, "EAGAIN on UDP socket, probably incorrect checksum");
+				}
+				else if ( connection_refused())
 				{
 					server->server_name= DOWN;
 					num_servers_down++;
@@ -3937,9 +3941,13 @@ bind_qserver( struct qserver *server)
 	}
     }
 
+    // we need nonblocking always. poll on an udp socket would wake
+    // up and recv blocks if a packet with incorrect checksum is
+    // received 
+    set_non_blocking( server->fd);
+
     if ( server->type->flags & TF_TCP_CONNECT)  {
 	int one= 1;
-	set_non_blocking( server->fd);
 	setsockopt( server->fd, IPPROTO_TCP, TCP_NODELAY,
 		(char*) &one, sizeof(one));
     }
