@@ -1,5 +1,5 @@
 
-CFLAGS =
+CFLAGS = -ggdb
 
 # Uncomment if you have gcc
 # CC = gcc

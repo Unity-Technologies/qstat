@@ -2312,6 +2312,13 @@ struct player  {
     int ship;		/* BFRIS only */
     int room;		/* BFRIS only */
     int deaths;		/* Descent3 only */
+
+	char *next_info;
+	int n_info;
+	struct info *info;
+	struct info **last_info;
+	int missing_rules;
+
     struct player *next;
 };
 
@@ -2319,6 +2326,12 @@ struct rule  {
     char *name;
     char *value;
     struct rule *next;
+};
+
+struct info  {
+    char *name;
+    char *value;
+    struct info *next;
 };
 
 extern char *qstat_version;
