@@ -1,4 +1,4 @@
-
+#CPPFLAGS=-DENABLE_DUMP -DDEBUG
 
 ifneq ($(OS),Windows_NT)
   OS := $(shell uname -s)
