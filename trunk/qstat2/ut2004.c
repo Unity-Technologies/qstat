@@ -77,12 +77,13 @@ static const char verified[] = {
     0x0a, 0x00, 0x00, 0x00, 0x09,  'V',  'E',  'R',
      'I',  'F',  'I',  'E',  'D', 0x00 };
 
+#if 0
 struct server_listing_record_head {
     unsigned len;
     unsigned ip;
     short port;
     short queryport;
-    char name[255];
+    char name[];
     // char map[]
 };
 
@@ -93,6 +94,7 @@ struct server_listing_record_foot {
     unsigned char unknown2[4];
     unsigned char marker2[3];
 };
+#endif
 
 static char cdkey[CD_KEY_LENGTH+1] = "";
 
