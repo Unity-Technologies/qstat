@@ -4415,7 +4415,7 @@ send_gamespy_master_request( struct qserver *server)
 	strcat( request, server->query_arg);
     else
 	strcat( request, gamespy_query_map[i].gamespy_type);
-    strcat(request, "\\final\\\\");
+    strcat(request, "\\final\\");
     assert(strlen(request) < sizeof(request));
 
     rc= send( server->fd, request, strlen( request), 0);
