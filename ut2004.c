@@ -633,7 +633,7 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 
     debug(2, "%d servers total", server->n_servers/6);
 
-#if 0 // doesn't seem to be needed
+#if 0 // harms now with new ping scheduling
     server->retry1= 0;
     cleanup_qserver( server, 0);
     bind_sockets();
