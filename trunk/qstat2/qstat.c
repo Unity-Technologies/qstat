@@ -10281,8 +10281,13 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	return;
 }
 
-static const char hl2_statusresponse[] = "\xFF\xFF\xFF\xFFI";
-static const int hl2_statusresponse_size = sizeof(hl2_statusresponse) - 1;
+static const char hl2_statusresponse[] = "\xFF\xFF\xFF\xFF\x49";
+static const char hl2_playersresponse[] = "\xFF\xFF\xFF\xFF\x44";
+static const char hl2_rulesresponse[] = "\xFF\xFF\xFF\xFF\x45";
+static const int hl2_response_size = sizeof(hl2_statusresponse) - 1;
+#define HL2_STATUS 1
+#define HL2_PLAYERS 2
+#define HL2_RULES 3
 
 void
 deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
@@ -10291,10 +10296,8 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 	char *end = rawpkt + pktlen;
 	char temp[512];
 	int type = 0;
-	unsigned num_players = 0;
-	unsigned challenge = 0;
 	unsigned char protocolver = 0;
-	unsigned char num;
+	int n_sent = 0;
 
 	server->n_servers++;
 	if ( server->server_name == NULL)
@@ -10307,100 +10310,184 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	// Check if correct reply
-	if ( pktlen < hl2_statusresponse_size )
+	if ( pktlen < hl2_response_size )
 	{
 		malformed_packet(server, "short response type");
 		cleanup_qserver( server, 1);
 		return;
 	}
-	else if ( 0 != memcmp( hl2_statusresponse, ptr, hl2_statusresponse_size ) )
+	else
 	{
-		malformed_packet(server, "unknown response");
+		if ( 0 == memcmp( hl2_statusresponse, ptr, hl2_response_size ) )
+		{
+			if ( pktlen < hl2_response_size + 20 )
+			{
+				malformed_packet(server, "short packet");
+				cleanup_qserver( server, 1);
+				return;
+			}
+			type = HL2_STATUS;
+		}
+		else if ( 0 == memcmp( hl2_playersresponse, ptr, hl2_response_size ) )
+		{
+			type = HL2_PLAYERS;
+		}
+		else if ( 0 == memcmp( hl2_rulesresponse, ptr, hl2_response_size ) )
+		{
+			type = HL2_RULES;
+		}
+		else
+		{
+			malformed_packet(server, "unknown response");
+			cleanup_qserver( server, 1);
+			return;
+		}
+	}
+
+	// header
+	ptr += hl2_response_size;
+
+	switch( type )
+	{
+	case HL2_STATUS:
+
+		// protocol version
+		protocolver = *ptr;
+		ptr++;
+
+		debug(2, "protocol: 0x%02X", protocolver );
+
+		if( '\x02' != protocolver )
+		{
+			malformed_packet(server, "protocol version != 0x02");
+			cleanup_qserver( server, 1);
+			return;
+		}
+
+		server->protocol_version = protocolver;
+		sprintf( temp, "%d", protocolver );
+		add_rule( server, "protocol", temp, NO_FLAGS);
+
+		// server name
+		server->server_name = strdup( ptr );
+		ptr += strlen( ptr ) + 1;
+
+		// map
+		server->map_name = strdup( ptr );
+		ptr += strlen( ptr ) + 1;
+
+		// gamedir
+		server->game = strdup( ptr );
+		add_rule( server, "gamedir", ptr, NO_FLAGS );
+		ptr += strlen( ptr ) + 1;
+
+		// description
+		add_rule( server, "description", ptr, NO_FLAGS );
+		ptr += strlen( ptr ) + 1;
+
+		// appid
+		ptr += 2;
+
+		// num players
+		server->num_players = *ptr;
+		ptr++;
+
+		// max players
+		server->max_players = *ptr;
+		ptr++;
+
+		// bot players
+		sprintf( temp, "%hhu", (*ptr) );
+		add_rule( server, "bot_players", temp, NO_FLAGS );
+		ptr++;
+
+		// dedicated
+		if ( 'd' == *ptr )
+		{
+			add_rule( server, "sv_type", "dedicated", NO_FLAGS );
+		}
+		else if ( 'l' == *ptr )
+		{
+			add_rule( server, "sv_type", "listen", NO_FLAGS );
+		}
+		else
+		{
+			char tmp[2] = { *ptr, '\0' };
+			add_rule( server, "sv_type", tmp, NO_FLAGS );
+		}
+		ptr++;
+
+		// OS
+		if ( 'l' == *ptr )
+		{
+			add_rule( server, "sv_os", "linux", NO_FLAGS );
+		}
+		else if ( 'w' == *ptr )
+		{
+			add_rule( server, "sv_os", "windows", NO_FLAGS );
+		}
+		else
+		{
+			char tmp[2] = { *ptr, '\0' };
+			add_rule( server, "sv_os", tmp, NO_FLAGS );
+		}
+		ptr++;
+
+		// passworded
+		add_rule( server, "sv_password", *ptr ? "1" : "0", NO_FLAGS);
+		ptr++;
+
+		// secure
+		add_rule( server, "secure", *ptr ? "1" : "0", NO_FLAGS);
+		ptr++;
+
+		// send the other request packets if wanted
+		if ( get_server_rules )
+		{
+			send_rule_request_packet( server );
+			n_sent++;
+		}
+		else if ( get_player_info )
+		{
+			send_player_request_packet( server ) ;
+			n_sent++;
+		}
+		break;
+
+	case HL2_RULES:
+		// rule count?
+		ptr += 2;
+		while ( ptr < end )
+		{
+			char *var = ptr;
+			char *val;
+			ptr += strlen( var ) + 1;
+			val = ptr;
+			ptr += strlen( val ) + 1;
+			add_rule( server, var, val, NO_FLAGS );
+		}
+
+		if ( get_player_info )
+		{
+			send_player_request_packet( server ) ;
+			n_sent++;
+		}
+		break;
+
+	case HL2_PLAYERS:
+		break;
+
+	default:
+		malformed_packet( server, "unknown response" );
 		cleanup_qserver( server, 1);
 		return;
 	}
-	else if ( pktlen < hl2_statusresponse_size + 20 )
+
+
+	if ( 0 == n_sent )
 	{
-		malformed_packet(server, "short packet");
-		cleanup_qserver( server, 1);
-		return;
+		cleanup_qserver( server, 1 );
 	}
-
-	ptr += hl2_statusresponse_size;
-
-	// protocol version
-	protocolver = *ptr;
-	ptr++;
-
-	debug(2, "protocol: 0x%02X", protocolver );
-
-	if( '\x02' != protocolver )
-	{
-		malformed_packet(server, "protocol version != 0x02");
-		cleanup_qserver( server, 1);
-		return;
-	}
-
-	server->protocol_version = protocolver;
-
-	// server name
-	server->server_name = strdup( ptr );
-	ptr += strlen( ptr ) + 1;
-
-	// map
-	server->map_name = strdup( ptr );
-	ptr += strlen( ptr ) + 1;
-
-	// gamedir
-	server->game = strdup( ptr );
-	ptr += strlen( ptr ) + 1;
-
-	// description
-	add_rule( server, "description", ptr, NO_FLAGS );
-	ptr += strlen( ptr ) + 1;
-
-	// unknown
-	ptr += 2;
-
-	// max players
-	server->max_players = *ptr;
-	ptr++;
-
-	// max players
-	server->max_players = *ptr;
-	ptr++;
-
-	// bot players
-	num = *ptr;
-	sprintf( temp, "%d", num );
-	ptr++;
-	add_rule( server, "bot_players", temp, NO_FLAGS );
-
-	// dedicated
-	num = *ptr;
-	sprintf( temp, "%d", num );
-	ptr++;
-	add_rule( server, "dedicated", temp, NO_FLAGS );
-
-	// OS
-	num = *ptr;
-	add_rule( server, "os", temp, NO_FLAGS );
-	sprintf( temp, "%d", num );
-	ptr++;
-
-	// passworded
-	num = *ptr;
-	sprintf( temp, "%d", num );
-	add_rule( server, "passworded", temp, NO_FLAGS );
-	ptr++;
-
-	// secure
-	num = *ptr;
-	sprintf( temp, "%d", num );
-	add_rule( server, "secure", temp, NO_FLAGS );
-	ptr++;
-
-	cleanup_qserver( server, 1 );
 	return;
 }
 

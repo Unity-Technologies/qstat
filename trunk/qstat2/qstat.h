@@ -390,6 +390,8 @@ struct {
 
 /* HALF-LIFE 2 */
 char hl2_serverinfo[20] = { '\xFF', '\xFF', '\xFF', '\xFF', 'T', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' };
+char hl2_playerinfo[20] = { '\xFF', '\xFF', '\xFF', '\xFF', 'U', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' };
+char hl2_ruleinfo[20] = { '\xFF', '\xFF', '\xFF', '\xFF', 'V', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' };
 
 /* HEXEN WORLD */
 struct {
@@ -879,10 +881,10 @@ server_type builtin_types[] = {
     "HL2",							/* template_var */
     (char*) &hl2_serverinfo,		/* status_packet */
     sizeof( hl2_serverinfo),		/* status_len */
-    NULL,							/* player_packet */
-    0,								/* player_len */
-    NULL,							/* rule_packet */
-    0,								/* rule_len */
+    (char*) &hl2_playerinfo,		/* player_packet */
+    sizeof( hl2_playerinfo),		/* player_len */
+    (char*) &hl2_ruleinfo,			/* rule_packet */
+    sizeof( hl2_ruleinfo),			/* rule_len */
     NULL,							/* master_packet */
     0,								/* master_len */
     NULL,							/* master_protocol */
@@ -894,8 +896,8 @@ server_type builtin_types[] = {
     xml_display_hl2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_hl2_request_packet,		/* status_query_func */
-    NULL,							/* rule_query_func */
-    NULL,							/* player_query_func */
+    send_rule_request_packet,		/* rule_query_func */
+    send_player_request_packet,		/* player_query_func */
     deal_with_hl2_packet,			/* packet_func */
 },
 {
