@@ -1,4 +1,4 @@
-AC_INIT([qstat],[2.6.CVS],[qstat-users@yahoogroups.com])
+AC_INIT([qstat],[2.7],[qstat-users@yahoogroups.com])
 AC_CONFIG_SRCDIR([qstat.c])
 AM_CONFIG_HEADER([gnuconfig.h])
 
