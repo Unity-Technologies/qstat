@@ -5270,18 +5270,16 @@ static int qserver_get_timeout(struct qserver* server, struct timeval* now)
 		interval= retry_interval;
 
 	diff2= 0xffff;
-	diff1= 0xffff;
-	if ( server->server_name == NULL)
-		diff1= interval*(n_retries-server->retry1+1) -
-			time_delta( now, &server->packet_time1);
-	else  {
-		if ( server->next_rule != NO_SERVER_RULES)
-			diff1= interval*(n_retries-server->retry1+1) -
-				time_delta( now, &server->packet_time1);
-		if ( server->type->player_packet && server->next_player_info < server->num_players)
-			diff2= interval*(n_retries-server->retry2+1) -
-				time_delta( now, &server->packet_time2);
+
+	diff1= interval*(n_retries-server->retry1+1) -
+		time_delta( now, &server->packet_time1);
+
+	if ( server->type->player_packet && server->next_player_info < server->num_players)
+	{
+		diff2= interval*(n_retries-server->retry2+1) -
+			time_delta( now, &server->packet_time2);
 	}
+
 	diff= (diff1<diff2)?diff1:diff2;
 
 	return diff;
@@ -5684,6 +5682,7 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 	/* quake3 status response */
 	server->next_rule= NO_SERVER_RULES;
 	server->next_player_info= server->max_players;
+	server->retry1 = 0;
 	if ( rawpkt[4] == '\001')  {
 	    rawpkt++;
 	    pktlen--;
@@ -7725,18 +7724,13 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 				server->retry1 = n_retries;
 				send_rule_request_packet( server);
 			}
-			else
-			{
-				// basic packet is a single response
-				cleanup_qserver(server, 0);
-			}
 		}
 		break;
 
 	case 0x01:
 		// Game info
 		ut2003_rule_packet( server, rawpkt, end );
-		server->next_rule = NULL;
+		server->next_rule = "";
 		server->retry1 = 0; /* we received at least one rule packet so
 				       no need to retry. We'd get double
 				       entries otherwise. */
@@ -7762,7 +7756,9 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	 * We do clean up if we don't fetch server rules so we don't
 	 * need to wait for timeout.
 	 */
-	if ( error || (!get_server_rules && server->num_players == server->n_player_info))
+	if ( error
+	|| (!get_server_rules && !get_player_info)
+	|| (!get_server_rules && server->num_players == server->n_player_info))
 	{
 		cleanup_qserver( server, 1 );
 	}
