@@ -12,13 +12,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _ISUNIX
 #include <unistd.h>
+#include <sys/param.h>
+#endif
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
 #include <fcntl.h>
-#include <sys/param.h>
 #include <stdarg.h>
 
 #ifdef DEBUG
@@ -82,9 +85,12 @@ void malformed_packet(struct qserver* server, const char* fmt, ...)
 	}
 }
 
+#ifdef ENABLE_DUMP
 static unsigned count = 0;
+#endif
 void dump_packet(const char* buf, int buflen)
 {
+#ifdef ENABLE_DUMP
 	char fn[PATH_MAX] = {0};
 	int fd;
 	sprintf(fn, "dump%03u", count++);
@@ -94,6 +100,7 @@ void dump_packet(const char* buf, int buflen)
 	if(write(fd, buf, buflen) == -1)
 		perror("write");
 	close(fd);
+#endif
 }
 
 void
