@@ -66,6 +66,7 @@ typedef struct _server_type server_type;
 
 #include "qserver.h"
 #include "ut2004.h"
+#include "a2s.h"
 
 /* Various magic numbers.
  */
@@ -165,8 +166,9 @@ typedef struct _server_type server_type;
 #define HL2_SERVER 46
 #define HL2_MASTER (47|MASTER_SERVER)
 #define UT2004_MASTER (48|MASTER_SERVER)
+#define A2S_SERVER	49
 
-#define LAST_BUILTIN_SERVER  48
+#define LAST_BUILTIN_SERVER  49
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -347,8 +349,8 @@ struct _server_type  {
     DisplayFunc display_xml_player_func;
     DisplayFunc display_xml_rule_func;
     QueryFunc status_query_func;
-    QueryFunc player_query_func;
     QueryFunc rule_query_func;
+    QueryFunc player_query_func;
     PacketFunc packet_func;
 };
 
@@ -694,8 +696,8 @@ server_type builtin_types[] = {
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_qserver_request_packet,/* status_query_func */
-    send_player_request_packet,	/* rule_query_func */
-    send_rule_request_packet,	/* player_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
     deal_with_q_packet,		/* packet_func */
 },
 {
@@ -728,8 +730,8 @@ server_type builtin_types[] = {
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_qserver_request_packet,/* status_query_func */
-    send_player_request_packet,	/* rule_query_func */
-    send_rule_request_packet,	/* player_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
     deal_with_q_packet,		/* packet_func */
 },
 {
@@ -932,8 +934,8 @@ server_type builtin_types[] = {
     xml_display_hl2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_hl2_request_packet,		/* status_query_func */
-    send_rule_request_packet,		/* rule_query_func */
-    send_player_request_packet,		/* player_query_func */
+    NULL,				/* rule_query_func */
+    NULL,				/* player_query_func */
     deal_with_hl2_packet,			/* packet_func */
 },
 {
@@ -1136,8 +1138,8 @@ server_type builtin_types[] = {
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_qwserver_request_packet,/* status_query_func */
-    send_rule_request_packet,	/* rule_query_func */
-    send_player_request_packet,	/* player_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
     (void (*)( struct qserver *, char *, int))
     deal_with_halflife_packet,	/* packet_func */
 },
@@ -2234,7 +2236,40 @@ server_type builtin_types[] = {
     NULL,			/* player_query_func */
     deal_with_ut2004master_packet,	/* packet_func */
 },
-
+{
+    /* HALFLIFE 2 */
+    A2S_SERVER,						/* id */
+    "A2S",							/* type_prefix */
+    "A2S",							/* type_string */
+    "-a2s",						/* type_option */
+    "Half-Life 2 new",					/* game_name */
+    0,								/* master */
+    HL2_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "gamedir",								/* game_rule */
+    "HL2",							/* template_var */
+    NULL,		/* status_packet */
+    0,		/* status_len */
+    NULL,		/* player_packet */
+    0,		/* player_len */
+    NULL,			/* rule_packet */
+    0,			/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_hl2_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_a2s_request_packet,		/* status_query_func */
+    NULL,				/* player_query_func */
+    send_a2s_rule_request_packet,	/* rule_query_func */
+    deal_with_a2s_packet,		/* packet_func */
+},
 {
     Q_UNKNOWN_TYPE,		/* id */
     "",				/* type_prefix */
@@ -2361,6 +2396,9 @@ extern int time_format;
 extern int color_names;
 extern int show_errors;
 
+extern int get_player_info;
+extern int get_server_rules;
+
 /* Definitions for the original Quake network protocol.
  */
 
@@ -2463,6 +2501,15 @@ void add_server_to_hash( struct qserver *server);
 
 void print_packet( struct qserver *server, char *buf, int buflen);
 
+#define NO_FLAGS 0
+#define NO_VALUE_COPY 1
+#define CHECK_DUPLICATE_RULES 2
+#define NO_KEY_COPY 4
+#define COMBINE_VALUES 8
+
+struct rule* add_rule( struct qserver *server, char *key, char *value,	int flags);
+struct player* add_player( struct qserver *server, int player_number );
+
 
 /*
  * Output template stuff
@@ -2502,6 +2549,7 @@ void hcache_update_file();
 
 unsigned int swap_long_from_little( void *l);
 unsigned short swap_short_from_little( void *l);
+float swap_float_from_little( void *f);
 
 /** \brief write four bytes in little endian order */
 void put_long_little(unsigned val, char* buf);
