@@ -175,13 +175,14 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    str = memchr(pkt, '\0', pktlen);
 	    if(!str) goto out_too_short;
 	    server->game = strdup(pkt);
+	    add_rule(server, "gamedir", pkt, 0);
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
 	    // description
 	    str = memchr(pkt, '\0', pktlen);
 	    if(!str) goto out_too_short;
-	    //server->game = strdup(pkt);
+	    add_rule(server, "gamename", pkt, 0);
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
@@ -314,11 +315,12 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += 8;
 	    }
 
+#if 0 // seems to be a rather normal condition
 	    if(cnt)
 	    {
 		malformed_packet(server, "packet contains too few players, missing %d", cnt);
-		server->missing_rules = 1;
 	    }
+#endif
 	    if(pktlen)
 		malformed_packet(server, "garbage at end of player info, %d bytes left", pktlen);
 
