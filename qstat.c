@@ -2357,7 +2357,8 @@ display_progress()
 	// only print out every 'progress' number of servers.
 	if (
 		0 != num_servers_returned+num_servers_timed_out &&
-		! ( num_servers_returned+num_servers_timed_out % progress )
+		( progress == 1 || 
+		(num_servers_returned+num_servers_timed_out) % progress == 0 )
 	)
 	{
 		fprintf( stderr, "\r%d/%d (%d timed out, %d down)%s",
@@ -2972,18 +2973,11 @@ main( int argc, char *argv[])
 	    if ( run_timeout <= 0)
 		usage( "value for -timeout must be > 0\n", argv,NULL);
 	}
-	else if ( strcmp( argv[arg], "-progno") == 0)
-	{
-	    arg++;
-	    if ( arg >= argc)
-		{
-			usage( "missing argument for -progno\n", argv,NULL);
-		}
-		
-	    progress = atoi( argv[arg] );
- 	}
-	else if ( strcmp( argv[arg], "-progress") == 0) {
+	else if ( strncmp(argv[arg], "-progress", sizeof("-progress")-1) == 0) {
+	    char *p= argv[arg] + sizeof("-progress")-1;
 	    progress= 1;
+	    if ( *p == ',')
+		progress= atoi(p+1);
  	}
 	else if ( strcmp( argv[arg], "-Hcache") == 0)  {
 	    arg++;

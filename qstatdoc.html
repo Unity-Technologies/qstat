@@ -756,12 +756,17 @@ type strings.
 	additional field, the unresolved server address, is added at the
 	beginning of all raw output lines.
 
-<dt><b>-progress</b><dd>
+<dt><b>-progress<i>,count</i></b><dd>
 	Print a progress meter.  Displays total servers processed,
 	including timeouts and down servers.  The meter is just a
 	line of text that writes over itself with &lt;cr&gt;.  Handy
 	for interactive use when you are redirecting output to
-	a file (the meter is printed on stderr).
+	a file (the meter is printed on stderr).<br>
+	By default, the progress meter is updated for every server.
+	The updates can be limited by appending <i>,count</i> to
+	the option where <i>count</i> is a number.  The meter
+	will be updated every <i>count</i> servers.  For example,
+	-progress,10 will update every ten servers.
 
 <dt><b>-Tserver</b><i> file</i><br>
 <dt><b>-Tplayer</b><i> file</i><br>
