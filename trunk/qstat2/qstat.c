@@ -7962,7 +7962,9 @@ find_ravenshield_game( char *gameno )
 		return strdup( "Escort Pilot" );
 		break;
 	default:
-		return strdup( "Unknown" );
+		// 1.50 and above actually uses a string so
+		// return that
+		return strdup( gameno );
 		break;
 	}
 }
