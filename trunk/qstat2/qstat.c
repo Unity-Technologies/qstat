@@ -4351,7 +4351,7 @@ build_hlmaster_packet( struct qserver *server, int *len)
 	pkt= &packet[0];
 	memcpy( pkt, server->type->master_packet, *len );
 
-	if ( server->type->id == STEAM_MASTER )
+	if ( server->type->flags & TF_MASTER_STEAM )
 	{
 		// default the region to 0xff
 		const char* regionstring = get_param_value( server, "region", NULL );
@@ -4409,7 +4409,7 @@ build_hlmaster_packet( struct qserver *server, int *len)
 			pkt+= sprintf( pkt, "\\full\\1");
 		else if ( strncmp( r, "dedicated", flen) == 0)
 		{
-			if ( server->type->id == STEAM_MASTER )
+			if ( server->type->flags & TF_MASTER_STEAM )
 				pkt+= sprintf( pkt, "\\type\\d");
 			else
 				pkt+= sprintf( pkt, "\\dedicated\\1");
@@ -4475,7 +4475,7 @@ send_qwmaster_request_packet( struct qserver *server)
 				packet= build_hlmaster_packet( server, &packet_len);
 			}
 		}
-		else if ( server->type->id == STEAM_MASTER)
+		else if ( server->type->flags & TF_MASTER_STEAM)
 		{
 			// region
 			int tag_len = strlen( server->master_query_tag );
@@ -6119,7 +6119,7 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 			send_qwmaster_request_packet( server);
 		}
 	}
-	else if ( server->type->id == STEAM_MASTER )
+	else if ( server->type->flags & TF_MASTER_STEAM )
 	{
 		// should the HL_MASTER be the same as this?
 		int i;
