@@ -1,3 +1,4 @@
+Makefile
 Makefile.in
 configure
 gnuconfig.h
@@ -5,3 +6,11 @@ gnuconfig.h.in
 INSTALL
 aclocal.m4
 install-sh
+missing
+depcomp
+autom4te.cache
+stamp-h1
+config.log
+config.status
+.deps
+qstat
