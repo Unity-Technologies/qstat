@@ -21,7 +21,7 @@ ifeq ($(OS),Windows_NT)
 
 else
   SYSCONFDIR = /etc
-  CFLAGS = -g
+  CFLAGS = -O2 -g
   OBJ = $(SRC:%=%.o)
 endif
 
