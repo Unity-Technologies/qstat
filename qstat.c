@@ -71,6 +71,9 @@ extern int h_errno;
 #endif /* _ISUNIX */
 
 #ifdef _WIN32
+#define PATH_MAX MAX_PATH
+#include <fcntl.h>
+#define _POSIX_ 1
 #ifndef FD_SETSIZE
 #define FD_SETSIZE 256
 #endif
@@ -604,7 +607,7 @@ static void _debug(const char* file, int line, const char* function, int level, 
   if( level <= get_debug_level() ) \
     _debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
 #else
-#define debug(...)
+#define debug 0 &&
 #endif
 
 /* MODIFY HERE
@@ -11349,9 +11352,9 @@ set_non_blocking( int fd)
 static unsigned count = 0;
 static void dump_packet(const char* buf, int buflen)
 {
-	char fn[128] = {0};
+	char fn[PATH_MAX] = {0};
 	int fd;
-	snprintf(fn, sizeof(fn) - 1, "dump%03u", count++);
+	sprintf(fn, "dump%03u", count++);
 	fprintf(stderr, "dumping to %s\n", fn);
 	fd = open(fn, O_WRONLY|O_CREAT|O_EXCL, 0644);
 	if(fd == -1) { perror("open"); return; }
