@@ -273,13 +273,7 @@ static int unreal_player_info_key( char *s, char *end);
 static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
 static int unreal_max_players( struct qserver *server );
 char * ut2003_strdup( const char *string, const char *end, char **next );
-struct rule * add_rule( struct qserver *server, char *key, char *value,	int flags);
 int html_entity( const char c, char *dest );
-#define NO_FLAGS 0
-#define NO_VALUE_COPY 1
-#define CHECK_DUPLICATE_RULES 2
-#define NO_KEY_COPY 4
-#define COMBINE_VALUES 8
 
 static const char * unreal_colors[] = {
 	"AliceBlue",
@@ -4108,8 +4102,7 @@ send_packets()
 	    interval= retry_interval;
 	debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
 	prev_n_sent= n_sent;
-	if ( server->server_name == NULL ||
-		!(server->type->flags & TF_SINGLE_QUERY) )  {
+	if ( server->server_name == NULL )  {
 	    if ( server->retry1 != n_retries &&
 		    time_delta( &now, &server->packet_time1) <
 			(interval*(n_retries-server->retry1+1)))
@@ -4143,8 +4136,7 @@ send_packets()
 	    gettimeofday(&t_lastsend, NULL);
 	    n_sent++;
 	}
-	if ( server->next_player_info < server->num_players &&
-		server->type->player_packet)  {
+	if ( server->next_player_info < server->num_players)  {
 	    if ( server->retry2 != n_retries &&
 		    time_delta( &now, &server->packet_time2) <
 			(interval*(n_retries-server->retry2+1)))
@@ -4332,6 +4324,7 @@ send_ut2003_request_packet( struct qserver *server)
 	}
     server->retry1--;
     server->n_packets++;
+    server->next_player_info = NO_PLAYER_INFO;
 }
 
 // First packet for an Half-Life 2 server
@@ -5111,10 +5104,18 @@ send_rule_request_packet( struct qserver *server)
 {
     int rc, len;
 
+    debug(3, "%p", server);
+
     /* Server created via broadcast, so bind it */
     if ( server->fd == -1)  {
 	if ( bind_qserver( server) < 0)
 	    goto setup_retry;
+    }
+
+    if(server->type->rule_query_func && server->type->rule_query_func != send_rule_request_packet)
+    {
+	server->type->rule_query_func(server);
+	return;
     }
 
     if ( server->type->id == Q_SERVER)  {
@@ -5153,6 +5154,18 @@ send_player_request_packet( struct qserver *server)
     if ( server->fd == -1)  {
 	if ( bind_qserver( server) < 0)
 	    goto setup_retry;
+    }
+
+    if(server->type->player_query_func && server->type->player_query_func != send_player_request_packet)
+    {
+	server->type->player_query_func(server);
+	return;
+    }
+
+    if(!server->type->player_packet)
+    {
+	debug(0, "error: server %p has no player_packet", server);
+	return;
     }
 
     if ( server->type->id == Q_SERVER)
@@ -5274,7 +5287,7 @@ static int qserver_get_timeout(struct qserver* server, struct timeval* now)
 	diff1= interval*(n_retries-server->retry1+1) -
 		time_delta( now, &server->packet_time1);
 
-	if ( server->type->player_packet && server->next_player_info < server->num_players)
+	if (server->next_player_info < server->num_players)
 	{
 		diff2= interval*(n_retries-server->retry2+1) -
 			time_delta( now, &server->packet_time2);
@@ -6830,7 +6843,7 @@ add_nrule( struct qserver *server, char *key, char *value, int len)
     server->n_rules++;
 }
 
-STATIC struct player *
+struct player *
 add_player( struct qserver *server, int player_number )
 {
     struct player *player;
@@ -7685,15 +7698,6 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	int error= 0,  before;
 	unsigned int packet_header;
 
-	if ( server->server_name == NULL )
-	{
-		server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
-	}
-	else
-	{
-		gettimeofday( &server->packet_time1, NULL);
-	}
-
 	rawpkt[pktlen]= '\0';
 	end = &rawpkt[pktlen];
 
@@ -7715,14 +7719,19 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	{
 	case 0x00:
 		// Server info
+		if ( server->server_name == NULL )
+			server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
+
 		error = ut2003_basic_packet( server, rawpkt, end );
 		if ( ! error )
 		{
 			if(get_server_rules || get_player_info)
 			{
+				int requests = server->n_requests;
 				server->next_rule = "";
 				server->retry1 = n_retries;
 				send_rule_request_packet( server);
+				server->n_requests = requests; // would produce wrong ping
 			}
 		}
 		break;
@@ -7919,13 +7928,17 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
 	}
 
 	if ( get_player_info && server->num_players)  {
+	    int requests = server->n_requests;
 	    server->next_player_info= server->num_players-1;
 	    send_player_request_packet( server);
+	    server->n_requests = requests; // prevent wrong ping
 	}
 	if ( get_server_rules)  {
+	    int requests = server->n_requests;
 	    server->next_rule= "";
 	    server->retry1= n_retries;
 	    send_rule_request_packet( server);
+	    server->n_requests = requests; // prevent wrong ping
 	}
     }
     /* 'players' response */
@@ -10652,12 +10665,16 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		// send the other request packets if wanted
 		if ( get_server_rules )
 		{
+			int requests = server->n_requests;
 			send_rule_request_packet( server );
+			server->n_requests = requests; // prevent wrong ping
 			n_sent++;
 		}
 		else if ( get_player_info )
 		{
+			int requests = server->n_requests;
 			send_player_request_packet( server ) ;
+			server->n_requests = requests; // prevent wrong ping
 			n_sent++;
 		}
 		break;

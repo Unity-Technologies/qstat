@@ -1,0 +1,189 @@
+Server Queries
+
+The Source engine allows you to query information from a running game server
+using UDP/IP packets. This document describes the packet formats and protocol
+to access this data.
+
+Basic Data Types
+
+All server queries consist of 5 basic types of data packed together into a data
+stream. All types are little endian.
+
+Name   Description
+
+byte   8 bit character
+
+short  16 bit signed integer
+
+long   32 bit signed integer
+
+float  32 bit float value
+
+string variable length byte field, terminated by 0x00
+
+Query Types
+
+The server responds to 4 queries:
+
+  • A2S_SERVERQUERY_GETCHALLENGE - Returns a challenge number for use in the
+    player and rules query.
+  • A2S_INFO - Basic information about the server.
+  • A2S_PLAYER - Details about each player on the server.
+  • A2S_RULES - The rules the server is using.
+
+Queries should be sent in UDP packets to the listen port of the server, which
+is typically port 27015.
+
+A2S_SERVERQUERY_GETCHALLENGE
+
+Request format
+
+Challenge values are required for A2S_PLAYER and A2S_RULES requests, you can
+use this request to get one.
+Note: You can also send A2S_PLAYER and A2S_RULES queries with a challenge value
+of -1 (0xFF FF FF FF FF FF FF FF) and they will respond with a challenge value
+to use (using the reply format below).
+
+FF FF FF FF 57
+
+Reply format
+
+Data      Type  Comment
+
+Type      byte  Should be equal to 'A' (0x41)
+
+Challenge long  The challenge number to use
+
+Example reply:
+
+FF FF FF FF FF 41 32 42 59 45 53 93 43 71
+
+A2S_INFO
+
+Request format
+
+Server info can be requested by sending the following byte values in a UDP
+packet to the server.
+
+FF FF FF FF 54 53 6F 75 72 63 65 20 45 6E 67 69 6E 65 20 51 75 65 72 79 00
+
+Reply format
+
+Data           Type     Comment
+
+Type           byte     Should be equal to 'I' (0x49)
+
+Version        byte     Network version
+
+Hostname       string   The Servers name
+
+Map            string   The current map being played
+
+Game Directory string   The Game type
+
+Game           string   A friendly string name for the game type
+Description
+
+AppID          short    Steam Application number (currently always set to 0)
+
+Num players    byte     The number of players currently on the server
+
+Max players    byte     Maximum allowed players for the server
+
+Num of bots    byte     Number of bot players currently on the server
+
+Dedicated      byte     Set to 1 for dedicated servers
+
+OS             byte     'l' for Linux, 'w' for Windows
+
+Password       byte     If set to 1 a password is required to join this server
+
+Secure         byte     If set to 1 this server is running VAC
+
+Game Version   string   The version of the game
+
+Example reply:
+
+FF FF FF FF 49 02 67 61 6D 65 32 78 73 2E 63 6F    ....I.game2xs.co
+6D 20 43 6F 75 6E 74 65 72 2D 53 74 72 69 6B 65    m.Counter-Strike
+20 53 6F 75 72 63 65 20 23 31 00 64 65 5F 64 75    .Source.#1.de_du
+73 74 00 63 73 74 72 69 6B 65 00 43 6F 75 6E 74    st.cstrike.Count
+65 72 2D 53 74 72 69 6B 65 00 00 00 0B 28 00 64    er-Strike....(.d
+6C 00 00 31 2e 31 2e 30 2e 31 36 00                l..1.1.0.16
+
+A2S_PLAYER
+
+Request format
+
+FF FF FF FF 55 <4 byte challenge number>
+
+The challenge number can either be set to -1 (0xFF FF FF FF FF FF FF FF) to
+have the server reply with S2C_CHALLENGE, or use the value from a previous
+A2S_SERVERQUERY_GETCHALLENGE request.
+
+Reply format
+
+The players response has two sections, the initial header:
+
+Data         Type    Comment
+
+Type         byte    Should be equal to 'D' (0x44)
+
+Num Players  byte    The number of players reported in this response
+
+
+Then for each player the following fields are sent:
+
+Data           Type     Comment
+
+Index          byte     The index into [0.. Num Players] for this entry
+
+Player Name    string   Player's name
+
+Kills          long     Number of kills this player has
+
+Time connected float    The time in seconds this player has been connected
+
+
+A2S_RULES
+
+Request format
+
+FF FF FF FF 56 <4 byte challenge number>
+
+The challenge number can either be set to -1 (0xFF FF FF FF FF FF FF FF) to
+have the server reply with S2C_CHALLENGE, or use the value from a previous
+A2S_SERVERQUERY_GETCHALLENGE request.
+
+Reply format
+
+The rules response has two sections, the initial header:
+
+Data        Type    Comment
+
+Type        byte    Should be equal to 'E' (0x45)
+
+Num Rules   short   The number of rules reported in this response
+
+
+Then for each rule the following fields are sent:
+
+Data       Type   Comment
+
+Rule Name  string The name of the rule
+
+Rule Value string The rules value
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+(C) 2004 Valve Corporation. All rights reserved. Valve, the Valve logo,
+Half-Life, the Half-Life logo, the Lambda logo, Steam, the Steam logo, Team
+Fortress, the Team Fortress logo, Opposing Force, Day of Defeat, the Day of
+Defeat logo, Counter-Strike, the Counter-Strike logo, Source, the Source logo,
+Hammer and Counter-Strike: Condition Zero are trademarks and/or registered
+trademarks of Valve Corporation.  Microsoft and Visual Studio are trademarks
+and/or registered trademarks of Microsoft Corporation.  All other trademarks
+are property of their respective owners. 
+
