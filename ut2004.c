@@ -82,7 +82,7 @@ struct server_listing_record_head {
     unsigned ip;
     short port;
     short queryport;
-    char name[];
+    char name[255];
     // char map[]
 };
 
