@@ -4265,6 +4265,7 @@ send_qwserver_request_packet( struct qserver *server)
     server->retry1--;
     if ( server->server_name == NULL)
 	server->n_packets++;
+    server->next_player_info = NO_PLAYER_INFO; // we don't have a player packet
 }
 
 /* First packet for an Unreal server
@@ -4533,6 +4534,8 @@ void
 send_qwmaster_request_packet( struct qserver *server)
 {
 	int rc= 0;
+
+	server->next_player_info = NO_PLAYER_INFO;
 
 	if ( server->type->id == Q2_MASTER)
 	{
@@ -5694,7 +5697,6 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "statusResponse\n", 15) == 0) )  {
 	/* quake3 status response */
 	server->next_rule= NO_SERVER_RULES;
-	server->next_player_info= server->max_players;
 	server->retry1 = 0;
 	if ( rawpkt[4] == '\001')  {
 	    rawpkt++;
@@ -5898,8 +5900,6 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 	    else if  ( strcmp( key, "maxclients") == 0 ||
 	    		strcmp( key, "sv_maxclients") == 0 ||
 			strcmp( key, "max") == 0)  {
-		if ( server->max_players == -1)
-		    server->next_player_info= atoi(value);
 		server->max_players= atoi(value);
 		/* MOHAA Q3 protocol max players is always 0 */
 		if ( server->max_players == 0)
@@ -6114,7 +6114,6 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 	assert(len == 0);
 
 	server->n_servers= server->master_pkt_len / 6;
-	server->next_player_info= -1;
 	server->retry1= 0;
 
 	debug(2, "%d servers added", server->n_servers);
@@ -7735,6 +7734,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 				int requests = server->n_requests;
 				server->next_rule = "";
 				server->retry1 = n_retries;
+				server->retry2 = 0; // don't wait for player packet
 				send_rule_request_packet( server);
 				server->n_requests = requests; // would produce wrong ping
 			}
@@ -8232,7 +8232,7 @@ if ( tribes_debug) printf( "player#%d, info <%.*s>\n", pnum, len, pkt+1);
 	    strncpy( buf, (char*)pkt+9, end-(pkt+9));
 	    buf[end-(pkt+9)]= '\0';
 	    player->frags= atoi( buf);
-if ( tribes_debug) printf( "player#%d, score <%.*s>\n", pnum, end-(pkt+9), pkt+9);
+if ( tribes_debug) printf( "player#%d, score <%.*s>\n", pnum, (unsigned)(end-(pkt+9)), pkt+9);
 	}
 	*last_player= player;
 	last_player= & player->next;
@@ -11795,7 +11795,7 @@ unreal_color( int color )
 		}
 	}
 
-	return (char*)color;
+	return (char*)(unsigned long)color;
 }
 
 #define FMT_HOUR_1	"%2dh"
