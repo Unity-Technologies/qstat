@@ -4285,7 +4285,7 @@ send_qwmaster_request_packet( struct qserver *server)
 			{
 				master_protocol= server->type->master_protocol;
 			}
-			packet_len = snprintf( query_buf, sizeof(query_buf), server->type->master_packet,
+			packet_len = sprintf( query_buf, server->type->master_packet,
 				master_protocol?master_protocol:"",
 				server->type->master_query?server->type->master_query:"");
 			packet = query_buf;
