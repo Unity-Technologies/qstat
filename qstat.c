@@ -10097,12 +10097,14 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 		if(player_id == MAX_DOOM3_ASYNC_CLIENTS)
 			break;
 
+		/* id's are not steady
 		if(player_id != num_players)
 		{
 			malformed_packet(server, "unexpected player id");
 			cleanup_qserver( server, 1);
 			return;
 		}
+		*/
 		
 		if ( ptr + 7 > end ) // 2 pred + 4 rate + empty player name ('\0')
 		{
@@ -10134,8 +10136,8 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		++ptr;
 		player->name = strdup( name );
-		debug( 2, "Player[%d] = %s, prediction %hu, rate %u",
-				num_players, player->name, prediction, rate);
+		debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
+				num_players, player->name, prediction, rate, player_id);
 
 		++num_players;
 	}
