@@ -10457,7 +10457,6 @@ int ut2k4_html_color( char *color, char *dest, int *font_tag )
 {
 	if ( 1 == html_names )
 	{
-		char hexcolor[7];
 		int len = sprintf( dest, "%s<font color=\"#%02hhx%02hhx%02hhx\">",
 			*font_tag ? "</font>" : "",
 			(unsigned char)color[0],

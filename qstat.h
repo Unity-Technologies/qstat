@@ -998,6 +998,7 @@ server_type builtin_types[] = {
     send_qwserver_request_packet,/* status_query_func */
     send_rule_request_packet,	/* rule_query_func */
     send_player_request_packet,	/* player_query_func */
+    (void (*)( struct qserver *, char *, int))
     deal_with_halflife_packet,	/* packet_func */
 },
 {
