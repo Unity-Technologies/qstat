@@ -2240,7 +2240,7 @@ server_type builtin_types[] = {
     /* HALFLIFE 2 */
     A2S_SERVER,						/* id */
     "A2S",							/* type_prefix */
-    "A2S",							/* type_string */
+    "a2s",							/* type_string */
     "-a2s",						/* type_option */
     "Half-Life 2 new",					/* game_name */
     0,								/* master */
@@ -2248,7 +2248,7 @@ server_type builtin_types[] = {
     0,								/* port_offset */
     TF_QUAKE3_NAMES,				/* flags */
     "gamedir",								/* game_rule */
-    "HL2",							/* template_var */
+    "A2S",							/* template_var */
     NULL,		/* status_packet */
     0,		/* status_len */
     NULL,		/* player_packet */
@@ -2266,8 +2266,8 @@ server_type builtin_types[] = {
     xml_display_hl2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_a2s_request_packet,		/* status_query_func */
-    NULL,				/* player_query_func */
     send_a2s_rule_request_packet,	/* rule_query_func */
+    NULL,				/* player_query_func */
     deal_with_a2s_packet,		/* packet_func */
 },
 {
