@@ -607,7 +607,11 @@ static void _debug(const char* file, int line, const char* function, int level, 
   if( level <= get_debug_level() ) \
     _debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
 #else
-#define debug 0 &&
+#  ifdef _WIN32
+     static inline void debug(int level, const char* fmt, ...) { return; };
+#  else
+#    define debug(...)
+#  endif
 #endif
 
 /* MODIFY HERE
@@ -4324,7 +4328,7 @@ static const char* steam_region[] =
 
 unsigned char build_doom3_masterfilter(struct qserver* server)
 {
-	int flen;
+	int flen = 0;
 	char *pkt, *r, *sep= "";
 	unsigned char b = 0;
 	pkt = get_param_value( server, "status", NULL);
