@@ -67,6 +67,8 @@
 #define STEF_DEFAULT_PORT		27960
 #define STEF_MASTER_DEFAULT_PORT	27953
 #define GHOSTRECON_PLAYER_DEFAULT_PORT	2346
+#define RAVENSHIELD_DEFAULT_PORT	8777
+#define SAVAGE_DEFAULT_PORT	11235
 
 #define Q_UNKNOWN_TYPE 0
 #define MASTER_SERVER 0x40000000
@@ -107,8 +109,10 @@
 #define UT2003_SERVER	34
 #define GHOSTRECON_SERVER 35
 #define ALLSEEINGEYE_PROTOCOL_SERVER 36
+#define RAVENSHIELD_SERVER 37
+#define SAVAGE_SERVER 38
 
-#define LAST_BUILTIN_SERVER  36
+#define LAST_BUILTIN_SERVER  38
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -119,13 +123,14 @@
 #define TF_QUAKE3_NAMES		(1<<7)
 #define TF_TRIBES2_NAMES	(1<<8)
 #define TF_SOF_NAMES		(1<<9)
+#define TF_U2_NAMES		(1<<10)
 
-#define TF_RAW_STYLE_QUAKE	(1<<10)
-#define TF_RAW_STYLE_TRIBES	(1<<11)
-#define TF_RAW_STYLE_GHOSTRECON	(1<<12)
+#define TF_RAW_STYLE_QUAKE	(1<<11)
+#define TF_RAW_STYLE_TRIBES	(1<<12)
+#define TF_RAW_STYLE_GHOSTRECON	(1<<13)
 
-#define TF_NO_PORT_OFFSET	(1<<13)
-#define TF_SHOW_GAME_PORT	(1<<14)
+#define TF_NO_PORT_OFFSET	(1<<14)
+#define TF_SHOW_GAME_PORT	(1<<15)
 
 #define TRIBES_TEAM	-1
 
@@ -138,7 +143,7 @@ typedef void (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
 
 /* Output and formatting functions
  */
- 
+
 void display_server( struct qserver *server);
 void display_qwmaster( struct qserver *server);
 void display_server_rules( struct qserver *server);
@@ -153,9 +158,11 @@ void display_tribes_player_info( struct qserver *server);
 void display_tribes2_player_info( struct qserver *server);
 void display_bfris_player_info( struct qserver *server);
 void display_descent3_player_info( struct qserver *server);
+void display_ravenshield_player_info( struct qserver *server);
+void display_savage_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
- 
+
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
 void raw_display_player_info( struct qserver *server);
@@ -167,10 +174,12 @@ void raw_display_halflife_player_info( struct qserver *server);
 void raw_display_tribes_player_info( struct qserver *server);
 void raw_display_tribes2_player_info( struct qserver *server);
 void raw_display_bfris_player_info( struct qserver *server);
+void raw_display_ravenshield_player_info( struct qserver *server);
+void raw_display_savage_player_info( struct qserver *server);
 void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
- 
+
 void xml_display_server( struct qserver *server);
 void xml_header();
 void xml_footer();
@@ -183,6 +192,8 @@ void xml_display_unreal_player_info( struct qserver *server);
 void xml_display_halflife_player_info( struct qserver *server);
 void xml_display_tribes_player_info( struct qserver *server);
 void xml_display_tribes2_player_info( struct qserver *server);
+void xml_display_ravenshield_player_info( struct qserver *server);
+void xml_display_savage_player_info( struct qserver *server);
 void xml_display_bfris_player_info( struct qserver *server);
 void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
@@ -200,6 +211,8 @@ void send_qwmaster_request_packet( struct qserver *server);
 void send_bfris_request_packet( struct qserver *server);
 void send_player_request_packet( struct qserver *server);
 void send_rule_request_packet( struct qserver *server);
+void send_ravenshield_request_packet( struct qserver *server);
+void send_savage_request_packet( struct qserver *server);
 void send_gamespy_master_request( struct qserver *server);
 void send_tribes2_request_packet( struct qserver *server);
 void send_tribes2master_request_packet( struct qserver *server);
@@ -220,6 +233,8 @@ void deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
+void deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
@@ -235,7 +250,7 @@ typedef struct _server_type  {
     char *game_name;
     int master;
     unsigned short default_port;
-    short port_offset;
+    unsigned short port_offset;
     int flags;
     char *game_rule;
     char *template_var;
@@ -489,7 +504,20 @@ unsigned char ghostrecon_playerquery[] = {
 
 /* All Seeing Eye */
 char eye_status_query[1]= "s";
+//unsigned char eye_status_query[] = {
+//	0xfe, 0xfd, 0x00, 0x7e, 0x37, 0x2a, 0x00, 0xff, 0xff, 0xff, 0xff
+//};
 char eye_ping_query[1]= "p";
+
+unsigned char savage_serverquery[] = {
+	0x9e,0x4c,0x23,0x00,0x00,0xc8,0x01,0x21,0x00,0x00
+};
+
+unsigned char savage_playerquery[] = {
+	0x9e,0x4c,0x23,0x00,0x00,0xce,0x76,0x46,0x00,0x00
+};
+
+char ravenshield_serverquery[] = "REPORT";
 
 server_type builtin_types[] = {
 {
@@ -774,7 +802,7 @@ server_type builtin_types[] = {
     0,				/* master */
     UNREAL_DEFAULT_PORT,	/* default_port */
     1,				/* port_offset */
-    0,				/* flags */
+    TF_U2_NAMES,				/* flags */
     "gametype",			/* game_rule */
     "UNREALTOURNAMENT2003",		/* template_var */
     (char*) &ut2003_basicstatus,	/* status_packet */
@@ -864,7 +892,7 @@ server_type builtin_types[] = {
     send_qwserver_request_packet,/* status_query_func */
     send_rule_request_packet,	/* rule_query_func */
     send_player_request_packet,	/* player_query_func */
-    (void (*)())deal_with_halflife_packet,	/* packet_func */
+    deal_with_halflife_packet,	/* packet_func */
 },
 {
     /* SIN */
@@ -1080,7 +1108,7 @@ server_type builtin_types[] = {
     0,				/* master */
     SOF_DEFAULT_PORT,		/* default_port */
     0,				/* port_offset */
-    TF_SINGLE_QUERY,		/* flags */
+    TF_SINGLE_QUERY|TF_SOF_NAMES,		/* flags */
     "gamedir",			/* game_rule */
     "SOLDIEROFFORTUNE",		/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
@@ -1221,8 +1249,8 @@ server_type builtin_types[] = {
     "DESCENT3",			/* template_var */
     (char*) &descent3_tcpipinfoquery,	/* status_packet */
     sizeof( descent3_tcpipinfoquery),	/* status_len */
-    (char*) &descent3_playerquery,	/* status_packet */
-    sizeof( descent3_playerquery),	/* status_len */
+    (char*) &descent3_playerquery,	/* player_packet */
+    sizeof( descent3_playerquery),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
@@ -1255,8 +1283,8 @@ server_type builtin_types[] = {
     "DESCENT3",			/* template_var */
     (char*) &descent3_pxoinfoquery,	/* status_packet */
     sizeof( descent3_pxoinfoquery),	/* status_len */
-    (char*) &descent3_playerquery,	/* status_packet */
-    sizeof( descent3_playerquery),	/* status_len */
+    (char*) &descent3_playerquery,	/* player_packet */
+    sizeof( descent3_playerquery),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
@@ -1289,8 +1317,8 @@ server_type builtin_types[] = {
     "GHOSTRECON",			/* template_var */
     (char*) &ghostrecon_playerquery,	/* status_packet */
     sizeof( ghostrecon_playerquery),	/* status_len */
-    NULL,			/* status_packet */
-    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
@@ -1319,7 +1347,7 @@ server_type builtin_types[] = {
     0,				/* default_port */
     123,			/* port_offset */
     TF_SINGLE_QUERY,		/* flags */
-    "",				/* game_rule */
+    "gametype",				/* game_rule */
     "EYEPROTOCOL",		/* template_var */
     (char*) &eye_status_query,	/* status_packet */
     sizeof( eye_status_query),	/* status_len */
@@ -1341,6 +1369,74 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_eye_packet,	/* packet_func */
+},
+{
+    /* RAVENSHIELD PROTOCOL */
+    RAVENSHIELD_SERVER,		/* id */
+    "RSS",			/* type_prefix */
+    "rss",			/* type_string */
+    "-rss",			/* type_option */
+    "Ravenshield",		/* game_name */
+    0,				/* master */
+    RAVENSHIELD_DEFAULT_PORT,	/* default_port */
+    1000,				/* port_offset */
+    TF_QUERY_ARG,		/* flags */
+    "gametype",			/* game_rule */
+    "RAVENSHIELD",			/* template_var */
+    (char*)ravenshield_serverquery,			/* status_packet */
+    sizeof( ravenshield_serverquery ) - 1,	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_ravenshield_player_info,	/* display_player_func */
+    display_server_rules,		/* display_rule_func */
+    raw_display_ravenshield_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_ravenshield_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_ravenshield_request_packet,	/* status_query_func */
+    NULL,				/* rule_query_func */
+    NULL,				/* player_query_func */
+    deal_with_ravenshield_packet,	/* packet_func */
+},
+{
+    /* SAVAGE PROTOCOL */
+    SAVAGE_SERVER,		/* id */
+    "SAS",			/* type_prefix */
+    "sas",			/* type_string */
+    "-sas",			/* type_option */
+    "Savage",		/* game_name */
+    0,				/* master */
+   	SAVAGE_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_QUERY_ARG,		/* flags */
+    "gametype",			/* game_rule */
+    "SAVAGE",			/* template_var */
+    (char*)savage_serverquery,			/* status_packet */
+    sizeof( savage_serverquery ) - 1,	/* status_len */
+    (char*)savage_playerquery,			/* player_packet */
+    sizeof( savage_playerquery ) - 1,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_savage_player_info,	/* display_player_func */
+    display_server_rules,		/* display_rule_func */
+    raw_display_savage_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_savage_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_savage_request_packet,	/* status_query_func */
+    NULL,				/* rule_query_func */
+    NULL,				/* player_query_func */
+    deal_with_savage_packet,	/* packet_func */
 },
 
 
@@ -1937,18 +2033,18 @@ char *get_qw_game( struct qserver *server);
  */
 
 int cleanup_qserver( struct qserver *server, int force);
- 
+
 int server_info_packet( struct qserver *server, struct q_packet *pkt,
         int datalen);
 int player_info_packet( struct qserver *server, struct q_packet *pkt,
         int datalen);
 int rule_info_packet( struct qserver *server, struct q_packet *pkt,
 	int datalen);
- 
+
 int time_delta( struct timeval *later, struct timeval *past);
 char * strherror( int h_err);
 int connection_refused();
- 
+
 void add_file( char *filename);
 int add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg);
 struct qserver* add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
@@ -1961,7 +2057,7 @@ struct qserver * find_server_by_address( unsigned int ipaddr, unsigned short por
 void add_server_to_hash( struct qserver *server);
 
 
- 
+
 void print_packet( struct qserver *server, char *buf, int buflen);
 
 
