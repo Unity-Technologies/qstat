@@ -70,6 +70,7 @@
 #define RAVENSHIELD_DEFAULT_PORT	8777
 #define SAVAGE_DEFAULT_PORT	11235
 #define FARCRY_DEFAULT_PORT	49001
+#define STEAM_MASTER_DEFAULT_PORT	27010 
 
 #define Q_UNKNOWN_TYPE 0
 #define MASTER_SERVER 0x40000000
@@ -114,8 +115,9 @@
 #define SAVAGE_SERVER 38
 #define FARCRY_SERVER 39
 #define GAMESPY2_PROTOCOL_SERVER 40
+#define STEAM_MASTER (41|MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  40
+#define LAST_BUILTIN_SERVER  41
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -526,6 +528,47 @@ char eye_ping_query[1]= "p";
 unsigned char gs2_status_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff
 };
+
+// Steam
+// Format:
+// 1. Request type ( 1 byte )
+// 2. Region ( 1 byte )
+// 3. ip ( string + null )
+// 4. Filter ( optional + null )
+// 
+// Regions:
+// 0 = US East Coast
+// 1 = US West Coast
+// 2 = South America
+// 3 = Europe
+// 4 = Asia
+// 5 = Australia
+// 6 = Middle East
+// 7 = Africa
+// 255 = N/A
+// Filter:
+// \type\d = Returns only dedicated servers
+//
+// \secure\1 = Returns servers running anti-cheat technology
+//
+// \gamedir\[mod] = Servers running the specified modification.
+// The parameter is the directory that the mod resides in e.g.
+// cstrike for Counter-Strike or dod for Day of Defeat.
+//
+// \map\[map] = Returns servers running the specified map
+// (e.g. de_dust2 or cs_italy)
+// 
+// \linux\1 = Servers running on the Linux platform
+// 
+// \empty\1 = Servers that are not empty
+// 
+// \full\1 = Servers that are not full
+// 
+// \proxy\1 = Servers that are spectator proxies
+// 
+// End the filter with 0x00
+//
+unsigned char steam_masterquery_template[] = "1%c%s%c%s";
 
 unsigned char savage_serverquery[] = {
 	0x9e,0x4c,0x23,0x00,0x00,0xc8,0x01,0x21,0x00,0x00
@@ -1873,6 +1916,40 @@ server_type builtin_types[] = {
     deal_with_descent3master_packet,	/* packet_func */
 },
 {
+    /* STEAM MASTER */
+    STEAM_MASTER,			/* id */
+    "STM",			/* type_prefix */
+    "stm",			/* type_string */
+    "-stm",			/* type_option */ /* ## also "-qw" */
+    "Steam Master",		/* game_name */
+    HL_SERVER,			/* master */
+    STEAM_MASTER_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_SINGLE_QUERY|TF_OUTFILE|TF_QUERY_ARG, /* flags */
+    "",				/* game_rule */
+    "STEAMMASTER",			/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    (char*) &steam_masterquery_template,	/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_qwmaster_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_qwmaster_packet,	/* packet_func */
+},
+{
     Q_UNKNOWN_TYPE,		/* id */
     "",				/* type_prefix */
     "",				/* type_string */
@@ -1963,7 +2040,8 @@ struct qserver {
     int n_servers;
     int master_pkt_len;
     char *master_pkt;
-    char master_query_tag[4];
+	// used for progressive master 4 bytes for WON 22 for Steam
+    char master_query_tag[22];
     char *error;
 
     /** in-game name of the server. A server that has a NULL name is considered
