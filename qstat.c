@@ -2313,7 +2313,7 @@ display_progress()
 	// only print out every 'progress' number of servers.
 	if (
 		0 != num_servers_returned+num_servers_timed_out &&
-		( progress == 1 || 
+		( progress == 1 ||
 		(num_servers_returned+num_servers_timed_out) % progress == 0 )
 	)
 	{
@@ -3892,7 +3892,7 @@ bind_qserver( struct qserver *server)
 
     // we need nonblocking always. poll on an udp socket would wake
     // up and recv blocks if a packet with incorrect checksum is
-    // received 
+    // received
     set_non_blocking( server->fd);
 
     if ( server->type->flags & TF_TCP_CONNECT)  {
@@ -5116,7 +5116,7 @@ cleanup_qserver( struct qserver *server, int force)
 	}
 
 	qserver_disconnect(server);
-		
+
 	if ( server->server_name != TIMEOUT)  {
 	    num_servers_returned++;
 	    if ( server->server_name != DOWN)  {
@@ -6856,7 +6856,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			*s++= '\0';
 		}
-		//fprintf( stderr, "%s = %s\n", key, value );
+		fprintf( stderr, "%s = %s\n", key, value );
 		if ( *value == '\0')
 		{
 			if ( strcmp( key, "final") == 0)
@@ -6956,19 +6956,19 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			if ( player && player->number == no )
 			{
 				player->name= strdup( value);
-				player= NULL;
+				player = NULL;
 			}
 			else if ( NULL != ( player = get_player_by_number( server, no ) ) )
 			{
-				player->name= strdup( value);
-				player= NULL;
+				player->name = strdup( value);
+				player = NULL;
 			}
 			// unreal_max_players( server ) due to bf1942 issue
 			// where the actual no players is correct but more player
 			// details are returned
 			else if ( unreal_max_players( server ) )
 			{
-				player= add_player( server, no );
+				player = add_player( server, no );
 				if ( player)
 				{
 					player->name= strdup( value);
@@ -7093,10 +7093,26 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			{
 				player_add_info( player, tmp, value, NO_FLAGS );
 			}
+			// unreal_max_players( server ) due to bf1942 issue
+			// where the actual no players is correct but more player
+			// details are returned
+			else if ( unreal_max_players( server ) )
+			{
+				player = add_player( server, player_num );
+				if ( player)
+				{
+					player->name = NULL;
+					// init to -1 so we can tell if
+					// we have team info
+					player->team = -1;
+					player->deaths = -999;
+				}
+				player_add_info( player, tmp, value, NO_FLAGS );
+			}
 		}
 		else
 		{
-			player= NULL;
+			player = NULL;
 			add_rule( server, key, value, NO_FLAGS);
 		}
     }
