@@ -815,9 +815,9 @@ server_type builtin_types[] = {
 {
     /* DOOM 3 */
     D3_SERVER,						/* id */
-    "D3S",							/* type_prefix */
-    "d3s",							/* type_string */
-    "-d3s",							/* type_option */
+    "DM3S",							/* type_prefix */
+    "dm3s",							/* type_string */
+    "-dm3s",						/* type_option */
     "Doom 3",						/* game_name */
     0,								/* master */
     D3_DEFAULT_PORT,				/* default_port */
