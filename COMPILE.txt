@@ -5,6 +5,8 @@ Linux
 -----
 ./configure && make
 
+If you compile from CVS run ./autogen.sh first
+
 WINDOWS
 -------
 nmake /f Makefile.w32
