@@ -1,3 +1,13 @@
+Aug 05, 2004
+Summary of New Features
+-----------------------
+Added Doom 3 initial support N.B. Score appears not to be reported.
+
+Fixes
+-----
+Updated RavenShield Protocol
+	Fixed version field and added password field for Ravenshield 1.56
+
 QStat version 2.5c+CVS.2
 ** UPDATED for 2.5c+CVS.2 **
 Nov 11, 2003

@@ -1002,6 +1002,27 @@ display_gs2_player_info( struct qserver *server)
 }
 
 void
+display_d3_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team_name,
+		xform_name( player->name, server));
+	else
+	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team,
+		xform_name( player->name, server));
+    }
+}
+
+void
 display_ravenshield_player_info( struct qserver *server)
 {
     struct player *player = server->players;
@@ -1432,6 +1453,37 @@ raw_display_ghostrecon_player_info( struct qserver *server)
 
 void
 raw_display_eye_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, fmt_team_name,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team_name,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	else
+	    fprintf( OF, fmt,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_d3_player_info( struct qserver *server)
 {
     static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
     static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
@@ -2034,6 +2086,42 @@ xml_display_ghostrecon_player_info( struct qserver *server)
 
 void
 xml_display_eye_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->score);
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
+			player->ping);
+		if ( player->team_name)
+		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
+			xml_escape(player->team_name));
+		else
+		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
+			player->team);
+		if ( player->skin)
+		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
+			xml_escape(player->skin));
+		if ( player->connect_time)
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_d3_player_info( struct qserver *server)
 {
     struct player *player;
 
@@ -5185,6 +5273,7 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
     }
     else if ( strncmp( &rawpkt[4], "infoResponse", 12) == 0 ||
 		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "infoResponse", 12) == 0) )  {
+fprintf( stderr, "INFO\n" ) ;
 	/* quake3 info response */
 	if ( rawpkt[4] == '\001')  {
 	    rawpkt++;
@@ -8520,7 +8609,7 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 			// AllowRadar
 			add_rule( server, "AllowRadar", value, NO_FLAGS );
 		}
-		else if ( 0 == strcmp( "D1", key ) )
+		else if ( 0 == strcmp( "D2", key ) )
 		{
 			// Version info
 			add_rule( server, "Version", value, NO_FLAGS );
@@ -8577,7 +8666,8 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( 0 == strcmp( "J2", key ) )
 		{
-			// Unknown
+			// Password
+			add_rule( server, "Password", value, NO_FLAGS);
 		}
 		else if ( 0 == strcmp( "K1", key ) )
 		{
@@ -9668,6 +9758,181 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 eye_protocol_error:
     cleanup_qserver( server, 1);
+}
+
+void
+deal_with_d3_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	char *ptr = rawpkt;
+	char *end = rawpkt + pktlen;
+	unsigned char type = 0;
+	unsigned char no_players = 0;
+	unsigned char total_players = 0;
+	unsigned char no_teams = 0;
+	unsigned char total_teams = 0;
+	unsigned char no_headers = 0;
+	char **headers = NULL;
+
+	if ( pktlen < 15 )
+	{
+		// invalid packet?
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	server->n_servers++;
+	if ( server->server_name == NULL)
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+	}
+	else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
+
+	// Basic check
+	if ( ptr[0] != '\xff' && ptr[1] != '\xff' )
+	{
+		// invalid packet
+		cleanup_qserver( server, 1);
+		return;
+	}
+	ptr += 2;
+
+	if ( 0 != strcmp( "infoResponse", ptr ) )
+	{
+		// invalid / unsupported packet
+		cleanup_qserver( server, 1);
+		return;
+	}
+	ptr += 12;
+
+	// Some sort of head dont know what yet
+	ptr += 9;
+	while ( 0 == type && ptr < end )
+	{
+		// server info:
+		// name value pairs null seperated
+		// empty name && value signifies the end of section
+		char *var, *val;
+		int var_len, val_len;
+
+		var = ptr;
+		var_len = strlen( var );
+
+		if ( ptr + var_len + 2 > end )
+		{
+			fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+		ptr += var_len + 1;
+
+		val = ptr;
+		val_len = strlen( val );
+		ptr += val_len + 1;
+		//fprintf( stderr, "var:%s=%s\n", var, val );
+
+		// Lets see what we've got
+		if ( 0 == strcasecmp( var, "si_name" ) )
+		{
+			server->server_name = strdup( val );
+		}
+		else if( 0 == strcasecmp( var, "fs_game" ) )
+		{
+			server->game = strdup( val );
+		}
+		else if( 0 == strcasecmp( var, "si_version" ) )
+		{
+			// format:
+			// DOOM 1.0.1262.win-x86 Jul  8 2004 16:46:37
+			//server->protocol_version = atoi( val+1 );
+		}
+		else if( 0 == strcasecmp( var, "si_map" ) )
+		{
+			server->map_name = strdup( val );
+		}
+		else if( 0 == strcasecmp( var, "si_maxplayers" ) )
+		{
+			server->max_players = atoi( val );
+		}
+		else if ( 0 == var_len && 0 == val_len )
+		{
+			// check for end of section
+			type = 1;
+		}
+		else
+		{
+			add_rule( server, var, val, NO_FLAGS );
+		}
+	}
+
+	if ( 1 != type )
+	{
+		// no more info should be player headers here as we
+		// requested it
+		fprintf( stderr, "Invalid packet detected (no players)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	// now each player details
+	while( 1 == type && ptr < end )
+	{
+
+		struct player *player;
+		char *val;
+		int val_len;
+
+		if ( 0x20 == ptr[0] && 0x01 == ptr[1] )
+		{
+			// end of players
+			type = 2;
+		}
+		else
+		{
+			if ( ptr + 9 > end )
+			{
+				// run off the end and shouldnt have
+				fprintf( stderr, "Invalid packet detected (invalid player)\n" );
+				cleanup_qserver( server, 1);
+				return;
+			}
+
+			player = add_player( server, total_players );
+
+			// dont know what these 7 bytes are atm
+			// ping, score etc??
+
+			// player number
+			ptr++;
+
+			// ping
+			player->ping = (unsigned char)*ptr;
+			ptr++;
+
+			// unknown
+			ptr++;
+
+			// rate
+			ptr += 2;
+
+			// unknown
+			ptr += 2;
+
+			val = ptr;
+			val_len = strlen( ptr );
+			ptr += val_len + 1;
+			player->name = strdup( val );
+			//fprintf( stderr, "Player[%d] = %s\n", total_players, player->name );
+			total_players++;
+		}
+	}
+
+	server->num_players = total_players;
+
+	cleanup_qserver( server, 1 );
+	return;
 }
 
 // See the following for protocol details:
