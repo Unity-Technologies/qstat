@@ -19,6 +19,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/param.h>
+#include <stdarg.h>
 
 #ifdef DEBUG
 void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
