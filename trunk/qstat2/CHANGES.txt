@@ -1,3 +1,62 @@
+QStat version 2.5c+CVS.2
+** UPDATED for 2.5c+CVS.2 **
+Nov 11, 2003
+Fixes
+-----
+Updated UT2003 Protocol
+	Updated to correctly support XMP including text coloring
+Update SOF Protocol
+	Now supports coloring of server names
+
+
+QStat version 2.5c+CVS.1
+** UPDATED for 2.5c+CVS.1 **
+Nov 11, 2003
+Fixes
+-----
+Updated GameSpy Server Protocol
+	Fixes stall on processing BF1942 v1.5 packets
+Update All Seeing Eye Protocol
+	Adds gametype to both standard output and rules
+
+
+QStat version 2.5c+CVS+
+** UPDATED for 2.5c+CVS+ **
+Oct 17, 2003
+Summary of New Features
+-----------------------
+Merged 2.5c+ with 2.5c+CVS
+All the features from 2.5c+ combined with those from CVS
+Which includes ASE support
+
+Fixes
+-----
+Updated GameSpy Server Protocol
+	Updated to better handle player information so that it
+	correctly parses Halo output.
+
+
+QStat version 2.5c+ (Multiplay Addition's)
+** UPDATED for 2.5c+ **
+Oct 10, 2003
+Summary of New Features
+-----------------------
+Ravenshield support [-rvs]
+	Added native support for the Ravenshield protocol
+Savage support [-sas]
+	Added native support for the Savage protocol.
+
+Fixes
+-----
+Updated GameSpy Server Protocol
+	Updated to better handle player name issues and to correctly
+	parse Battlefield 1942 output.
+
+All the above are done by myself so any issues please contact me:
+Email: killing@multiplay.co.uk
+IRC: #mpukhosting on Quakenet
+
+
 QStat version 2.5c
 ** UPDATED for 2.5c **
 Nov 11, 2002
