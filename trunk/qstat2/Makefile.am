@@ -17,7 +17,11 @@ qstat_SOURCES = \
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
 
-EXTRA_DIST = CHANGES.txt COMPILE.txt ChangeLog LICENSE.txt Makefile.w32
+EXTRA_DIST = CHANGES.txt COMPILE.txt LICENSE.txt \
+	Makefile.w32 \
+	ChangeLog \
+	qstatdoc.html \
+	contrib.cfg
 
 cl:
 	cvs2cl.pl --utc --no-wrap --separate-header --no-times -f ChangeLog.cvs
