@@ -240,6 +240,7 @@ struct qserver **last_server= &servers;
 struct qserver **connmap= NULL;
 int max_connmap;
 struct qserver *last_server_bind= NULL;
+struct qserver *first_server_bind= NULL;
 int connected= 0;
 time_t run_timeout= 0;
 time_t start_time;
@@ -2691,7 +2692,10 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 	server->error= strdup( strherror(h_errno));
 	server->port= port;
 	server->type= type;
-	server->prev= *last_server;
+	if ( last_server != &servers)  {
+	    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+	    server->prev= prev_server;
+	}
 	*last_server= server;
 	last_server= & server->next;
 	if ( one_server_type_id == ~MASTER_SERVER)
@@ -2729,8 +2733,10 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     if ( num_servers_total % 10 == 0)
 	hcache_update_file();
 
-    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-    server->prev= prev_server;
+    if ( last_server != &servers)  {
+	prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+	server->prev= prev_server;
+    }
     *last_server= server;
     last_server= & server->next;
 
@@ -2791,8 +2797,10 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
     if ( num_servers_total % 10 == 0)
 	hcache_update_file();
 
-    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-    server->prev= prev_server;
+    if ( last_server != &servers)  {
+	prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+	server->prev= prev_server;
+    }
     *last_server= server;
     last_server= & server->next;
 
@@ -3944,7 +3952,6 @@ get_next_timeout( struct timeval *timeout)
     struct timeval now;
     int diff1, diff2, diff, smallest= retry_interval+master_retry_interval;
     int interval, bind_count= 0;
-    static struct qserver *first_server_bind= NULL;
 
     if ( first_server_bind == NULL)
 	first_server_bind= servers;
@@ -4113,14 +4120,19 @@ free_server( struct qserver *server)
     struct rule *rule, *next_rule;
 
     /* remove from servers list */
-    if ( server == servers)
+    if ( server == servers)  {
 	servers= server->next;
-    if ( server == *last_server)  {
+	if ( servers)
+	    servers->prev= NULL;
+    }
+    if ( (void*) &server->next == (void*) last_server)  {
 	if ( server->prev)
 	    last_server= & server->prev->next;
 	else
 	    last_server= & servers;
     }
+    if ( server == first_server_bind)
+	first_server_bind= server->next;
     if ( server == last_server_bind)
 	last_server_bind= server->next;
 
@@ -4553,13 +4565,17 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 		add_rule( server, key, value, NO_VALUE_COPY);
 	    }
 	    else if ( get_server_rules || strncmp( key, "game", 4) == 0)  {
-		add_rule( server, key, value,
-			NO_VALUE_COPY|check_duplicate_rules);
-		if ( strcmp( key, server->type->game_rule) == 0)  {
+		if ( add_rule( server, key, value,
+			NO_VALUE_COPY|check_duplicate_rules) == NULL)
+		    free(value);      /* duplicate, so free value */
+		if ( server->game == NULL &&
+			strcmp( key, server->type->game_rule) == 0)  {
 		    server->game= value;
 		    server->flags |= FLAG_DO_NOT_FREE_GAME;
 		}
 	    }
+	    else
+		free(value);
 	}
 	else if ( *pkt == '\n')  {
 player_info:
@@ -5216,7 +5232,7 @@ add_rule( struct qserver *server, char *key, char *value, int flags)
     if ( flags & CHECK_DUPLICATE_RULES)  {
 	for ( rule= server->rules; rule; rule= rule->next)
 	    if ( strcmp( rule->name, key) == 0)
-	        return rule;
+	        return NULL;
     }
 
     rule= (struct rule *) malloc( sizeof( struct rule));
@@ -5535,7 +5551,11 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end)
 	value= dup_nstring( rawpkt, end, &rawpkt);
 	if ( value == NULL)
 	    break;
-	add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | chkdup);
+	if ( add_rule( server, key, value,
+			NO_KEY_COPY | NO_VALUE_COPY | chkdup) == NULL)  {
+	    free(value);      /* duplicate, so free key and value */
+	    free(key);
+	}
 	if ( strcmp( key, "minplayers") == 0)
 	    result= atoi(value);
     }
