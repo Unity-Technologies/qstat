@@ -57,6 +57,7 @@ static int gettimeofday(struct timeval *now, void *blah)
 # ifndef EADDRINUSE
 #  define EADDRINUSE	WSAEADDRINUSE
 # endif
+# define snprintf _snprintf
 #endif /* _WIN32 */
 
 #include <string.h>

@@ -18,11 +18,11 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include "gnuconfig.h"
-#endif
-
-#ifndef VERSION
-# define VERSION "2.6.CVS"
+# include "gnuconfig.h"
+#else
+# ifndef VERSION
+#  define VERSION "2.6.CVS"
+# endif
 #endif
 
 char *qstat_version= VERSION;

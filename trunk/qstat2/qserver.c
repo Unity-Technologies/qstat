@@ -11,10 +11,12 @@
 #include "qstat.h"
 #include "qserver.h"
 
+#ifdef _ISUNIX
+#include <sys/socket.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
 int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 {
