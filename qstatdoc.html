@@ -1669,6 +1669,26 @@ query parameters will be ignored.
 <table border=1>
 <tr valign=top><td>name<td>Sets the name of the game type.  Should be the full game
 name as used by the publisher.
+<tr><td>flags<td>set the query flags. Bitwise OR of the following constants:
+	<ul>
+	    <li>TF_SINGLE_QUERY</li>
+	    <li>TF_OUTFILE</li>
+	    <li>TF_MASTER_MULTI_RESPONSE</li>
+	    <li>TF_TCP_CONNECT</li>
+	    <li>TF_QUERY_ARG</li>
+	    <li>TF_QUERY_ARG_REQUIRED</li>
+	    <li>TF_QUAKE3_NAMES</li>
+	    <li>TF_TRIBES2_NAMES</li>
+	    <li>TF_SOF_NAMES</li>
+	    <li>TF_U2_NAMES</li>
+	    <li>TF_RAW_STYLE_QUAKE</li>
+	    <li>TF_RAW_STYLE_TRIBES</li>
+	    <li>TF_RAW_STYLE_GHOSTRECON</li>
+	    <li>TF_NO_PORT_OFFSET</li>
+	    <li>TF_SHOW_GAME_PORT</li>
+	</ul>
+    </td>
+</tr>
 <tr><td>default&nbsp;port<td>Default network port used by the status protocol.
 <tr><td>status&nbsp;port&nbsp;offset<td>Offset of the status/query port from the game port.
 <tr><td>game&nbsp;rule<td>The server rule containing the name of the game style or game mod.

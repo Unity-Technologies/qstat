@@ -80,20 +80,23 @@ static int debug= 0;
 
 #define REPORT_ERROR(a)		print_location(); fprintf a; fprintf(stderr, "\n")
 
-#define CK_MASTER_PROTOCOL	1
-#define CK_MASTER_QUERY		2
-#define CK_MASTER_PACKET	3
-#define CK_NAME			4
-#define CK_DEFAULT_PORT		5
-#define CK_GAME_RULE		6
-#define CK_TEMPLATE_VAR		7
-#define CK_MASTER_TYPE		8
-#define CK_STATUS_PACKET	9
-#define CK_STATUS2_PACKET	10
-#define CK_PLAYER_PACKET	11
-#define CK_RULE_PACKET		12
-#define CK_PORT_OFFSET		13
-
+enum {
+    CK_NONE = 0,
+    CK_MASTER_PROTOCOL,
+    CK_MASTER_QUERY,
+    CK_MASTER_PACKET,
+    CK_FLAGS,
+    CK_NAME,
+    CK_DEFAULT_PORT,
+    CK_GAME_RULE,
+    CK_TEMPLATE_VAR,
+    CK_MASTER_TYPE,
+    CK_STATUS_PACKET,
+    CK_STATUS2_PACKET,
+    CK_PLAYER_PACKET,
+    CK_RULE_PACKET,
+    CK_PORT_OFFSET
+};
 
 typedef struct _config_key {
     int key;
@@ -104,6 +107,7 @@ static ConfigKey new_keys[] = {
 { CK_MASTER_PROTOCOL, "master protocol" },
 { CK_MASTER_QUERY, "master query" },
 { CK_MASTER_PACKET, "master packet" },
+{ CK_FLAGS, "flags" },
 { CK_NAME, "name" },
 { CK_DEFAULT_PORT, "default port" },
 { CK_GAME_RULE, "game rule" },
@@ -121,8 +125,35 @@ static ConfigKey modify_keys[] = {
 { CK_MASTER_PROTOCOL, "master protocol" },
 { CK_MASTER_QUERY, "master query" },
 { CK_MASTER_PACKET, "master packet" },
+{ CK_FLAGS, "flags" },
 { 0, NULL },
 };
+
+typedef struct {
+    const char *name;
+    int value;
+} ServerFlag;
+
+#define SERVER_FLAG(x) { #x, x }
+ServerFlag server_flags[] = {
+    SERVER_FLAG(TF_SINGLE_QUERY),
+    SERVER_FLAG(TF_OUTFILE),
+    SERVER_FLAG(TF_MASTER_MULTI_RESPONSE),
+    SERVER_FLAG(TF_TCP_CONNECT),
+    SERVER_FLAG(TF_QUERY_ARG),
+    SERVER_FLAG(TF_QUERY_ARG_REQUIRED),
+    SERVER_FLAG(TF_QUAKE3_NAMES),
+    SERVER_FLAG(TF_TRIBES2_NAMES),
+    SERVER_FLAG(TF_SOF_NAMES),
+    SERVER_FLAG(TF_U2_NAMES),
+    SERVER_FLAG(TF_RAW_STYLE_QUAKE),
+    SERVER_FLAG(TF_RAW_STYLE_TRIBES),
+    SERVER_FLAG(TF_RAW_STYLE_GHOSTRECON),
+    SERVER_FLAG(TF_NO_PORT_OFFSET),
+    SERVER_FLAG(TF_SHOW_GAME_PORT),
+    { NULL, 0 }
+};
+#undef SERVER_FLAG
 
 static int get_config_key( char *first_token, ConfigKey *keys);
 static void add_config_type( server_type *gametype);
@@ -524,12 +555,86 @@ get_config_key( char *first_token, ConfigKey *keys)
     return key;
 }
 
+STATIC int get_server_flag_value(const char* value, unsigned len)
+{
+    int i= 0;
+
+    for ( i= 0; server_flags[i].name; ++i)  {
+	if ( len == strlen(server_flags[i].name) &&
+		strncmp( server_flags[i].name, value, len) == 0)  {
+	    return server_flags[i].value;
+	}
+    }
+
+    return -1;
+}
+
+STATIC int parse_server_flags(const char* value)
+{
+    int val = 0, v, first = 1;
+    const char* s = value;
+    const char* e;
+
+    while(*s)
+    {
+	while(isspace(*s))
+	    ++s;
+
+	if(!first)
+	{
+	    if(*s != '|') {
+		REPORT_ERROR(( stderr, "Syntax error: expecting |"));
+		val = -1;
+		break;
+	    }
+
+	    ++s;
+
+	    while(isspace(*s))
+		++s;
+	}
+	else
+	    first = 0;
+
+	e = s;
+
+	while(isalnum(*e) || *e == '_')
+	    ++e;
+
+	if(e == s) {
+	    REPORT_ERROR(( stderr, "Syntax error: expecting flag"));
+	    val = -1;
+	    break;
+	}
+
+	v = get_server_flag_value(s, e-s);
+	if(v == -1) {
+	    REPORT_ERROR(( stderr, "Syntax error: invalid flag"));
+	    val = -1;
+	    break;
+	}
+	
+	s = e;
+	val |= v;
+    }
+
+    return val;
+}
+
 STATIC int
 set_game_type_value( server_type *gametype, int key, char *value)
 {
     switch ( key)  {
     case CK_NAME:
 	gametype->game_name= strdup(value);
+	break;
+    case CK_FLAGS:
+	{
+	    int flags = parse_server_flags(value);
+	    if(flags == -1)
+		return -1;
+	    gametype->flags = flags;
+	}
 	break;
     case CK_DEFAULT_PORT: {
 	unsigned short port;
@@ -646,6 +751,14 @@ STATIC int
 modify_game_type_value( server_type *gametype, int key, char *value)
 {
     switch ( key)  {
+    case CK_FLAGS:
+	{
+	    int flags = parse_server_flags(value);
+	    if(flags == -1)
+		return -1;
+	    gametype->flags = flags;
+	}
+	break;
     case CK_MASTER_PROTOCOL:
 	if ( ! gametype->master)  {
 	    REPORT_ERROR((stderr, "Cannot set master protocol on non-master game type"));
@@ -676,6 +789,7 @@ modify_game_type_value( server_type *gametype, int key, char *value)
 	    return -1;
 	}
 	gametype->master_packet= memdup( value, value_len);
+	gametype->master_len= value_len;
 	break;
     }
     return 0;
