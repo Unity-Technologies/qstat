@@ -4066,8 +4066,15 @@ send_qwmaster_request_packet( struct qserver *server)
 	int rc= 0, query_len= 0;
 	char query_buf[4096];
 
-	if ( server->type->master_len == 0)
+	if ( server->type->master_len == 0 &&
+		( 
+			Q3_MASTER == server->type->id ||
+			RTCW_MASTER == server->type->id || 
+			STEF_MASTER == server->type->id
+		)
+	)
 	{
+		// fill in the master protocol details
 		char *master_protocol= server->query_arg;
 		if ( master_protocol == NULL)
 		{
