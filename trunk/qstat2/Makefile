@@ -2,12 +2,12 @@
 CFLAGS = -ggdb
 
 # Uncomment if you have gcc
-# CC = gcc
+CC = gcc
 
 # NOTE: if you get errors when linking qstat (missing symbols or
 # libraries), then switch the LIBS macro being used.
 
-SRC = qstat.c config.c hcache.c template.c
+SRC = qstat.c config.c hcache.c template.c debug.c ut2004.c md5.c qserver.c
 O = qstat.o config.o hcache.o template.o
 OBJ = qstat.obj config.obj hcache.obj template.obj
 
