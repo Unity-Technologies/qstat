@@ -1894,6 +1894,7 @@ xml_display_unreal_player_info( struct qserver *server)
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
+		struct info *info = player->info;
 		fprintf( OF, "\t\t\t<player>\n");
 
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
@@ -1934,6 +1935,15 @@ xml_display_unreal_player_info( struct qserver *server)
 		{
 			fprintf( OF, "\t\t\t\t<face>%s</face>\n",
 				player->face ? xml_escape(player->face) : "");
+		}
+		for ( ; NULL != info; info = info->next )
+		{
+			if ( info->name )
+			{
+				char *name = xml_escape( info->name );
+				char *value = xml_escape( info->value );
+				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
+			}
 		}
 
 		fprintf( OF, "\t\t\t</player>\n");
@@ -6569,6 +6579,77 @@ rule_info_packet( struct qserver *server, struct q_packet *pkt, int datalen)
     return 0;
 }
 
+struct info *
+player_add_info( struct player *player, char *key, char *value, int flags)
+{
+    struct info *info;
+    if ( flags & CHECK_DUPLICATE_RULES )
+	{
+		for ( info = player->info; info; info = info->next )
+		{
+			if ( 0 == strcmp( info->name, key ) )
+			{
+				return NULL;
+			}
+		}
+    }
+
+	if ( flags & COMBINE_VALUES )
+	{
+		for ( info = player->info; info; info = info->next )
+		{
+			if ( 0 == strcmp( info->name, key ) )
+			{
+				char *full_value = (char*)calloc( sizeof(char), strlen( info->value ) + strlen( value ) + 2 );
+				if ( NULL == full_value )
+				{
+					fprintf( stderr, "Failed to malloc combined value\n" );
+					exit( 1 );
+				}
+				sprintf( full_value, "%s%s%s", info->value, multi_delimiter, value );
+
+				// We should be able to free this
+				free( info->value );
+				info->value = full_value;
+
+				return info;
+			}
+		}
+	}
+
+    info = (struct info *) malloc( sizeof( struct info));
+    if ( flags & NO_KEY_COPY)
+	{
+		info->name = key;
+	}
+    else
+	{
+		info->name = strdup(key);
+	}
+    if ( flags & NO_VALUE_COPY)
+	{
+		info->value = value;
+	}
+    else
+	{
+		info->value = strdup(value);
+	}
+    info->next = NULL;
+
+	if ( NULL == player->info )
+	{
+		player->info = info;
+	}
+	else
+	{
+		*player->last_info = info;
+	}
+    player->last_info = &info->next;
+    player->n_info++;
+
+    return info;
+}
+
 struct rule *
 add_rule( struct qserver *server, char *key, char *value, int flags)
 {
@@ -6665,6 +6746,8 @@ add_player( struct qserver *server, int player_number )
     player = (struct player *) calloc( 1, sizeof( struct player));
     player->number = player_number;
     player->next = server->players;
+    player->n_info = 0;
+	player->last_info = NULL;
     server->players = player;
     server->n_player_info++;
     return player;
@@ -6713,7 +6796,8 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *s, *key, *value, *end;
     struct player *player= NULL;
-    int id_major=0, id_minor=0, final=0;
+    int id_major=0, id_minor=0, final=0, player_num;
+	char tmp[pktlen];
 
 	server->n_servers++;
     if ( server->server_name == NULL)
@@ -7020,7 +7104,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			player = get_player_by_number( server, atoi( key+6 ) );
 			if ( NULL != player )
 			{
-				player->score = atoi( value);
+				player->score = atoi( value );
 			}
 		}
 		else if ( player && strncmp( key, "playertype", 10) == 0)
@@ -7038,6 +7122,15 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		else if ( strncmp( key, "keyhash_", 8) == 0)
 		{
 			// Ensure these dont make it into the rules
+		}
+		else if ( 2 == sscanf( key, "%[^_]_%d", tmp, &player_num ) )
+		{
+			// arbitary player info
+			player = get_player_by_number( server, player_num );
+			if ( NULL != player )
+			{
+				player_add_info( player, tmp, value, NO_FLAGS );
+			}
 		}
 		else
 		{
