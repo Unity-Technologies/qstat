@@ -121,6 +121,7 @@ for the supported game types.  The type string is used with the
 <tr><td>-qwm<td>qwm<td>27000<td>QuakeWorld master
 <tr><td>-q2m<td>q2m<td>27900<td>Quake II master
 <tr><td>-hlm<td>hlm<td>27010<td>Half-Life master
+<tr><td>-stm<td>stm<td>27010<td>Half-Life master (Steam)
 <tr><td>-tbm<td>tbm<td>28000<td>Tribes master
 <tr><td>-t2m<td>t2m<td>28002<td>Tribes 2 master
 <tr><td>-q3s<td>q3s<td>27960<td>Quake III
@@ -280,7 +281,8 @@ I know about.
 27004, 27006), 204.182.161.2, 194.217.251.40, 203.34.140.1, 200.245.221.200,
 194.87.251.3
 <tr><td>Quake II<td>satan.idsoftware.com, q2master.planetquake.com
-<tr><td>Half-Life<td>half-life.west.won.net, half-life.east.won.net
+<tr><td>Half-Life (hlm)<td>half-life.west.won.net, half-life.east.won.net
+<tr><td>Half-Life (stm)<td>hlmaster1.hlauth.net
 <tr><td>Tribes<td>tribes.dynamix.com
 <tr><td>Quake III<td>master3.idsoftware.com
 <tr><td>Gamespy<td>master0.gamespy.com
@@ -433,6 +435,38 @@ dedicated servers that are not empty, specify <b>status=dedicated:notempty</b>
 </table>
 
 See the Tribes 2 master server above for example usage.
+
+<H4>Half-Life Master (Steam)</H4>
+
+The Half-Like steam master server supports a number of filtering options
+different from the old WON master.
+<blockquote>
+<b>stm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+</blockquote>
+<table border=1>
+<tr><th>Query Argument<th>Values<th>Description
+<tr><td>game<td><i>mod path</i><td>Servers running this "mod".
+<tr><td>map<td><i>map name</i><td>Servers running this map.
+<tr><td>region<td><i>name or number of region</i><td>Geographical Area of the server.
+You can specify the name or number of the region:
+	<ul>
+		<li>0: US East coast</li>
+		<li>1: US West coast </li>
+		<li>2: South America </li>
+		<li>3: Europe </li>
+		<li>4: Asia </li>
+		<li>5: Australia </li>
+		<li>6: Middle East </li>
+		<li>7: Africa</li>
+	</ul>
+<tr><td>status<td><i>list of </i>dedicated, linux, notempty, notfull, secure, proxy
+<td>Limit servers to those matching this status.  The list is
+one or more status flags separated by colons (':').  To filter on
+dedicated servers that are not empty, specify <b>status=dedicated:notempty</b>
+</table>
+
+See the Tribes 2 master server above for example usage.
+
 
 <H4>Option Usage</H4>
 

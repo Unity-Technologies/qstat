@@ -3996,6 +3996,19 @@ send_unrealmaster_request_packet( struct qserver *server)
     server->n_packets++;
 }
 
+static const char* steam_region[] =
+{
+	"US East Coast",
+	"US West Coast",
+	"South America",
+	"Europe",
+	"Asia",
+	"Australia",
+	"Middle East",
+	"Africa",
+	NULL
+};
+
 char *
 build_hlmaster_packet( struct qserver *server, int *len)
 {
@@ -4009,8 +4022,27 @@ build_hlmaster_packet( struct qserver *server, int *len)
 
 	if ( server->type->id == STEAM_MASTER )
 	{
-		// detault the region to 0xff
-		int region = atoi( get_param_value( server, "region", "255" ) );
+		// default the region to 0xff
+		const char* regionstring = get_param_value( server, "region", NULL );
+		int region = 0xFF;
+		if(regionstring)
+		{
+			char* tmp = NULL;
+			region = strtol( regionstring, &tmp, 10);
+			if(tmp == regionstring)
+			{
+				int i = 0;
+				region = 0xFF;
+				for(;*steam_region[i]; ++i)
+				{
+					if(!strcmp(regionstring, steam_region[i]))
+					{
+						region = i;
+						break;
+					}
+				}
+			}
+		}
 		*(pkt+1) = region;
 	}
 
@@ -4043,9 +4075,18 @@ build_hlmaster_packet( struct qserver *server, int *len)
 		else if ( strncmp( r, "notfull", flen) == 0)
 			pkt+= sprintf( pkt, "\\full\\1");
 		else if ( strncmp( r, "dedicated", flen) == 0)
-			pkt+= sprintf( pkt, "\\dedicated\\1");
+		{
+			if ( server->type->id == STEAM_MASTER )
+				pkt+= sprintf( pkt, "\\type\\d");
+			else
+				pkt+= sprintf( pkt, "\\dedicated\\1");
+		}
 		else if ( strncmp( r, "linux", flen) == 0)
 			pkt+= sprintf( pkt, "\\linux\\1");
+		else if ( strncmp( r, "proxy", flen) == 0) // steam
+			pkt+= sprintf( pkt, "\\proxy\\1");
+		else if ( strncmp( r, "secure", flen) == 0) // steam
+			pkt+= sprintf( pkt, "\\secure\\1");
 		r= sep+1;
 	}
 
