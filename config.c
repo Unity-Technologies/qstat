@@ -126,6 +126,7 @@ static ConfigKey modify_keys[] = {
 { CK_MASTER_QUERY, "master query" },
 { CK_MASTER_PACKET, "master packet" },
 { CK_FLAGS, "flags" },
+{ CK_MASTER_TYPE, "master for gametype" },
 { 0, NULL },
 };
 
@@ -160,6 +161,7 @@ static void add_config_type( server_type *gametype);
 static server_type * get_config_type( char *game_type);
 static void copy_server_type( server_type *dest, server_type *source);
 static server_type * get_server_type( char *game_type);
+static server_type * get_builtin_type( char *game_type);
 
 typedef struct _gametype_context {
     char *type;
@@ -791,6 +793,22 @@ modify_game_type_value( server_type *gametype, int key, char *value)
 	gametype->master_packet= memdup( value, value_len);
 	gametype->master_len= value_len;
 	break;
+    case CK_MASTER_TYPE:
+	{
+	server_type *type;
+	if ( ! gametype->master)  {
+	    REPORT_ERROR((stderr, "Cannot set master type on non-master game type\n"));
+	    return -1;
+	}
+	force_lower_case( value);
+	type= get_server_type( value);
+	if ( type == NULL)  {
+	    REPORT_ERROR((stderr, "Unknown server type \"%s\"\n", value));
+	    return -1;
+	}
+	gametype->master= type->id;
+	}
+	break;
     }
     return 0;
 }
@@ -799,11 +817,22 @@ STATIC server_type *
 get_server_type( char *game_type)
 {
     server_type *result;
-    result= find_server_type_string( game_type);
+    result= get_builtin_type( game_type);
     if ( result != NULL)
 	return result;
 
     return get_config_type( game_type);
+}
+
+STATIC server_type*
+get_builtin_type( char* type_string)
+{
+    server_type *type= &builtin_types[0];
+
+    for ( ; type->id != Q_UNKNOWN_TYPE; type++)
+	if ( strcmp( type->type_string, type_string) == 0)
+	    return type;
+    return NULL;
 }
 
 STATIC void
