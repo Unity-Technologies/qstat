@@ -11,8 +11,10 @@
  *
  */
 
-#include <sys/types.h>
+#ifdef _ISUNIX
 #include <sys/socket.h>
+#endif
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 

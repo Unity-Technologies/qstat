@@ -21,6 +21,10 @@
 #include "gnuconfig.h"
 #endif
 
+#ifndef VERSION
+# define VERSION "2.6.CVS"
+#endif
+
 char *qstat_version= VERSION;
 
 /* OS/2 defines */
@@ -71,33 +75,6 @@ extern int h_errno;
 #endif
 #define sockerr()	errno
 #endif /* _ISUNIX */
-
-#ifdef _WIN32
-#define PATH_MAX MAX_PATH
-#include <fcntl.h>
-#define _POSIX_ 1
-#ifndef FD_SETSIZE
-#define FD_SETSIZE 256
-#endif
-#include <winsock.h>
-#include <sys/timeb.h>
-#define close(a) closesocket(a)
-int gettimeofday(struct timeval *now, void *blah)
-{
-    struct timeb timeb;
-    ftime( &timeb);
-    now->tv_sec= timeb.time;
-    now->tv_usec= (unsigned int)timeb.millitm * 1000;
-    return 0;
-}
-#define sockerr()	WSAGetLastError()
-#define strcasecmp      stricmp
-#define strncasecmp     strnicmp
-#define STATIC
-#ifndef EADDRINUSE
-#define EADDRINUSE	WSAEADDRINUSE
-#endif
-#endif /* _WIN32 */
 
 #ifdef __OS2__
 #include <sys/socket.h>
@@ -3325,8 +3302,10 @@ main( int argc, char *argv[])
 			if ( get_debug_level() > 0 )
 				print_packet( server, pkt, pktlen);
 
+#ifdef ENABLE_DUMP
 			if (get_debug_level() > 2)
 				dump_packet(pkt, pktlen);
+#endif
 
 			server->type->packet_func( server, pkt, pktlen);
 		}
@@ -6780,7 +6759,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
     char *s, *key, *value, *end;
     struct player *player= NULL;
     int id_major=0, id_minor=0, final=0, player_num;
-	char tmp[pktlen];
+	char tmp[256];
 
 	server->n_servers++;
     if ( server->server_name == NULL)
@@ -7106,7 +7085,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			// Ensure these dont make it into the rules
 		}
-		else if ( 2 == sscanf( key, "%[^_]_%d", tmp, &player_num ) )
+		else if ( 2 == sscanf( key, "%255[^_]_%d", tmp, &player_num ) )
 		{
 			// arbitary player info
 			player = get_player_by_number( server, player_num );
