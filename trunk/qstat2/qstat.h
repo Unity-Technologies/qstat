@@ -1401,7 +1401,7 @@ server_type builtin_types[] = {
     "Gamespy V2 Protocol",	/* game_name */
     0,				/* master */
     0,				/* default_port */
-    10,				/* port_offset */
+    0,				/* port_offset */
     TF_SINGLE_QUERY,		/* flags */
     "gametype",			/* game_rule */
     "GPS2PROTOCOL",		/* template_var */

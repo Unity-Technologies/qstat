@@ -9458,11 +9458,11 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	server->n_servers++;
-    if ( server->server_name == NULL)
+	if ( server->server_name == NULL)
 	{
 		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
 	}
-    else
+	else
 	{
 		gettimeofday( &server->packet_time1, NULL);
 	}
@@ -9475,8 +9475,12 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		// server info:
 		// name value pairs null seperated
 		// empty name && value signifies the end of section
-		char *var = ptr;
-		int var_len = strlen( var );
+		char *var, *val;
+		int var_len, val_len;
+
+		var = ptr;
+		var_len = strlen( var );
+
 		if ( ptr + var_len + 2 > end )
 		{
 			fprintf( stderr, "Invalid packet detected (no rule value)\n" );
@@ -9485,8 +9489,8 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		ptr += var_len + 1;
 
-		char *val = ptr;
-		int val_len = strlen( val );
+		val = ptr;
+		val_len = strlen( val );
 		ptr += val_len + 1;
 		//fprintf( stderr, "var:%s=%s\n", var, val );
 
@@ -9601,14 +9605,17 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		int i;
 		for ( i = 0; i < no_headers; i++ )
 		{
+			char *val;
+			int val_len;
+
 			if ( ptr >= end )
 			{
 				fprintf( stderr, "Invalid packet detected (short player detail)\n" );
 				cleanup_qserver( server, 1);
 				return;
 			}
-			char *val = ptr;
-			int val_len = strlen( val );
+			val = ptr;
+			val_len = strlen( val );
 			ptr += val_len + 1;
 
 			// lets see what we got
@@ -9724,14 +9731,17 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		int i;
 		for ( i = 0; i < no_headers; i++ )
 		{
+			char *val;
+			int val_len;
+
 			if ( ptr >= end )
 			{
 				fprintf( stderr, "Invalid packet detected (short team detail)\n" );
 				cleanup_qserver( server, 1);
 				return;
 			}
-			char *val = ptr;
-			int val_len = strlen( val );
+			val = ptr;
+			val_len = strlen( val );
 			ptr += val_len + 1;
 
 			// lets see what we got
