@@ -9601,52 +9601,65 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 	{
 		// now each player details
 		// add the player
-		struct player *player = add_player( server, total_players );
-		int i;
-		for ( i = 0; i < no_headers; i++ )
+		if ( 0x00 == *ptr )
 		{
-			char *val;
-			int val_len;
-
-			if ( ptr >= end )
+			// no players
+			if ( 0 != no_players )
 			{
-				fprintf( stderr, "Invalid packet detected (short player detail)\n" );
+				fprintf( stderr, "Invalid packet detected (no players)\n" );
 				cleanup_qserver( server, 1);
 				return;
 			}
-			val = ptr;
-			val_len = strlen( val );
-			ptr += val_len + 1;
-
-			// lets see what we got
-			if ( 0 == strcmp( headers[i], "player_" ) )
-			{
-				player->name = strdup( val );
-			}
-			else if ( 0 == strcmp( headers[i], "score_" ) )
-			{
-				player->score = atoi( val );
-			}
-			else if ( 0 == strcmp( headers[i], "deaths_" ) )
-			{
-				player->deaths = atoi( val );
-			}
-			else if ( 0 == strcmp( headers[i], "ping_" ) )
-			{
-				player->ping = atoi( val );
-			}
-			else if ( 0 == strcmp( headers[i], "kills_" ) )
-			{
-				player->frags = atoi( val );
-			}
-			else if ( 0 == strcmp( headers[i], "team_" ) )
-			{
-				player->team = atoi( val );
-			}
-			
-			//fprintf( stderr, "Player[%d][%s]=%s\n", total_players, headers[i], val );
 		}
-		total_players++;
+		else
+		{
+			struct player *player = add_player( server, total_players );
+			int i;
+			for ( i = 0; i < no_headers; i++ )
+			{
+				char *val;
+				int val_len;
+
+				if ( ptr >= end )
+				{
+					fprintf( stderr, "Invalid packet detected (short player detail)\n" );
+					cleanup_qserver( server, 1);
+					return;
+				}
+				val = ptr;
+				val_len = strlen( val );
+				ptr += val_len + 1;
+
+				// lets see what we got
+				if ( 0 == strcmp( headers[i], "player_" ) )
+				{
+					player->name = strdup( val );
+				}
+				else if ( 0 == strcmp( headers[i], "score_" ) )
+				{
+					player->score = atoi( val );
+				}
+				else if ( 0 == strcmp( headers[i], "deaths_" ) )
+				{
+					player->deaths = atoi( val );
+				}
+				else if ( 0 == strcmp( headers[i], "ping_" ) )
+				{
+					player->ping = atoi( val );
+				}
+				else if ( 0 == strcmp( headers[i], "kills_" ) )
+				{
+					player->frags = atoi( val );
+				}
+				else if ( 0 == strcmp( headers[i], "team_" ) )
+				{
+					player->team = atoi( val );
+				}
+				
+				//fprintf( stderr, "Player[%d][%s]=%s\n", total_players, headers[i], val );
+			}
+			total_players++;
+		}
 
 		if ( total_players > no_players )
 		{
