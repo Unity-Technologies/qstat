@@ -1,0 +1,26 @@
+$(IFNOT:ISMASTER)
+<TR $(IF:PLAYERS)bgcolor=#603030$(ENDIF)>
+<TD>$SERVERNAME
+<TD align=center>$PLAYERS/$MAXPLAYERS
+<TD align=center>$RULE:mission
+<TD align=center>$MAP
+<TD>$HOSTNAME
+$(IF:RULE(info))<TR bgcolor=black><td colspan=5><table><tr><td>$(RULE:info)</table>$(ENDIF)
+$(IF:PLAYERS)$(IF:FLAG(-P))
+<tr><td>
+<TR bgcolor=#603030>
+<TD colspan=4><TABLE cellpadding=1 border=0 cellspacing=0 width=90%>
+  <TR bgcolor=#555555>
+  <TH width=10 bgcolor=#603030>&nbsp;</TH>
+  <TH width=110>Player Name</TH>
+  <TH width=40>Type</TH>
+  <TH width=40>Tribe</TH>
+  <TH width=40 align=right>Score</TH>
+  <TH width=40>&nbsp;</TH>
+  <TH width=40 align=center>Team</TH>
+  <TH>&nbsp;</TH>
+$PLAYERTEMPLATE
+</TABLE>
+$ENDIF$ENDIF
+<tr><td>&nbsp;</td>
+$ENDIF

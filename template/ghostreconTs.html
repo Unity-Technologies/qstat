@@ -1,0 +1,137 @@
+<TABLE cellspacing=0 cellpadding=5 border=0 width=90%>
+<TR bgcolor=#555555>
+<TH width align=center>Server Name
+<TH width align=center>Players
+<TH width align=center>Map
+<TH width align=center>Mission
+<TH bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$SERVERNAME
+<TD align=center>$PLAYERS/$MAXPLAYERS
+<TD align=center>$MAP
+<TD align=center>$(RULE:mission)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Game Mode
+<TD align=center>Mission Type
+<TD align=center>Dedicated Server
+<TD align=center>Ip Addr
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:gamemode)
+<TD align=center>$(RULE:missiontype)
+<TD align=center>$(RULE:dedicated)
+<TD align=center>$IPADDR:$PORT
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Status
+<TD align=center>Time Limit
+<TD align=center>Time Played
+<TD align=center>Remaining Time
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:status)
+<TD align=center>$(RULE:gametime)
+<TD align=center>$(RULE:timeplayed)
+<TD align=center>$(RULE:remainingtime)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Version
+<TD align=center>Spawn Type
+<TD align=center>Spawn Count
+<TD align=center>Restrictions
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:version)
+<TD align=center>$(RULE:spawntype)
+<TD align=center>$(RULE:spawncount)
+<TD align=center>$(RULE:restrict)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Password
+<TD align=center>Threat Indicator
+<TD align=center>Patch Level
+<TD align=center>Observing
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:password)
+<TD align=center>$(RULE:ti)
+<TD align=center>$(RULE:patch)
+<TD align=center>$(RULE:allowobservers)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Start Timer
+<TD align=center>Start Time Value
+<TD align=center>Time untill Start
+<TD align=center>Debrief Time
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:usestarttime)
+<TD align=center>$(RULE:starttimeset)
+<TD align=center>$(RULE:startwait)
+<TD align=center>$(RULE:debrieftime)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+<TR bgcolor=#555555>
+<TD align=center>Respawn Minimum 
+<TD align=center>Respawn Maximum
+<TD align=center>Respawn Safe
+<TD align=center>IFF Mode
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:respawnmin)
+<TD align=center>$(RULE:respawnmax)
+<TD align=center>$(RULE:respawnsafe)
+<TD align=center>$(RULE:iff)
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+</TABLE>
+<TABLE cellspacing=0 cellpadding=1 border=0 width=70%>
+<TR bgcolor=#555555>
+<TH align=center>MOTD
+<TH bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$(RULE:motd)
+<TD bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#555555>
+<TH align=center>Mods
+<TH bgcolor=black>&nbsp;
+</TR>
+<TR bgcolor=#603030>
+<TD align=center>$GAME
+<TD bgcolor=black>&nbsp;
+</TR>
+<tr><td>
+</TABLE>
+$(IF:PLAYERS)$(IF:FLAG(-P))
+<TABLE cellpadding=1 border=0 cellspacing=0 width=50%>
+  <TR bgcolor=#555555>
+  <TH width=210 align=center>Player Name</TH>
+  <TH width=150 align=center>Team</TH>
+  <TH width=150 align=center>Health</TH>
+  <TH bgcolor=black>&nbsp;</TH>
+$PLAYERTEMPLATE
+</TABLE>
+$ENDIF$ENDIF
+<P></P>

@@ -1,0 +1,1401 @@
+QStat version 2.5c
+** UPDATED for 2.5c **
+Nov 11, 2002
+
+Summary of New Features
+-----------------------
+Unreal Tournament 2003 support [-ut2s]
+	Including support for the current UT2003 patch
+Ghost Recon support [-grs]
+	Bob Marriott provided the patch for this.  I integrated with
+	very few changes.  See info/GhostRecon.txt for more detail.
+	Thanks Bob!   Supports versions 1.2, 1.3, 1.4 and expansions
+-noportoffset to disable adding the port offset to query packets
+	There's a "noportoffset" query argument to set this per-server.
+-showgameport to output the game port instead of the query port
+	With -showgameport, qstat will report the game port instead of
+	the query port in $ARG, $PORT, and $HOSTNAME.  If the query port
+	is different from game port, the query port will be set in the
+	"_queryport" server rule.
+	There's a "showgameport" query argument to set this per-server.
+
+New template variables
+----------------------
+$TOTALMAXPLAYERS		Sum of max players from all servers
+$PLAYERSTATID			UT2003 global player stat id (not yet
+				supported by Epic).
+$UNREALTOURNAMENT2003
+$GHOSTRECON
+$PLAYERLEVEL			Character level for NWN
+$IF:DEATHS			True if $DEATHS > 0
+$TOTALUTILIZATION		How full the servers are (0 to 100 percent)
+
+Fixes
+-----
+Fixed packet parsing for Battlefield 1942.  Use -gps to query BF1942
+	servers.  The query port is usually 23000.
+Fix broadcast queries for Tribes 2, Quake 3, UT2003 (hopefully)
+Fix all output modes to support team-numbers, team-names, and no-team styles
+Fix xml output; accidentally disabled <ping> and <retries>
+Fix player info for NWN and other GPS games
+Fix sv_password rule on Half-Life servers
+Removed some debug output
+
+Thanks
+------
+A big round of applause for Bob Marriott, author of the Ghost Recon
+support.  He reverse engineered the GR status protocol and maintained
+the patch through several protocol revisions.  And he wrote
+documentation!
+
+Thanks to Ludwig Nussel and Alex Burger of XQF for testing, suggestions,
+and some timely stubborness :-)
+Thanks for testing and suggestions: Kingsley Foreman, Pierre Smolarek,
+Simon Garner and Paul Witt.
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.5b **
+August 8, 2002
+
+Whoops, I broke XQF.  When using QStat raw mode, XQF and other programs
+rely on the number of fields returned staying fixed.  I added a game/mod
+field to most raw output which breaks these programs.
+
+Summary of New Features
+-----------------------
+Extended -raw with a -raw,game variation that adds the game/mod name to
+	the end of the raw server output.  Otherwise, the game/mod info
+	is not output in raw mode.
+
+Thanks to Ludwig Nussel for not biting my head off (too much).
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.5a **
+August 6, 2002
+
+Final version of QStat 2.5a.  Please send feedback and bug reports
+to qstat-users@yahoogroups.com or to steve@qstat.org
+
+This version of QStat is being distributed under the Artistic License.
+The terms of the license can be found in LICENSE.txt in the QStat package.
+
+Summary of New Features
+-----------------------
+Config file support to define new game types
+	This is a major new feature.  This will allow users to define
+	new game types and master servers, including setting custom
+	request packets.  I expect that support for most new game types
+	will be accomplished via config files.
+	The default config file is "qstat.cfg".  More game types from
+	QStat users can be found in "contrib.cfg".
+Added support for "status port offset" to config file; UNS (unreal) has
+	this set to 1.  If you extend UNS, the new server type will have
+	the same status port offset.
+Added a GNUmakefile to support gmake
+	Updated COMPILE.txt with new instructions
+Improve Half-Life server status; extracts mod information and
+	secure status
+Add support for server rules template (-Tr file)
+	See qstatdoc.html for instructions.
+Support broadcast queries for Tribes and Tribes 2
+Star Trek: Elite Force server and master (-efs and -efm)
+Return to Castle Wolfenstein server and master (-rws and -rwm)
+Debug flag (-d)  (uses an improved packet output format)
+Support color player names in Soldier of Fortune
+
+Default Config File (qstat.cfg)
+-------------------------------
+Command and Conquer: Renegade server (-crs)
+Soldier of Fortune 2 (-sof2s)
+Soldier of Fortune 2 Master (-sof2m)
+Medal of Honor: Allied Assault server (-mas)
+Medal of Honor: Allied Assault server, Quake 3 protocol (-maqs)
+Half-Life "infostring" protocol (-hlqs)
+	This is a Quake 2 style protocol
+
+Fixes
+-----
+Fixed raw output to include the game or mod name as the last item
+Fix template to allow numbers, '.' and ' ' in rule names
+	Refers to $(RULE:someserverrule)  Allowing space ' ' may
+	break existing templates if they use syntax like
+		$RULE:maxbullets Max Bullets
+	This can be fixed by change it to $(RULE:maxbullets)
+	This change was made because SOF2 allows spaces in server rule
+	names.
+Fix Unreal and Gamespy based servers to support backslashes '\' in
+	player names (only partially worked before)
+Support Half-Life split packets; this happens to the rules info from
+	some Half-Life servers (usually AdminMod and DOD).
+XML output; added <?xml ...> element, UTF-8 output option (-utf8)
+XML; added <gametype>
+Fix crash on broadcast queries
+Avoid duplicates in the rule list
+Fixed -srcip to put address in the right byte-order
+Work-around for crash on Windows when bind() returns temporary error
+Finish output when -timeout expires
+Changed Q3 based servers to use a two-packet status query; I think
+	this gets more accurate mod information.
+More accurate player count on Quake based servers
+Compiles on OSX/Darwin
+Fix one byte overrun on QuakeWorld packet
+
+New template variables
+----------------------
+$TYPEPREFIX		The server's game type prefix
+$RULENAMESPACES		Allow spaces in rule names
+$RULETEMPLATE		Invoke the server rule template
+$RULENAME		The rule name
+$RULEVALUE		The rule value
+$(IF:RULENAME(name))	True if rule name equals "name"
+$(IF:RULEVALUE(value))	True if rule value equals "value"
+(see qstat.cfg for gametype variables)
+
+Thanks
+------
+Many thanks to all the beta testers for bug reports and feature
+suggestions.  There are many to list, but the following provided
+significant help:
+Kingsley Foreman, Mike Davis, Ludwig Nussel, Pierre Smolarek,
+aphax, and Simon Garner.   and I'm sure I forgot someone
+
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.4e **
+Oct 1, 2001
+
+This release is basically to fix Tribes 2 support.  That was all my
+fault, Dynamix/Sierra did nothing wrong.  Since I was going through
+the trouble of a full release, I decided to toss in Descent 3 support.
+Don't be impressed, a patch for D3 was sitting in my inbox.  :-)
+
+Summary of New Features
+-----------------------
+Descent 3 support
+-htmlmode (same as $HTML, but for -raw mode)
+
+Fixes
+-----
+Fixed Tribes 2 queries
+Fixed $SHIRTCOLOR when no color names are used
+
+Thanks
+------
+Many thanks to Matthew Mueller for a patch to support Descent 3.
+Matthew thanks Brian Hayes, Kevin Bentley, and tcpdump.
+Thanks to Thomas Hager for putting me on the right track for the
+Tribe 2 bug.
+
+Sorry, the real -noconsole support did not make it into this release.
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.4d **
+August 8, 2001
+
+Summary of New Features
+-----------------------
+Half-Life master filters
+Names for Quake 3 game types
+XML output mode
+Broadcast support for Gamespy style protocols
+Append output file option [-af]
+Option to print carets in Q3 player names [-carets]
+OS/2 Warp EMX compiler port
+OpenBSD support
+Options to specify source ports [-srcport] and source IP address [-srcip]
+	for packets sent by qstat.  Handy for getting through firewalls.
+	See docs for details.
+
+Fixes
+-----
+Tribes 2 teamdamage flag
+Fixed writing beyond array bounds when reading templates on Windows.
+	(maybe this will fix the garbage characters some people see)
+Fixed player sorting for games with teams (tribes 1 and 2).
+Removed win32/qstat.exe from the tar.gz
+Trying the MS C 6.0 compiler again (win32/qstat.exe)
+Fixed running QStat from PHP; would crash or give no data
+
+New template variables
+----------------------
+$CLEARNEWLINES		Convert newlines to spaces in all variable output.
+			Handy for Tribes 2 servers with long descriptions.
+$GAMETYPE		Quake 3 only - the name of the game type
+
+Thanks
+------
+Most of this release was contributed by QStat users:
+
+XML output			Simon Garner
+Half-Life master filters	Ludwig Nussel
+OS/2 Warp EMX			Mikulas Patocka
+OpenBSD				subset
+
+A three rail gun salut to ya!
+
+And thanks to Tahi 'Linus' Walcher for helping find the PHP bug.
+strace is a thing of the gods.
+
+I was hoping to fix one other problem for Windows users.  QStat is a
+command-line style program, so Windows always gives it a console
+window.  This is annoying if you're running QStat from a web-page or a
+GUI server browser.  I can fix this, but it's not that easy.  In the
+mean time, I've added a -noconsole option that will delete the console
+as soon as qstat starts.  The effect is that a console window will
+flash on the screen briefly.  QStat still runs, you just won't see any
+output on screen.  Anyway, I'll craft a real implementation of
+-noconsole in the next release.
+
+Steve, steve@qstat.org
+
+
+
+** UPDATED for 2.4c **
+Apr 19, 2001
+
+Summary of New Features
+-----------------------
+Tribes 2 player type and tribe tag information
+Changed Quake 3 default version to "48" (1.27g)
+New Tribes 2 master filters. (see documentation)
+
+Bug Fixes
+---------
+Fixed win32/qstat.exe binary; re-compiled using old compiler
+Convert newlines into spaces when printing Tribes 2 server info
+    in raw mode.
+Fixed problems with the 22337 build of Tribes 2.
+Tribes 2 raw output is now the same format as most other servers.
+    Note that this reverses the order of current and max players
+    from what they were in 2.4b.  And adds ping and # retries values.
+
+New template variables
+----------------------
+$IF:ISBOT
+$IF:ISALIAS
+$IF:TRIBETAG
+$TRIBETAG
+
+Notes
+-----
+	[ Blarg, I hate it when I blow a release.  Many people had
+	  problems with the win32/qstat.exe in 2.4b release.  I had
+	  compiled this with a new compiler version on a new Win2k
+	  install.  It worked fine for me, but apparently the new
+	  compiler has compatibility problems.  So, I've gone back
+	  to the old compiler and old NT 4.0 install.
+	  Several people also reported problems using 2.4b with the
+	  new 22337 build of Tribes 2.
+	  Sorry about the problems.  This release should fix things
+	  up. ]
+
+The new Tribes 2 player info is available in raw mode (see docs) and
+templates.  But it is not displayed in the interactive output.  I've
+updated the sample Tribes 2 templates to display the new player info.
+
+Finally, there seem to be a number of bugs with the Tribes 2 master
+servers.  One of the bugs is noted in the documentation.  Dynamix is
+aware of the problems and working to fix them.
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.4b **
+Apr 13, 2001
+
+Summary of New Features
+-----------------------
+Support for Tribes 2 [-t2s] (builds numbered 22075 or higher)
+Support for Tribes 2 master [-t2m]
+Support for Quake 3 and Tribes 2 colorized player names [-htmlnames]
+Sample HTML templates for Tribes 2 [template/tribes2*]
+New QStat web site!   http://www.qstat.org
+New mailing lists for QStat users and announcements! (see web site)
+
+New template variables
+----------------------
+$ISMASTER
+$TRIBES2
+$TRIBES2MASTER
+$HTMLPLAYERNAME
+
+Bug Fixes
+---------
+Fix 'game' value for some Quake 2 based servers
+Fixed some cases where QStat will hang
+Fixed some picky compiler warnings
+
+Notes
+-----
+The Tribes 2 master server has a number of fancy filtering options.
+Check the "Tribes 2 Master" section in the documentation for details.
+
+Many thanks to Brad Heinz and Dynamix for their help with Tribes 2.
+Thanks to the QStat beta testers:
+	Dr. Chmod, Marauder, Leif Sawyer, Luca Spada, Simon Garner,
+	and Jose Ivey
+
+Steve, steve@qstat.org
+
+
+** UPDATED for 2.4a **
+Oct 5, 2000
+
+Summary of New Features
+-----------------------
+Support for Gamespy master [-gsm]
+Support for "Gamespy style" protocol queries (adds 12+ games) [-gsm and -gps]
+More server sort options [-sort]
+Player sort options [-sort]
+Option to set the output file [-of]
+Quake 3 master query argument; can query by protocol version
+
+Other Improvements
+------------------
+Way way way faster
+Fixed Q3 master server queries
+Fixed queries of SoF 1.05 servers
+Servers now queried in the order provided to QStat (was reverse order)
+Fixed ^ display in Q3 player names
+Partial fix for '\' in player names
+Players now displayed in the order the server reports them (was reverse order)
+Rules now displayed in the order the server reports them (was reverse order)
+Server variables can be referenced inside player templates
+Fixed raw display of SoF servers
+Improved HalfLife queries; fetches sv_type and sv_os server rules
+Much much much faster
+
+New template variables
+----------------------
+$IF:GAMESPYMASTER
+$IF:GAMESPYPROTOCOL
+
+Notes
+-----
+I'm probably treading on some toes with the Gamespy master support.
+Someone figured out that the Gamespy server lists are not protected,
+and sent me the protocol.  Once I had that, supporting the master was
+trivial.  See the documentation for details on using a gamespy master.
+
+Many games are using the Unreal style server status protocol.  Maybe
+because there are lots of Unreal engine games.  Or maybe because
+developers want Gamespy support, so they use a protocol that Gamespy
+already supports.  There are too many of these games to add individual
+game types and command-line options.  So I've lumped them together as
+"Gamespy Protocol" servers using the game type "GPS".  They all seem
+to have a server rule called "gamename" set to the name of the game
+(eg. "roguespear", "turok2").
+
+I made a pile of performance improvements to QStat.  Start-up time for
+large server lists is very fast.  Queries on large servers lists is
+also much faster.  And queries require much less CPU time.  If you
+have -maxsim set high to reduce query times, you might see more
+server timeouts now.  QStat can spew out packets so fast, you'll see
+more packet loss and hence more timeouts.
+
+Thanks
+------
+Many thanks to the beta testers and contributors.  They provided
+bug fixes, bug reports, suggestions, ideas, protocol traces, and
+kind words.  I'll spare them the spam by just mentioning real names:
+
+Alex Burger, Conan Ford, Vitaliy Fuks, Mike Dowell, Nico de Vries,
+and Jose Ivey
+
+
+Steve
+
+
+** UPDATED for 2.3g **
+Feb 3, 2000
+
+BETA is done!  The 2.3 release is stable enough now to drop the
+beta qualifier.
+
+Summary of New Features
+-----------------------
+Added options to support Soldier of Fortune [-sfs]
+
+New template variables
+----------------------
+$IF:SOLDIEROFFORTUNE
+
+There are command-line options to control the following, but it's
+handy to have control within the templates as well.
+$COLORNUMBERS		Set the format of $SHIRTCOLOR and $PANTSCOLOR
+$COLORNAMES
+$COLORRGB
+$TIMESECONDS		Set the format of $CONNECTTIME
+$TIMECLOCK
+$TIMESTOPWATCH
+
+Summary of Fixes
+----------------
+Fix crashes in Unreal -raw player output (duh).
+Fix hangs doing Unreal server queries.
+Fix $GAME for Quake 3 servers
+Fix Kingpin servers reported as Q2 servers
+
+Notes
+-----
+The SOF server does not return map information, so you'll just get a
+'?' or blank for an SOF map.  The map info is returned by the master
+server.  But QStat does not yet support the SOF master server.  I
+traced the SOF master protocol, but it's totally different from any
+other master server.  Before I invest the time into writing a
+parser for the SOF master packets, I'm going to wait to see if it
+changes before the final retail release.
+
+Notes on Future Releases
+------------------------
+Now that the 2.3 release train is winding down, what's up for
+QStat 2.4?  I don't know, but there's a few frequently requested
+features:
+ - More sort options; server and player
+ - More games; Delta Force, Descent III
+ - Fetch server lists from web pages
+ - Better templates; variables and full expression evaluation
+ - Better performance on large server lists
+ - Examples and samples
+
+I don't know which features will be available when, so don't ask.
+
+There may be one or two more 2.3 releases to fix critical bugs or
+add a new game.
+
+Getränk und ist fröhlich,
+
+Steve
+
+
+** UPDATED for 2.3f BETA **
+Jan 11, 2000
+
+Summary of Fixes
+----------------
+Added player ping and face to Unreal -raw output
+Fix queries for version 405 Unreal servers
+
+New template variable
+---------------------
+For the player template:
+$FACE       The texture used on a player's face.
+            This was added to Unreal a while back, but I didn't notice.
+
+Notes
+-----
+The fine blokes at Unreal decided to fiddle with the Unreal query
+protocol.  When asked why PingTool and QStat did not work with the
+new servers, they responded that we must not be following the new
+GameSpy spec.  Ha!  As if they publish this information or care to
+keep other server browser authors informed.  Sheesh.
+
+Steve
+
+
+** UPDATED for 2.3e BETA **
+Jan 7, 2000
+
+Summary of Fixes
+----------------
+Quake III Arena master queries
+Half-Life master queries
+$(IF:GAME) was true when $GAME was blank (Tribes)
+Improved Q3A player name translation
+Fixed raw mode output for Unreal (minor incompatible change)
+Updated docs for raw mode output
+Add one to Unreal/UT port to get query port (incompatible change)
+$GAME and "-sort g" now work for Unreal/UT
+
+Summary of New Features
+-----------------------
+Options added for Kingpin and Heretic II game servers.  These
+two games were previously supported with the -q2s option.
+
+New options: -kps and -hrs
+New template conditions: $(IF:KINGPIN) and $(IF:HERETIC2)
+
+Notes
+-----
+Numerous people sent me the fix for the Q3A master query problem.  I
+think the first was Ted Milker, but thanks to all for your suggestions
+and patience.
+
+The Half-Life master support wasn't using the latest protocol, so
+needed an upgrade.  Now you can get the full 2100+ server list from
+the master.  BTW, there are more HL servers than Q3A servers.
+
+Unreal support was changed to automatically add one to the port number
+to find the query port.  This is probably why people thought QStat
+didn't support UT.  For those that figure it out already, you'll have
+to remove your own +1 hacks to use this release.
+
+I apologize for the long delay between releases.  Work, holidays, and
+health problems cut my free time to less than zero.
+
+Best wishes for the new millennium,
+
+Steve
+
+
+
+** UPDATED for 2.3d BETA **
+May 12, 1999
+
+More bug reports and suggestions prompted this release.
+
+Quake 3 master
+--------------
+The id Q3 master server isn't working very well.  The protocol is lame
+and its network is way over subscribed.  I've enhanced QStat to deal
+with the changes, but I actually think they (id) have made matters worse
+rather than better.  QStat can now, sometimes, get all the servers
+from the master, but it often can't get 30-60% of the servers.  This
+is not QStat problem, but id's.  I've sent them a detailed analysis
+of the problems and made some suggestions.
+
+Summary of Fixes
+----------------
+Improve reliability of Q3 master server queries
+Support Tribes servers with 3+ teams
+Strip escape sequences from Q3 player names; use -hpn if you want the
+	complete content of player names.
+Accurately calculate number of servers on a master (ignore duplicates).
+Fixed $(ISFULL) to be false if the server is empty [duh]
+
+New Features
+------------
+New option to control master server retry interval ("-mi") independent
+	of server retry interval.
+Increase maximum -maxsim to 256 for Win32.
+Added $(TYPESTRING) template var; shows server's type string (eg. q2s, hls)
+Added $(NOWINT) template var; shows the current time in seconds since
+	00:00:00 UTC, January 1, 1970.
+
+
+Notes
+-----
+Many many thanks to Nico de Vries (Nico.de.Vries@ucc.nl) of CLQ for
+the many bugs reports, suggestions, etc.  Thanks to stincey@nireland.com
+for figuring out the Tribes 3+ teams bug.
+
+
+Steve, steve@activesw.com
+
+
+
+** UPDATED for 2.3c BETA **
+May 3, 1999
+
+A slew of bug reports arrived over the weekend.  I guess QStat users
+are weekend warriors.  Thanks to the four people that sent patches for
+the Q3 master breakage.  I won't say who's patch I used, but I
+selected the most elegant.
+
+id has said that the Q3 master protocol will be changing alot over
+the next weeks.  I'll try to track their progress, but no promises.
+They also asked for suggestions on reducing packet size, so I sent
+them my ideas (all quite clever <puff> <puff>).
+
+Summary of Fixes
+----------------
+Q3 master server
+Q3 server name
+Tribes -raw mode [forgot to write it]
+Removed leftover debug print
+Switched snprintf() to sprintf() [much more portable]
+Half-Life game rules [useful for TFC]
+Fixed -progress output
+Added player ping to Unreal player output
+Fixed minor mistakes in docs
+
+Notes
+-----
+Many thanks to:
+"Dark Grue" <darkgrue@iname.com> of QStatList
+Nico de Vries <Nico.de.Vries@ucc.nl> of CLQ
+"Joe S." <jszabo@eden.rutgers.edu> of ... I forget what Joe does
+Sven Grundmann <grundema@uni-duesseldorf.de>
+
+for their bug reports, patches, and suggestions.
+
+Steve, steve@activesw.com
+
+
+** UPDATED for 2.3b BETA **
+April 29, 1999
+
+New: Quake III and BFRIS support
+Not many complaints about problems with 2.3a, looks like the
+new code is working fine.
+
+Summary of New Features
+-----------------------
+Quake III: Arena (Q3Test)
+Quake III master
+BFRIS (www.aegistech.com)
+
+Minor Changes
+-------------
+A couple people pointed out that the docs and the code did not
+exactly agree on the server type strings.  So, I've fixed the
+code to match the docs.  The following type strings were changed:
+
+2.3a            2.3b
+----            ----
+QW	-->	QWS
+Q2 	-->	Q2S
+
+Notes
+-----
+Voluminous thanks to Dave "Zoid" Kirsch of id Software for supplying
+diffs to support Quake III.  Zoid says has used QStat "from time to time"
+over the years.  Makes me smile.
+
+And a sweeping bow to Pete Ratzlaff of Harvard for the diff to support
+Linux game BFRIS.  See www.aegistech.com for info.
+
+I gave the diffs the wary eye for fuggly programming, but both were
+written nicely and applied without a hitch.  I performed minimal
+testing of the new code, please let me know if there are problems.
+
+Steve, steve@activesw.com
+
+
+** UPDATED for 2.3a BETA **
+April 19, 1999
+
+Lots of changes and additions in this release, far more than I have
+patience to test.  Please try this release with your web page, stats
+program, server browser, and what not.  If you encounter any problems
+_please_ send me email!  Flames on my sloppy coding are acceptable.
+
+Summary of New Features
+-----------------------
+Complete Half-Life support (players and server rules)
+Half-Life master server		(option -hlm)
+Tribes servers			(option -tbs)
+Tribes master server		(option -tbm)
+Shogo				(option -sgs)
+Hex player colors		(option -hc)
+Several new template variables
+Created server types table to simplify code
+
+Bug Fixes
+---------
+Servers without "hostname" rule appeared to TIMEOUT
+One or two other boo-boos
+
+Incompatible
+------------
+The option "-qw" has been removed.  Please use "-qwm" instead.
+
+New variables for output templates
+----------------------------------
+Generic variables
+$(DEFAULTTYPE)	Full name of the default server type (-default)
+Server variables
+$(ISEMPTY)	True if the server has no players
+$(ISFULL)	True if the server is full of players
+Player variables
+$(PACKETLOSS)	Players packets loss (Tribes only)
+$(ISTEAM)	True if this player represents a team (Tribes only)
+$(TEAMNAME)	Name of this player's team (Tribes only)
+
+Notes
+-----
+Many thanks to the following for their assistance:
+zarjazz@barrysworld.com			Tribes
+seb@club-internet.fr, carl@d-n-a.net	Shogo
+sean@msiconsulting.com			Half-Life
+
+Thanks to the many people who have sent suggestions for improvements.
+I've incorporated some of them in this release, more will follow in
+later releases.
+
+This release was focused on supporting popular new games and making
+it easier to add new games to the code.  The backlog of new games
+support is now empty.  If there's a game you would like to see
+supported, please send email.  The Linux game BFRIS
+(http://www.aegistech.com) is the only planned new game support.
+
+Steve, steve@activesw.com
+
+
+
+** UPDATED for 2.2b **
+Jan 15, 1999
+
+D'oh!  I need to do more testing.  The -raw mode did not work at
+all for Half-Life.  Thanks to Dark Grue <darkgrue@iname.com> for
+bring that to my attention.
+
+Bug Fixes
+---------
+Fix Half-Life support with -raw mode
+Shush compiler warning on Linux
+
+
+Steve, steve@activesw.com
+
+
+** UPDATED for 2.2a **
+Jan 14, 1999
+
+Not too much in this release, but I've been getting an email a day
+asking about Half-Life support.  The Half-Life status packets are
+totally different from Quake II, so I've only completed the general
+info so far.  Players and rules from Half-Life will be available in the
+next release.  I also threw in flags to support Sin.  Sin was
+supported in previous releases by pretending it was a Q2 server, but
+now it has its own flags.
+
+Future releases of QStat will support even more games (Shogo, Blood 2,
+Heretic 2, etc).
+
+Summary of New Features
+-----------------------
+Sin support				(option -sns)
+Half-Life (partial) support		(option -hls)
+
+Bug Fixes
+---------
+Divide-by-zero bug with sorting
+Memory allocation bug using -H (hostname lookup)
+
+New variables for output templates
+----------------------------------
+Server template variables
+$SIN		True if the server is running Sin
+$HALFLIFE	True if the server is running Half-Life
+
+
+Steve, steve@activesw.com
+
+
+
+** UPDATED for 2.1a **
+Oct 4, 1998
+
+This release supercedes previous 2.1 releases (2.1z BETA and 2.1y BETA)
+
+Summary of New Features
+-----------------------
+Unreal 2.15+ support			(option -uns)
+Broadcast queries			(prefix address with '+')
+Save lists from master servers		(option -qw,outfile and -q2m,outfile)
+
+Bug Fixes
+---------
+Fixed host cache on Intel platforms
+Report Host Not Found as a server error (so it appears in templates
+	and raw output)
+
+New variables for output templates
+----------------------------------
+Server template variables
+$HOSTNOTFOUND	True if the host name lookup failed
+
+Player template variables
+$MESH		Player mesh (model) name (Unreal only)
+
+Notes
+-----
+QStat will support the public Unreal master server once it's
+done.  The current Unreal master server is private to GameSpy
+(snarl).
+
+The broadcast queries is an experimental feature.  I've only
+tested it with Quake II.  Other games will be tested and
+supported in later releases.  For example, querying the local net for
+Q2 servers on the default port:
+	qstat -q2s +255.255.255.255
+The '+' makes QStat broadcast to the given address.  The default
+broadcast address for all nets is 255.255.255.255.  You can
+also use a network specific broadcast (eg. 199.2.18.255).  On
+Unixes, 'ifconfig -a' will display the broadcast address for
+all attached networks.
+
+The ",outfile" option for master servers is handy for dealing with
+unreliable master server (such as the id Q2 master).  Run qstat
+once to save the servers lists to files, and a second time to
+query the servers:
+	qstat -q2m,outfile satan.idsoftware.com,idq2.lst
+	qstat -f idq2.lst
+The first command saves the server list from the id Q2 master into
+"idq2.lst".  If the master isn't working, then the file retains
+its previous contents.  The second command queries the servers in
+that file.
+
+I've also included the templates for an example Unreal server
+list web page.
+
+Thanks to my wonderful users for reporting bugs and making
+suggestions.  And a special thanks to the Unreal development team for
+actually documenting their query protocol (unlike some other well known
+first person shooter developers).
+
+Steve, steve@activesw.com
+
+
+
+** UPDATED for 2.1y BETA **
+Aug 22, 1998
+
+Summary of New Features
+-----------------------
+HexenWorld support
+Revived support for id's Q2 master
+New variables for output templates
+Faster host cache initialization
+More efficient server query (Unix only)
+Support for AIX 4.2 and HPUX 11.0
+
+
+Bug Fixes
+---------
+Fixed bogus query failure on second server on same IP address.
+Fixed to ignore QW and Q2 server packets that contain lots of error
+	messages.  Also disabled printing of the "Odd packet" messages.
+	They can be enabled with the -errors option.
+Fixed output templates on Windows
+
+Non-feature
+-----------
+Unreal support.  Unreal needs to get fixed before QStat can support it.
+
+
+HexenWorld support
+------------------
+Use the -hws command line option, or the HWS server type key.
+
+Revived support for id's Q2 master
+----------------------------------
+id's Quake II master server was broken for a long time.  QStat
+supported id's Q2 master, but the master only rarely returned anything
+(and you had to wait up to 30 seconds for a response).  When QuakeSpy
+announced that id had fixed their Q2 master, I was surprised that QStat
+did not work on the fixed master.  Turns out the "fix" also changed the
+query protocol slightly.
+
+New variables for output templates
+----------------------------------
+General variables
+$\		Inhibit output of the next newline.
+
+Server template variables
+$HEXENWORLD	True if the server is HexenWorld (use with $IF)
+$UNREAL		True if the server is Unreal (use with $IF)
+
+Player template variables
+$DEATHS		Number of deaths (Unreal only)
+$TEAMNUM	Team number (Unreal only)
+
+un-Unreal support
+-----------------
+I implemented support for the original Unreal server status protocol.
+However, the Unreal server worked so poorly as to be unusable.  Unreal
+is getting improved Internet support, but it's not ready yet.  When
+Unreal gets fixed, QStat will support the new protocol.
+
+
+I've also included the templates I use for the status page of my
+own Quake II servers.
+
+Steve, steve@activesw.com
+
+
+
+** UPDATED for 2.1z BETA **
+Feb 28, 1998
+
+Summary of New Features
+-----------------------
+Output templates (HTML generation)
+Server sorting
+Host name and IP address cache
+Support for Quake II master
+
+New Flags
+---------
+See the documentation (qstatdoc.html) for complete details.
+
+-default server-type
+	Set the default server type which should be one of: QS, QW, QWM,
+	H2S, Q2, or Q2M.
+-Hcache file
+	Host name cache file
+-sort sort-key
+	Sort the servers by the sort-key
+	p	sort by ping
+	g	sort by game
+-Tserver file
+	Server output template.  Displayed once per server.
+-Tplayer file
+	Player output template.  Displayed once per player (if -P is used)
+-Theader file
+	Header output template.  Displayed once before any servers are output
+-Ttrailer file
+	Trailer output template.  Displayed once after all servers and players
+	are output.
+-q2m	Get servers from Quake II master server
+
+Summary of Enhancements
+-----------------------
+Remove duplicate server addresses before query
+Reduce memory usage when -R and/or -P are not specified
+Work-around a memory leak in Solaris 2.5
+Wait for results from all master servers before starting to query servers
+VMS support
+
+Release Notes
+-------------
+This is a major new release of QStat.  There is over 1400 lines of new
+code with all the benefits and drawbacks therein.  I hope you like the
+features, but I really hope it's not riddled with bugs.  There might be
+some portability issues since I only have access to Solaris, HP-UX, Irix,
+and Windows NT.  If you have a problem compiling, please send me a note.
+
+No major new features are planned for 2.1 beyond what you see here.
+However, I plan to make enhancements to the sorting and template code
+before final release.  Please tell me what is missing.  Obvious
+deficiencies include:
+- No per-server output files (can't have a server list with a link
+  to a page with details about each server).
+- Missing $ELSE ($IFNOT is a cheap replacement)
+- Flexible $IF expressions would be nice
+- The output template variable syntax is kinda lame: you use
+  $(IF:RULE(email)) to test for a rule and $(RULE:email) to output the value
+- Can only sort on ping and game.  Would like to add map, players, etc
+- Can't sort the player lists
+- Host cache administration might be nice (re-verify command)
+- Host cache sharing.  Use file locking to allow multiple qstats to
+  share the same host cache.
+
+Presence on the list above does not guarantee implementation!  Please
+tell me what you want, even if it's listed above.
+
+A host name cache can take a _long_ time to build the first time (30
+minutes, minimum).  I will try to keep starter cache files on the QStat
+web site.  The current cache file for servers in the QW masters
+contains over 1000 entries.
+
+I've included sample output templates for HTML.  They are not the
+best HTML, but they demonstrate some of the neat tricks you can do.
+If you use the templates with '-R', then server rules like email
+and web will be output as links next to the server.  If you get
+player status (-P), then a subtable is output with player info
+formatted with the correct columns for the server type.  A sample
+command line to use the templates:
+
+qstat -f myservers.txt -Ts template/server1.html -Th template/header1.html
+	-Tp template/player1.html -Tt template/trailer1.html > myservers.html
+
+(The template files in qstat21z.zip have a ".htm" extension)
+
+Finally, the id Quake II master has a bug (gasp!) that makes it _very_
+slow to respond some times.  QStat tries to work-around the bug by
+increasing the retry interval by 20 times while waiting for a response
+from a Quake II master.  The retry interval is restored once all the
+masters have been queried.
+
+Thank you for your support.
+
+
+
+** UPDATED for 2.0b **
+Dec 29, 1997
+
+- Fix map name for Quake II 3.07-09
+  The rule key changed from "map" to "mapname".  If both are present,
+  then "mapname" takes precedence.
+- Q2: Noticed some servers are running custom games.  The rule keys for
+  games are confusing:
+	"gamename"	Always seems to be set to "baseq2", unless a
+			custom game is being run, in which case "gamename"
+			is not set at all.
+	"gamedir"	Probably the same as "*gamedir" in QW.
+	"game"		Always the same as "gamedir" in the servers I
+			stat'd.  Maybe this can be used to indicate the
+			name as well as the version of the game being
+			run.
+  For now, QStat displays the value of the "game" key in the non-raw
+  output of Q2 servers.
+- Print file name and line number information with errors when reading
+  files.
+- new option: -progress    display progress meter
+	Thanks maynard@ultra.net
+
+Leave for the Holidays and the id boys change the protocol.  A minor
+change, but a few QStat users noticed right away.  The change does
+not affect people using -raw.
+
+
+
+** UPDATED for 2.0a **
+Dec 9, 1997
+
+- Support for Quake II servers, see documentation for usage.
+- Minor fix to connect time formatting.
+
+I don't have Quake II, but the status protocol is very similar to
+QuakeWorld, so I was able to figure it out by poking existing Quake II
+servers on the net.  Id has stated that the network protocol will
+get an upgrade soon after the in-store release.  As always, QStat
+will track these changes as they become available.
+
+
+
+** UPDATED for 1.6 **
+Nov 30, 1997
+
+Changes since beta5.  Minor enhancements and a few fixes.
+
+- Removed all the annoying copyright restrictions.
+- Added option -ne : no empty servers
+	Thanks secabeen@fnord.rh.uchicago.edu
+- Added option -raw-arg : special for QStatList (see qstat docs)
+	Thanks darkgrue@iname.com
+- Added option -timeout : total time in seconds before giving up
+	Can prevent overlapping runs when cron runs qstat every five
+	minutes.
+- Added gamedir to QW server output (not -raw)
+- Fixed bug getting long server lists from QuakeWorld masters.  Can now
+  get lists in excess of 16,000 servers.  How long til that limit is
+  exceeded?
+- Fixed bug using -H with -qw
+- Fixed use of select() so systems with large file descriptor limits
+  can query more than 64 servers at a time.
+- Overhauled the web page, but it is still gif-less.
+
+QStat 1.6 has been in alpha / beta just short of a year (1.6 alpha
+was released Dec 20, 1996).  It has been a good year.  Many thanks
+to those who sent suggestions, kind words, and bug reports.  And
+appologies to those who have not seen their request implemented,
+or who did not even receive a reply.
+
+  "Mmmgufm gumerfm rerfgmmf."
+  "That's right, Kenny, Steve is a busy guy and doesn't care about
+   your stupid problems."
+  "Merfgl! gumerfm rerfgmmf!"
+  "Dammit, Kenny, turn down the computer, I can't hear you over the
+   splattering bodies."
+  "Gumerfm rerfgmmf."
+  "Oh.  Kenny says, Steve does care about your problems, but not the
+   stupid ones."
+  [ A large core dump falls on Kenny, killing him. ]
+  "Steve killed Kenny!  You bastard!"
+
+Quake II gives me an excuse to crank up the major version dial.
+QStat 2.0 will feature support for Quake II servers.
+
+
+
+
+** UPDATED for 1.6 beta5 **
+Oct 5, 1997
+
+Kitchen sink release to add some of the most requested features.
+
+- Extended file format.  The file used with the -f option can include
+  server type information to distinguish between Hexen II, Quake, and
+  QuakeWorld servers.  You can put all your servers into one file and
+  query them all with one qstat invocation.
+- Fix bug that caused a QuakeWorld master server query to never timeout.
+- New option -h2s for specifying a single Hexen II server to query.
+- New option -maxsimultaneous limits the number of simultaneous server
+  queries.  Previously configurable by modifying the MAXFD #define in
+  qstat.h.
+- Updated docs [FINALLY!]
+- Compiles on HP-UX 10.20
+- Changed packaging: files are in a directory named for the version
+  of qstat, and use gzip instead of compress on unix
+- Removed pre-QuakeWorld 1.5 support.  The -qw1.5 option is obsolete
+  and no longer needed.  As are the -qwuserinfo and -qwseeninfo options.
+- Smarter about when to include server type prefix in formatted output
+
+Unless I hear cries for more features, this will be the last beta
+before the final release of qstat 1.6.  Now that the docs are up to
+date, I've run out of excuses for doing the release.
+
+
+
+** UPDATED for 1.6 beta4 **
+Sept 2, 1997
+
+Qstat has gone through some minor revs of beta3 and the arrival of
+Hexen II sparked the need for another release.  Summary of fixes and
+changes:
+
+- Support for Hexen II servers.  Use the -hexen2 mode to query Hexen II
+  servers:
+	qstat -hexen2 -R -P 165.166.143.15 208.131.24.189
+  You cannot mix queries of Quake and Hexen II servers.  This limitation
+  will be fixed in the final 1.6 release.  However you can mix QW and
+  Hexen II queries in one qstat command.
+  [Thanks to Michael Long, mlong@infoave.net, for getting me the protocol
+   magic for Hexen II.]
+- In the formatted display output (as opposed to -raw), a Hexen II server
+  is indicated with a H2S prefix.  This will only be seen if qstat is
+  using different quake protocols at the same time (eg. query a Hexen II
+  and QW server in the same command).
+- Various fixes to deal with bogus packets from QW servers.  The lastest
+  one is caused when the QW server info packet is truncated.  It appears
+  that there is a fixed buffer of 1600 bytes in the QW server for building
+  server info responses.  The QW server programmers may want to consider
+  increasing this value.  On Ethernet, two packets must be used to send
+  1600 bytes (Ethernet frame size 1518, subtract ~50 for header, leaving
+  ~1468 for data).  Might as well set the buffer size to ~3000 bytes so
+  two full packets can be used.
+- There's some wierd problem on Linux which causes bind() to occasionally
+  fail with EADDRINUSE.  Fixed the code to consider this a transient
+  error and retry the address at a later time.  If you saw messages like:
+	bind: Address already in use
+	send: Invalid argument
+  from qstat, then this fixes that.
+
+No time table for the final 1.6 release.  Other than updating the docs,
+I don't plan any significant new features.
+
+
+
+** The docs have not yet been updated.  This is all you get for now. **
+
+** UPDATED for 1.6 beta3 **
+April 3, 1997
+
+D'oh!  Should never do releases just after midnight.  Beta2 had an
+old win32 executable.  Also forgot to check for NULL map name in
+the -raw display code.  Sorry!
+
+
+** UPDATED for 1.6 beta2 **
+April 2, 1997
+
+Features in 1.6 beta2 beyond beta1
+Fix crash on negative player colors
+New option -qw1.5
+	Use the QuakeWorld 1.5 protocol.  Affects the interaction
+	with a QW master (-qw).  Fortunately, the rest of the protocol
+	hasn't changed.  I imagine the user and seen info won't be
+	available from a QW 1.5 master.  The user and seen flags will
+	remain until I have a better understanding of where QW is going.
+
+Had to fix a bunch of crashes related to QW 1.5 servers.  Some of them
+don't have common keys like "map".
+
+
+** UPDATED for 1.6 beta1 **
+Feb 7, 1997
+
+Features in 1.6 beta1 over the 1.6 alpha releases:
+Changes to -qw option
+	Support for user names and user ids
+	Defaults values ("qstat") for user id and password.  Most of
+	the QW masters have a qstat user with "qstat" as the password.
+New option -qws
+	Fetch and display stats for a single QW server.
+New option -qwuserinfo
+	Fetch and display user information from a QW master.
+New option -qwseeninfo
+	Fetch and display user information from a QW master.
+bug fix
+	Better handling of error packets from QW servers and masters.
+	No more "huh?"
+
+Thanks to Kris Nosack (kn@byu.edu) for comments and bug reports.
+
+** The following has been updated to reflect the changes and
+** additions in 1.6 beta1.
+
+
+The main feature of this release is support for QuakeWorld.  A couple
+minor bug fixes have also been made.
+
+QuakeWorld support has been integrated into qstat.  You can query
+normal Quake servers and QuakeWorld servers at the same time.  A new
+prefix is used to distinguish between the different server types.
+
+
+New options
+-----------
+
+All of these options can be used together in a single run of qstat.
+
+To query QuakeWorld servers, use the -qw or -qws options.  The first
+will get the list of QW servers from a QW master and query all of
+them for status information.  The latter, -qws, will just query the
+given QW server for status information.  These options are the only
+way to get QuakeWorld server stats.
+Hosts added with -f or on the command-line are treated like normal
+Quake servers.
+
+-qw host:port:uid:password
+
+host		host name or IP address of QW Master Server
+port		port number (defaults to 27000 if blank)
+uid		valid QW user id or name on host
+password	password for user
+
+To get the server list from a master server, qstat needs a valid login
+on the master.  A default login and password can be used if the uid and
+password are not given.  The default is "qstat" for both values.  All
+the known masters should have a "qstat" user with the same password.
+
+-qws host:port
+
+host		host name or IP address of QW server
+port		post number (defaults to 27500 if blank)
+
+If you don't use -qw or -qws, qstat will behave identically to qstat 1.5.
+
+I use the following command to query QW servers:
+
+	qstat -qw 204.50.178.66
+
+
+To get QuakeWorld user information, use the -qwuserinfo and -qwseeninfo
+options.  A QW login is not required to get user information.
+
+-qwuserinfo host:port user-list
+
+host            host name or IP address of QW Master Server
+port            port number (defaults to 27000 if blank)
+user-list	list of QW users (ids or names)
+
+The display for a user will include everything in their record.  The
+color name option (-ncn) is applied to 'topcolor' and 'bottomcolor'.
+The user-list must be _one_ command line argument; use double-quotes
+to enclose multiple users if they're separated with spaces.  You can
+also use back-slashes to separate users.
+
+-qwseeninfo host:port user-list
+
+host            host name or IP address of QW Master Server
+port            port number (defaults to 27000 if blank)
+user-list	list of QW users (ids or names)
+
+The last seen information comes directly from the master, qstat does
+not perform any additional formatting.  The user-list should be _one_
+command line argument; use double-quotes to enclose multiple users if
+they're separated with spaces.  You can also use back-slashes to
+separate users.
+
+To get user information for me and qstat and find out who was last
+slagging me:
+
+	qstat -qwuserinfo 204.50.178.66 "Act-Steve qstat" -qwseeninfo 204.50.178.66 Act-Steve
+
+
+Display format
+--------------
+
+The QW servers return different information than the normal servers,
+so I had to extend the output style.  The first field of a server
+status line is the server type:
+
+QS	normal Quake server
+QW	QW server
+QWM	QW master server
+QWU	QW user information
+QWE	QW last seen information
+
+The for-human-comsumption output is pretty self-evident, but the raw
+output needs some explanation.  The output for normal Quake servers
+has not changed.
+
+QWM server status fields
+	server address, number of QW servers
+	[the uid and password are removed before display, no rules or
+	 player info is output]
+
+QW server status
+	server address, server name, map name, max players,
+	current players, avg response time, number of retries
+	[If -R is specified, a line of server rules is output.  The
+	 format is the same as for normal servers: key1=value1,key2=value2]
+	[If -P is specified, one line is output for each player.]
+	player uid, player name, frags, connect time, shirt color,
+	pants color, ping, skin
+
+QWU
+	key1, value1, key2, value2, ...
+	[The first seven keys will always be the same; name, userid,
+	 skill, efficiency, rank, frags, deaths.  But I would not count
+	 on that as I'm a fickle programmer and may change my mind.]
+
+QWE
+	seen-info
+	[qstat just displays the string returned by the master.  The
+	 user name is embedded in there, but you'll have to parse it
+	 out.]
+
+All the existing display options apply to QW servers.
+
+Run qstat by hand to better understand the new output before trying to
+incorporate it into your web page.
+
+
+Errors
+------
+
+QStat has a variety of ways of reporting errors such as time outs
+and server errors.  If you see something between angle brackets,
+<like this>, that's an error message directly from a server or
+master.
+
+Some day I'll document how errors are displayed in the raw format.
+But for now I trust you web masters can figure it out
+
+
+Final words
+-----------
+
+This version is very beta.  If you would like qstat to work differently
+let me know.  And of course, if you have problems or questions, please
+let me know.
+
+Known bugs
+----------
+
+qstat often fails to get all the QW server lists if multiple QW masters
+are specified.  You'll see a TIMEOUT or "no response" from the QWM when
+this happens.  I have a fix in mind, but I'm tired and there's beer
+waiting for me at home.
+
+An error is not displayed if qstat times out getting user or last seen
+information.
+
+
+Steve Jankowski
+steve@activesw.com
+
+
+---
+
+Version 1.5 adds player info, server rules, response times, and
+performance improvements.  A large number of flags were added to support
+different output formatting options.  Web masters should check out
+the -raw option which displays all server info with your choice
+of delimiter.  Updated copyright to be more specific about allowable
+use.  Updated the web page with links to Quake protocol pages.
+
+Version 1.4 includes a number of new features and bug fixes.  There is
+now support for Linux, flags to set retry timeout and interval, flags
+to limit output to running or not full servers.  A bug was fixed which
+caused qstat to have a long delay the first time it was run on Windows
+95/NT.
+
+Version 1.3 fixes a bug introduced in 1.2 and adds a Windows 95/NT
+executable.  The bug caused DOWN servers to be reported multiple
+times.
+
+Version 1.2 fixes the bug with running out of file descriptors.
