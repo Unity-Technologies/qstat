@@ -33,12 +33,31 @@
 #endif
 
 #ifdef _WIN32
-# define FD_SETSIZE 256
+# include <sys/timeb.h>
 # include <winsock.h>
 # define PATH_MAX MAX_PATH
 # include <fcntl.h>
 # define _POSIX_ 1
-#endif
+# ifndef FD_SETSIZE
+#  define FD_SETSIZE 256
+# endif
+# define close(a) closesocket(a)
+static int gettimeofday(struct timeval *now, void *blah)
+{
+    struct timeb timeb;
+    ftime( &timeb);
+    now->tv_sec= timeb.time;
+    now->tv_usec= (unsigned int)timeb.millitm * 1000;
+    return 0;
+}
+# define sockerr()	WSAGetLastError()
+# define strcasecmp      stricmp
+# define strncasecmp     strnicmp
+# define STATIC
+# ifndef EADDRINUSE
+#  define EADDRINUSE	WSAEADDRINUSE
+# endif
+#endif /* _WIN32 */
 
 #include <string.h>
 
