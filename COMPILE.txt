@@ -5,7 +5,8 @@ Linux
 -----
 ./configure && make
 
-If you compile from CVS run ./autogen.sh first
+If you want to compile from CVS you need to first install autoconf
+and automake, then run ./autogen.sh. 
 
 WINDOWS
 -------
