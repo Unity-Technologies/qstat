@@ -1900,20 +1900,41 @@ xml_display_unreal_player_info( struct qserver *server)
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
 			player->frags);
+		if ( -999 != player->deaths )
+		{
+			fprintf( OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+		}
 		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
 			player->ping);
+
 		if ( player->team_name)
+		{
 		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
 			xml_escape(player->team_name));
-		else
+		}
+		else if ( -1 != player->team )
+		{
 		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
 			player->team);
-		fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
-			player->skin ? xml_escape(player->skin) : "");
-		fprintf( OF, "\t\t\t\t<mesh>%s</mesh>\n",
-			player->mesh ? xml_escape(player->mesh) : "");
-		fprintf( OF, "\t\t\t\t<face>%s</face>\n",
-			player->face ? xml_escape(player->face) : "");
+		}
+
+		// Some games dont provide
+		// so only display if they do
+		if ( player->skin )
+		{
+			fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
+				player->skin ? xml_escape(player->skin) : "");
+		}
+		if ( player->mesh )
+		{
+			fprintf( OF, "\t\t\t\t<mesh>%s</mesh>\n",
+				player->mesh ? xml_escape(player->mesh) : "");
+		}
+		if ( player->face )
+		{
+			fprintf( OF, "\t\t\t\t<face>%s</face>\n",
+				player->face ? xml_escape(player->face) : "");
+		}
 
 		fprintf( OF, "\t\t\t</player>\n");
 	}
@@ -2309,24 +2330,34 @@ display_progress()
 
     gettimeofday( &now, NULL);
 
-    if ( ! rate_start.tv_sec) {
-	rate_start= now;
-	rate[0]='\0';
+    if ( ! rate_start.tv_sec)
+	{
+		rate_start= now;
+		rate[0]='\0';
     }
-    else  {
-	int delta= time_delta( &now, &rate_start);
-	if ( delta > 1500)
-	    sprintf( rate, "  %d servers/sec  ", (num_servers_returned+num_servers_timed_out)*1000 / delta);
-	else
-	    rate[0]='\0';
+    else
+	{
+		int delta= time_delta( &now, &rate_start);
+		if ( delta > 1500 )
+			sprintf( rate, "  %d servers/sec  ", (num_servers_returned+num_servers_timed_out)*1000 / delta);
+		else
+			rate[0]='\0';
     }
 
-    fprintf( stderr, "\r%d/%d (%d timed out, %d down)%s",
-	num_servers_returned+num_servers_timed_out,
-	num_servers_total,
-	num_servers_timed_out,
-	num_servers_down,
-	rate);
+	// only print out every 'progress' number of servers.
+	if (
+		0 != num_servers_returned+num_servers_timed_out &&
+		! ( num_servers_returned+num_servers_timed_out % progress )
+	)
+	{
+		fprintf( stderr, "\r%d/%d (%d timed out, %d down)%s",
+			num_servers_returned+num_servers_timed_out,
+			num_servers_total,
+			num_servers_timed_out,
+			num_servers_down,
+			rate
+		);
+	}
 }
 
 /* ----- END MODIFICATION ----- Don't need to change anything below here. */
@@ -2931,7 +2962,17 @@ main( int argc, char *argv[])
 	    if ( run_timeout <= 0)
 		usage( "value for -timeout must be > 0\n", argv,NULL);
 	}
-	else if ( strcmp( argv[arg], "-progress") == 0)  {
+	else if ( strcmp( argv[arg], "-progno") == 0)
+	{
+	    arg++;
+	    if ( arg >= argc)
+		{
+			usage( "missing argument for -progno\n", argv,NULL);
+		}
+		
+	    progress = atoi( argv[arg] );
+ 	}
+	else if ( strcmp( argv[arg], "-progress") == 0) {
 	    progress= 1;
  	}
 	else if ( strcmp( argv[arg], "-Hcache") == 0)  {
@@ -3925,31 +3966,49 @@ bind_sockets()
     struct qserver *server;
     int rc, retry_count= 0;;
 
-    if ( !waiting_for_masters)  {
-	if ( last_server_bind == NULL)
-	    last_server_bind= servers;
-	server= last_server_bind;
+    if ( !waiting_for_masters)
+	{
+		if ( last_server_bind == NULL)
+		{
+			last_server_bind= servers;
+		}
+		server= last_server_bind;
     }
     else
-	server= servers;
+	{
+		server= servers;
+	}
 
-    for ( ; server != NULL && connected < max_simultaneous;
-		server= server->next)  {
-	if ( server->server_name == NULL && server->fd == -1)  {
-	    if ( waiting_for_masters && !server->type->master)
-		continue;
-	    if ( (rc= bind_qserver( server)) == 0)  {
-		server->type->status_query_func( server);
-		connected++;
-		if ( !waiting_for_masters)
-		    last_server_bind= server;
-	    }
-	    else if ( rc == -2 && ++retry_count > 2)
+    for ( ; server != NULL && connected < max_simultaneous; server= server->next)
+	{
+		if ( server->server_name == NULL && server->fd == -1)
+		{
+			if ( waiting_for_masters && !server->type->master)
+			{
+				continue;
+			}
+
+			if ( (rc= bind_qserver( server)) == 0)
+			{
+				server->type->status_query_func( server);
+				connected++;
+				if ( !waiting_for_masters)
+				{
+					last_server_bind= server;
+				}
+			}
+			else if ( rc == -2 && ++retry_count > 2)
+			{
+				return -2;
+			}
+		}
+    }
+
+    if ( ! connected && retry_count)
+	{
 		return -2;
 	}
-    }
-    if ( ! connected && retry_count)
-	return -2;
+
     return 0;
 }
 
@@ -4345,12 +4404,14 @@ build_hlmaster_packet( struct qserver *server, int *len)
 		pkt+= sprintf( pkt, "\\gamedir\\%s", gamedir);
 	}
 
+	// not valid for steam?
 	map = get_param_value( server, "map", NULL);
 	if ( map )
 	{
 		pkt+= sprintf( pkt, "\\map\\%s", map);
 	}
 
+	// not valid for steam?
 	flags= get_param_value( server, "status", NULL);
 	r= flags;
 	while ( flags && sep )
@@ -5967,30 +6028,27 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 		rawpkt+= 2;
 		pktlen-= 2;
 	}
-	else if ( rawpkt[0] == HL_SERVERS && rawpkt[1] == 0x0d)
+	else if ( rawpkt[0] == HL_SERVERS && rawpkt[1] == 0x0d )
 	{
-		if ( server->type->id == STEAM_MASTER )
-		{
-			// no sequence id for steam
-			// instead we use the ip:port of the last recieved server
-			struct in_addr *sin_addr = (struct in_addr*)(rawpkt+pktlen-6);
-			char *ip = inet_ntoa( *sin_addr );
-			unsigned short port = htons( *((unsigned short*)(rawpkt+pktlen-2)) );
+		// 2 byte id + 4 byte sequence
+		memcpy( server->master_query_tag, rawpkt+2, 3);
+		rawpkt+= 6;
+		pktlen-= 6;
+	}
+	else if ( rawpkt[0] == HL_SERVERS && rawpkt[1] == 0x0a )
+	{
+		// no sequence id for steam
+		// instead we use the ip:port of the last recieved server
+		struct in_addr *sin_addr = (struct in_addr*)(rawpkt+pktlen-6);
+		char *ip = inet_ntoa( *sin_addr );
+		unsigned short port = htons( *((unsigned short*)(rawpkt+pktlen-2)) );
 
-			//fprintf( stderr, "NEXT IP=%s:%u\n", ip, port );
-			sprintf( server->master_query_tag, "%s:%u", ip, port );
+		//fprintf( stderr, "NEXT IP=%s:%u\n", ip, port );
+		sprintf( server->master_query_tag, "%s:%u", ip, port );
 
-			// skip over the 2 byte id
-			rawpkt+= 2;
-			pktlen-= 2;
-		}
-		else
-		{
-			// 2 byte id + 4 byte sequence
-			memcpy( server->master_query_tag, rawpkt+2, 3);
-			rawpkt+= 6;
-			pktlen-= 6;
-		}
+		// skip over the 2 byte id
+		rawpkt+= 2;
+		pktlen-= 2;
 	}
 	else if ( strncmp( rawpkt, "servers", 7) == 0)
 	{
@@ -6086,6 +6144,7 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 		if ( i == pktlen )
 		{
 			// last 6 bytes where 0x00 so we have reached the last packet
+			server->n_servers--;
 			server->master_pkt_len -= 6;
 			server->server_name = MASTER;
 			cleanup_qserver( server, 1);
@@ -6793,7 +6852,14 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				// details are returned
 				if ( player == NULL && unreal_max_players( server ) )
 				{
-					player= add_player( server, player_number);
+					player = add_player( server, player_number);
+					if ( player )
+					{
+						// init to -1 so we can tell if
+						// we have team info
+						player->team = -1;
+						player->deaths = -999;
+					}
 				}
 			}
 		}
@@ -6860,6 +6926,10 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				if ( player)
 				{
 					player->name= strdup( value);
+					// init to -1 so we can tell if
+					// we have team info
+					player->team = -1;
+					player->deaths = -999;
 				}
 			}
 		}
