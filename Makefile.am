@@ -14,7 +14,10 @@ qstat_SOURCES = \
 	template.c \
 	ut2004.c ut2004.h
 
-EXTRA_DIST = CHANGES.txt COMPILE.txt COPYING ChangeLog INSTALL LICENSE.txt
+dist_configfiles_DATA = qstat.cfg
+configfilesdir = $(sysconfdir)
+
+EXTRA_DIST = CHANGES.txt COMPILE.txt ChangeLog LICENSE.txt
 
 cl:
 	cvs2cl.pl --utc --no-wrap --separate-header --no-times -f ChangeLog.cvs
