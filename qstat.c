@@ -9236,35 +9236,35 @@ static char *sof_colors[32] = {
 char *
 xform_name( char *string, struct qserver *server)
 {
-    static char _buf1[1024], _buf2[1024];
-    static char *_q= &_buf1[0];
-    unsigned char *s= (unsigned char*) string;
-    char *q;
-    int is_server_name = (string == server->server_name);
-    int font_tag= 0;
+	static char _buf1[1024], _buf2[1024];
+	static char *_q= &_buf1[0];
+	unsigned char *s= (unsigned char*) string;
+	char *q;
+	int is_server_name = (string == server->server_name);
+	int font_tag= 0;
 
-    _q= _q == _buf1 ? _buf2 : _buf1;
-    q= _q;
+	_q= _q == _buf1 ? _buf2 : _buf1;
+	q= _q;
 
-    if ( s == NULL)
-    {
+	if ( s == NULL)
+	{
 		q[0]= '?';
 		q[1]= '\0';
 		return _q;
-    }
+	}
 
-    if ( (hex_player_names && !is_server_name) || (hex_server_names && is_server_name))
+	if ( (hex_player_names && !is_server_name) || (hex_server_names && is_server_name))
 	{
 		for ( ; *s; s++, q+= 2)
 		{
-		    sprintf( q, "%02x", *s);
+			sprintf( q, "%02x", *s);
 		}
 		*q= '\0';
 		return _q;
-    }
+	}
 
-    if ( server->type->flags & TF_QUAKE3_NAMES)
-    {
+	if ( server->type->flags & TF_QUAKE3_NAMES)
+	{
 		for ( ; *s; s++)
 		{
 			if ( *s == '^' && *(s+1) != '^')
@@ -9344,8 +9344,8 @@ xform_name( char *string, struct qserver *server)
 		}
 		*q= '\0';
 	}
-    else if ( !is_server_name && (server->type->flags & TF_TRIBES2_NAMES))
-    {
+	else if ( !is_server_name && (server->type->flags & TF_TRIBES2_NAMES))
+	{
 		for ( ; *s; s++)
 		{
 			int inc = html_entity( *s, q );
@@ -9380,9 +9380,41 @@ xform_name( char *string, struct qserver *server)
 			}
 		}
 		*q= '\0';
-    }
-    else if ( server->type->flags & TF_SOF_NAMES )
-    {
+	}
+	else if ( server->type->flags & TF_U2_NAMES )
+	{
+		for ( ; *s; s++)
+		{
+			int inc;
+			if ( 0 == memcmp( s, "^\1", 2 ) )
+			{
+				// Color follows
+				s += 2;
+				q += unreal_html_color( (unsigned char)*s, q, &font_tag );
+			}
+			else
+			{
+				int inc = html_entity( *s, q );
+				if ( 0 != inc )
+				{
+					q += inc;
+				}
+				else if ( isprint(*s))
+				{
+					*q++= *s;
+				}
+				else if ( 0xa0 == *s )
+				{
+					*q++= ' ';
+				}
+			}
+		}
+		*q = '\0';
+	}
+	else if ( !is_server_name || server->type->flags & TF_SOF_NAMES )
+	{
+		// Catch all for NOT is_server_name OR TF_SOF_NAMES
+		// The may not be the intention but is needed for q1 at least
 		for ( ; *s; s++)
 		{
 			int inc = html_entity( *s, q );
@@ -9433,49 +9465,18 @@ xform_name( char *string, struct qserver *server)
 			}
 		}
 		*q= '\0';
-    }
-    else if ( server->type->flags & TF_U2_NAMES )
-	{
-		for ( ; *s; s++)
-		{
-			int inc;
-			if ( 0 == memcmp( s, "^\1", 2 ) )
-			{
-				// Color follows
-				s += 2;
-				q += unreal_html_color( (unsigned char)*s, q, &font_tag );
-			}
-			else
-			{
-				int inc = html_entity( *s, q );
-				if ( 0 != inc )
-				{
-					q += inc;
-				}
-				else if ( isprint(*s))
-				{
-					*q++= *s;
-				}
-				else if ( 0xa0 == *s )
-				{
-					*q++= ' ';
-				}
-			}
-		}
-		*q = '\0';
 	}
-    else
-    {
+	else
+	{
 		strcpy( _q, string);
 	}
 
-    if ( font_tag )
-    {
+	if ( font_tag )
+	{
 		q+= sprintf( q, "</font>");
 	}
 
-    return _q;
-
+	return _q;
 }
 
 int unreal_html_color( short color, char *dest, int *font_tag )
