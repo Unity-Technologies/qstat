@@ -75,6 +75,9 @@
 #define STEAM_MASTER_DEFAULT_PORT	27010
 #define DOOM3_DEFAULT_PORT	27666
 #define DOOM3_MASTER_DEFAULT_PORT	27650
+#define HL2_DEFAULT_PORT	27015
+#define HL2_MASTER_DEFAULT_PORT	27011
+
 
 #define Q_UNKNOWN_TYPE 0
 #define MASTER_SERVER 0x40000000
@@ -124,9 +127,11 @@
 #define JK3_MASTER (43|MASTER_SERVER)
 #define DOOM3_SERVER 44
 #define DOOM3_MASTER (45|MASTER_SERVER)
+#define HL2_SERVER 46
+#define HL2_MASTER (47|MASTER_SERVER)
 
 
-#define LAST_BUILTIN_SERVER  45
+#define LAST_BUILTIN_SERVER  47
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -179,6 +184,7 @@ void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
 void display_gs2_player_info( struct qserver *server);
 void display_doom3_player_info( struct qserver *server);
+void display_hl2_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -199,6 +205,7 @@ void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
 void raw_display_gs2_player_info( struct qserver *server);
 void raw_display_doom3_player_info( struct qserver *server);
+void raw_display_hl2_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -221,6 +228,7 @@ void xml_display_ghostrecon_player_info( struct qserver *server);
 void xml_display_eye_player_info( struct qserver *server);
 void xml_display_gs2_player_info( struct qserver *server);
 void xml_display_doom3_player_info( struct qserver *server);
+void xml_display_hl2_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -244,6 +252,7 @@ void send_ghostrecon_request_packet( struct qserver *server);
 void send_eye_request_packet( struct qserver *server);
 void send_gs2_request_packet( struct qserver *server);
 void send_doom3_request_packet( struct qserver *server);
+void send_hl2_request_packet( struct qserver *server);
 
 void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
@@ -271,6 +280,7 @@ void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen)
 void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 
 typedef struct _server_type  {
     int id;
@@ -377,6 +387,9 @@ struct {
     char command[12];
 } doom3_serverinfo =
 { { '\377', '\377' }, { 'g', 'e', 't', 'I', 'n', 'f', 'o', '\0', '\0', '\0', '\0', '\0' } };
+
+/* HALF-LIFE 2 */
+char hl2_serverinfo[20] = { '\xFF', '\xFF', '\xFF', '\xFF', 'T', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' };
 
 /* HEXEN WORLD */
 struct {
@@ -819,7 +832,7 @@ server_type builtin_types[] = {
 },
 {
     /* DOOM 3 */
-    DOOM3_SERVER,						/* id */
+    DOOM3_SERVER,					/* id */
     "DM3S",							/* type_prefix */
     "dm3s",							/* type_string */
     "-dm3s",						/* type_option */
@@ -830,8 +843,8 @@ server_type builtin_types[] = {
     TF_QUAKE3_NAMES,				/* flags */
     "fs_game",						/* game_rule */
     "DOOM3",						/* template_var */
-    (char*) &doom3_serverinfo,			/* status_packet */
-    sizeof( doom3_serverinfo),			/* status_len */
+    (char*) &doom3_serverinfo,		/* status_packet */
+    sizeof( doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -840,16 +853,50 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,			/* display_player_func */
+    display_doom3_player_info,		/* display_player_func */
     display_server_rules,			/* display_rule_func */
-    raw_display_doom3_player_info,		/* display_raw_player_func */
+    raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_doom3_player_info,		/* display_xml_player_func */
+    xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_doom3_packet,			/* packet_func */
+},
+{
+    /* HALFLIFE 2 */
+    HL2_SERVER,						/* id */
+    "HL2S",							/* type_prefix */
+    "hl2s",							/* type_string */
+    "-hl2s",						/* type_option */
+    "Half-Life 2",					/* game_name */
+    0,								/* master */
+    HL2_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "",								/* game_rule */
+    "HL2",							/* template_var */
+    (char*) &hl2_serverinfo,		/* status_packet */
+    sizeof( hl2_serverinfo),		/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_hl2_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_hl2_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_hl2_packet,			/* packet_func */
 },
 {
     /* RETURN TO CASTLE WOLFENSTEIN */
