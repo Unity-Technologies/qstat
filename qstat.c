@@ -6587,11 +6587,12 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	packet_header = swap_long_from_little( &rawpkt[0] );
 	rawpkt += 4;
 
-	// 0x78 = UT2003 Demo
-	// 0x79 = UT2003 Retail
-	// 0x7e = Unreal2 XMP
 	server->protocol_version = packet_header;
-	if ( packet_header != 0x78 && packet_header != 0x79 && packet_header != 0x7e )
+	if (   packet_header != 0x78 // UT2003 Demo
+	    && packet_header != 0x79 // UT2003 Retail
+	    && packet_header != 0x7e // Unreal2 XMP
+	    && packet_header != 0x7f // UT2004 Demo
+	    )
 	{
 		unsigned int ipaddr = ntohl(server->ipaddr);
 		fprintf( stderr,
