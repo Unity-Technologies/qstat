@@ -1,9 +1,0 @@
-LDLIBS = wsock32.lib
-LDFLAGS = /ML
-CFLAGS = /O2
-
-SRC = config.c debug.c hcache.c md5.c qserver.c qstat.c template.c ut2004.c
-OBJ = $(SRC:.c=.obj)
-
-qstat.exe: $(OBJ)
-	$(CC) /Fe$@ $(OBJ) $(LDFLAGS) $(LDLIBS)

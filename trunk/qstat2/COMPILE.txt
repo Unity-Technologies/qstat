@@ -1,13 +1,26 @@
 Compilation instructions for QStat
 ----------------------------------
 
-Linux
------
+Linux and other GNU systems
+---------------------------
 ./configure && make
+
+to install qstat run "make install"
+
+to see which configuration parameters can be tweaked, run
+"./configure --help"
 
 If you want to compile from CVS you need to first install autoconf
 and automake, then run ./autogen.sh. 
 
 WINDOWS
 -------
-nmake /f Makefile.w32
+nmake /f Makefile.noauto windows
+
+SOLARIS
+-------
+make -f Makefile.noauto solaris
+
+HPUX
+----
+make -f Makefile.noauto hpux
