@@ -21,11 +21,7 @@
 #include <ctype.h>
 #include <time.h>
 
-#ifdef __hpux
-#include <sys/types.h>
-#include <netinet/in.h>
-#endif
-#ifdef _AIX
+#if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__)
 #include <sys/types.h>
 #include <netinet/in.h>
 #else
