@@ -32,15 +32,15 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 	}
     }
 
-    if ( server->retry1 == n_retries)
-    {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
+    if ( server->retry1 != n_retries)
     {
 	server->n_retries++;
     }
+    else
+    {
+	gettimeofday( &server->packet_time1, NULL);
+    }
+
     server->retry1--;
     server->n_packets++;
 

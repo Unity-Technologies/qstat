@@ -56,8 +56,6 @@ extern unsigned int ntohl(unsigned int n);
 */
 
 extern int hostname_lookup;
-extern int get_player_info;
-extern int get_server_rules;
 extern int num_servers_total;
 extern int num_servers_timed_out;
 extern int num_servers_down;
