@@ -263,6 +263,7 @@ int current_fileline;
 
 int count_bits( int n);
 
+static int qserver_get_timeout(struct qserver* server, struct timeval* now);
 static int wait_for_timeout( unsigned int ms);
 static void finish_output();
 static void decode_stefmaster_packet( struct qserver *server, char *pkt, int pktlen);
@@ -2774,6 +2775,8 @@ void do_work(void)
 
 	send_packets();
 
+	debug(2, "connected: %d", connected);
+
 	while ( connected || (!connected && bind_retry==-2))
 	{
 		if ( ! connected && bind_retry==-2)
@@ -2792,6 +2795,8 @@ void do_work(void)
 		get_next_timeout( &timeout);
 
 		rc= wait_for_file_descriptors( &timeout);
+
+		debug(2, "rc %d", rc);
 
 		if ( rc == SOCKET_ERROR)
 		{
@@ -2902,15 +2907,23 @@ void do_work(void)
 				}
 			}
 
+			debug(2, "connected: %d", connected);
 			server->type->packet_func( server, pkt, pktlen);
+			debug(2, "connected: %d", connected);
 		}
 		buffill = 0;
 
 		if ( run_timeout && time(0)-start_time >= run_timeout)
+		{
+			debug(2, "run timeout reached");
 			break;
+		}
+
 		send_packets();
 		if ( connected < max_simultaneous)
 			bind_retry= bind_sockets();
+
+		debug(2, "connected: %d", connected);
 	}
 
 	free(buffer);
@@ -4062,6 +4075,7 @@ bind_sockets()
 
 /* Functions for sending packets
  */
+// this is so broken, someone please rewrite the timeout handling
 void
 send_packets()
 {
@@ -4092,21 +4106,27 @@ send_packets()
 	    interval= master_retry_interval;
 	else
 	    interval= retry_interval;
+	debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %p, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
 	prev_n_sent= n_sent;
 	if ( server->server_name == NULL ||
 		!(server->type->flags & TF_SINGLE_QUERY) )  {
 	    if ( server->retry1 != n_retries &&
 		    time_delta( &now, &server->packet_time1) <
 			(interval*(n_retries-server->retry1+1)))
+	    {
 		continue;
+	    }
 	    if ( ! server->retry1)  {
 		cleanup_qserver( server, 1);
 		continue;
 	    }
-	    server->type->status_query_func( server);
-	    gettimeofday(&t_lastsend, NULL);
-	    n_sent++;
-	    continue;
+	    if(qserver_get_timeout(server, &now) <= 0)
+	    {
+		    server->type->status_query_func( server);
+		    gettimeofday(&t_lastsend, NULL);
+		    n_sent++;
+		    continue;
+	    }
 	}
 	if ( server->next_rule != NO_SERVER_RULES)  {
 	    if ( server->retry1 != n_retries &&
@@ -4142,6 +4162,7 @@ send_packets()
 	    n_sent++;
 	}
 	if ( prev_n_sent == n_sent)  {
+	    debug(2, "%d %d", time_delta( &now, &server->packet_time1), (interval*(n_retries+1)));
 	    if ( ! server->retry1 && time_delta( &now, &server->packet_time1) >
 			(interval*(n_retries+1)))
 		cleanup_qserver( server, 1);
@@ -5233,13 +5254,43 @@ cleanup_qserver( struct qserver *server, int force)
     return 0;
 }
 
+/** must be called only on connected servers
+ * @returns time in ms until server needs timeout handling. timeout handling is needed if <= zero
+ */
+static int qserver_get_timeout(struct qserver* server, struct timeval* now)
+{
+	int diff, diff1, diff2, interval;
+
+	if ( server->type->id & MASTER_SERVER)
+		interval= master_retry_interval;
+	else
+		interval= retry_interval;
+
+	diff2= 0xffff;
+	diff1= 0xffff;
+	if ( server->server_name == NULL)
+		diff1= interval*(n_retries-server->retry1+1) -
+			time_delta( now, &server->packet_time1);
+	else  {
+		if ( server->next_rule != NO_SERVER_RULES)
+			diff1= interval*(n_retries-server->retry1+1) -
+				time_delta( now, &server->packet_time1);
+		if ( server->next_player_info < server->num_players)
+			diff2= interval*(n_retries-server->retry2+1) -
+				time_delta( now, &server->packet_time2);
+	}
+	diff= (diff1<diff2)?diff1:diff2;
+
+	return diff;
+}
+
 void
 get_next_timeout( struct timeval *timeout)
 {
     struct qserver *server= servers;
     struct timeval now;
-    int diff1, diff2, diff, smallest= retry_interval+master_retry_interval;
-    int interval, bind_count= 0;
+    int diff, smallest= retry_interval+master_retry_interval;
+    int bind_count= 0;
 
     if ( first_server_bind == NULL)
 	first_server_bind= servers;
@@ -5261,24 +5312,8 @@ get_next_timeout( struct timeval *timeout)
     for ( ; server != NULL && bind_count < connected; server= server->next)  {
 	if ( server->fd == -1)
 	    continue;
-	if ( server->type->id & MASTER_SERVER)
-	    interval= master_retry_interval;
-	else
-	    interval= retry_interval;
-	diff2= 0xffff;
-	diff1= 0xffff;
-	if ( server->server_name == NULL)
-	    diff1= interval*(n_retries-server->retry1+1) -
-		time_delta( &now, &server->packet_time1);
-	else  {
-	    if ( server->next_rule != NULL)
-		diff1= interval*(n_retries-server->retry1+1) -
-			time_delta( &now, &server->packet_time1);
-	    if ( server->next_player_info < server->num_players)
-		diff2= interval*(n_retries-server->retry2+1) -
-			time_delta( &now, &server->packet_time2);
-	}
-	diff= (diff1<diff2)?diff1:diff2;
+
+	diff = qserver_get_timeout(server, &now);
 	if ( diff < smallest)
 	    smallest= diff;
 	bind_count++;
