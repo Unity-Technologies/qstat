@@ -1855,9 +1855,15 @@ struct qserver {
     char *query_arg;
     struct query_param *params;
     unsigned short port;
+    /** how much retries are _left_ for status query or rule query. That means
+     * if s->retry1 == (global)n_retries then no retries were necessary so far.
+     * if s->retry1 == 0 then the server has to be cleaned up -- ln */
     int retry1;
+    /** how much retries are _left_ for player query. @see retry1 -- ln */
     int retry2;
+    /** how much retry packets were sent -- ln */
     int n_retries;
+    /** time when the first packet to the server was sent -- ln */
     struct timeval packet_time1;
     struct timeval packet_time2;
     int ping_total;		/* average is ping_total / n_requests */
@@ -1870,6 +1876,8 @@ struct qserver {
     char master_query_tag[4];
     char *error;
 
+    /** in-game name of the server. A server that has a NULL name is considered
+     * down. -- ln */
     char *server_name;
     char *address;
     char *map_name;
