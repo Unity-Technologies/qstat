@@ -25,12 +25,23 @@
 
 #ifdef _ISUNIX
 #include <sys/time.h>
+#define SOCKET_ERROR -1
 #endif
 
 #ifdef _WIN32
-#define FD_SETSIZE 256
-#include <winsock.h>
+# define FD_SETSIZE 256
+# include <winsock.h>
+# define PATH_MAX MAX_PATH
+# include <fcntl.h>
+# define _POSIX_ 1
 #endif
+
+#include <string.h>
+
+typedef struct _server_type server_type;
+
+#include "qserver.h"
+#include "ut2004.h"
 
 /* Various magic numbers.
  */
@@ -129,9 +140,9 @@
 #define DOOM3_MASTER (45|MASTER_SERVER)
 #define HL2_SERVER 46
 #define HL2_MASTER (47|MASTER_SERVER)
+#define UT2004_MASTER (48|MASTER_SERVER)
 
-
-#define LAST_BUILTIN_SERVER  47
+#define LAST_BUILTIN_SERVER  48
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -153,7 +164,6 @@
 
 #define TRIBES_TEAM	-1
 
-struct qserver;
 struct q_packet;
 
 typedef void (*DisplayFunc)( struct qserver *);
@@ -282,7 +292,7 @@ void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 
-typedef struct _server_type  {
+struct _server_type  {
     int id;
     char *type_prefix;
     char *type_string;
@@ -314,7 +324,7 @@ typedef struct _server_type  {
     QueryFunc player_query_func;
     QueryFunc rule_query_func;
     PacketFunc packet_func;
-} server_type;
+};
 
 extern server_type builtin_types[];
 extern server_type *types;
@@ -2163,6 +2173,42 @@ server_type builtin_types[] = {
     NULL,			/* player_query_func */
     deal_with_qwmaster_packet,	/* packet_func */
 },
+
+{
+    /* UT2004 MASTER */
+    UT2004_MASTER,		/* id */
+    "UT2004M",			/* type_prefix */
+    "ut2004m",			/* type_string */
+    "-ut2004m",			/* type_option */
+    "UT2004 Master",		/* game_name */
+    UT2003_SERVER,		/* master */
+    28902,			/* default_port */
+    0,				/* port_offset */
+    TF_OUTFILE|TF_QUERY_ARG|TF_TCP_CONNECT,	/* flags */
+    "",				/* game_rule */
+    "UT2004MASTER",		/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,	/* master_protocol */
+    NULL,	/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_ut2004master_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_ut2004master_packet,	/* packet_func */
+},
+
 {
     Q_UNKNOWN_TYPE,		/* id */
     "",				/* type_prefix */
@@ -2207,82 +2253,6 @@ struct player;
 #define FLAG_BROADCAST		(1<<1)
 #define FLAG_PLAYER_TEAMS	(1<<2)
 #define FLAG_DO_NOT_FREE_GAME	(1<<3)
-
-struct query_param  {
-    char *key;
-    char *value;
-    int i_value;
-    unsigned int ui_value;
-    struct query_param *next;
-};
-
-typedef struct SavedData  {
-    char *data;
-    int datalen;
-    int pkt_index;
-    int pkt_max;
-    unsigned int pkt_id;
-    struct SavedData *next;
-} SavedData;
-
-struct qserver {
-    char *arg;
-    char *host_name;
-    unsigned int ipaddr;
-    int flags;
-    server_type * type;
-    int fd;
-    char *outfilename;
-    char *query_arg;
-    struct query_param *params;
-    unsigned short port;
-    /** how much retries are _left_ for status query or rule query. That means
-     * if s->retry1 == (global)n_retries then no retries were necessary so far.
-     * if s->retry1 == 0 then the server has to be cleaned up -- ln */
-    int retry1;
-    /** how much retries are _left_ for player query. @see retry1 -- ln */
-    int retry2;
-    /** how much retry packets were sent -- ln */
-    int n_retries;
-    /** time when the first packet to the server was sent -- ln */
-    struct timeval packet_time1;
-    struct timeval packet_time2;
-    int ping_total;		/* average is ping_total / n_requests */
-    int n_requests;
-    int n_packets;
-
-    int n_servers;
-    int master_pkt_len;
-    char *master_pkt;
-	// used for progressive master 4 bytes for WON 22 for Steam
-    char master_query_tag[22];
-    char *error;
-
-    /** in-game name of the server. A server that has a NULL name is considered
-     * down. -- ln */
-    char *server_name;
-    char *address;
-    char *map_name;
-    char *game;
-    int max_players;
-    int num_players;
-    int protocol_version;
-
-    SavedData saved_data;
-
-    int next_player_info;
-    int n_player_info;
-    struct player *players;
-
-    char *next_rule;
-    int n_rules;
-    struct rule *rules;
-    struct rule **last_rule;
-    int missing_rules;
-
-    struct qserver *next;
-    struct qserver *prev;
-};
 
 #define PLAYER_TYPE_NORMAL	1
 #define PLAYER_TYPE_BOT		2
@@ -2342,6 +2312,10 @@ extern char *MASTER;
 extern char *SERVERERROR;
 extern char *HOSTNOTFOUND;
 
+extern int n_retries;
+
+extern struct timeval packet_recv_time;
+
 #define DEFAULT_RETRIES			3
 #define DEFAULT_RETRY_INTERVAL		500	/* milli-seconds */
 #define MAXFD_DEFAULT			20
@@ -2359,7 +2333,7 @@ extern int second_sort_key;
 extern int time_format;
 
 extern int color_names;
-
+extern int show_errors;
 
 /* Definitions for the original Quake network protocol.
  */
@@ -2499,5 +2473,11 @@ unsigned long hcache_lookup_hostname( char *hostname);
 char * hcache_lookup_ipaddr( unsigned long ipaddr);
 void hcache_write_file( char *filename);
 void hcache_update_file();
+
+unsigned int swap_long_from_little( void *l);
+unsigned short swap_short_from_little( void *l);
+
+/** \brief write four bytes in little endian order */
+void put_long_little(unsigned val, char* buf);
 
 #endif

@@ -63,7 +63,6 @@ extern int h_errno;
 #endif
 
 #define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
 #ifndef INADDR_NONE
 #define INADDR_NONE ~0
 #endif
@@ -172,21 +171,7 @@ int gettimeofday(struct timeval *now, void *blah)
 #include <unistd.h>
 #endif
 
-
-// NOTE: Windows doesn't support debugging ATM
-#ifdef _WIN32
-	#define debug 0 &&
-#else
-	#ifdef DEBUG
-		#include <stdarg.h>
-		static void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...);
-		#define debug(level,fmt,rem...) \
-		  if( level <= get_debug_level() ) \
-			_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
-	#else
-		#define debug(...)
-	#endif
-#endif
+#include "debug.h"
 
 server_type *types;
 int n_server_types;
@@ -315,7 +300,7 @@ int html_entity( const char c, char *dest );
 #define NO_KEY_COPY 4
 #define COMBINE_VALUES 8
 
-static char * unreal_colors[] = {
+static const char * unreal_colors[] = {
 	"AliceBlue",
 	"AntiqueWhite",
 	"Aqua",
@@ -458,7 +443,7 @@ static char * unreal_colors[] = {
 	"YellowGreen",
 };
 
-static char *unreal_rgb_colors[] = {
+static const char *unreal_rgb_colors[] = {
 	"#F0F8FF",
 	"#FAEBD7",
 	"#00FFFF",
@@ -605,15 +590,6 @@ void free_server( struct qserver *server);
 void free_player( struct player *player);
 void free_rule( struct rule *rule);
 void standard_display_server( struct qserver *server);
-
-static void dump_packet(const char* buf, int buflen);
-
-/** report a packet decoding error to stderr*/
-static void malformed_packet(struct qserver* server, const char* msg);
-
-static int get_debug_level (void);
-static void set_debug_level (int level);
-
 
 /* MODIFY HERE
  * Change these functions to display however you want
@@ -2395,10 +2371,7 @@ static int little_endian;
 static int big_endian;
 unsigned int swap_long( void *);
 unsigned short swap_short( void *);
-unsigned int swap_long_from_little( void *l);
 float swap_float_from_little( void *f);
-unsigned short swap_short_from_little( void *l);
-static void put_long_little(unsigned val, char* buf);
 char * strndup( const char *string, size_t len);
 #define FORCE 1
 
@@ -5099,6 +5072,29 @@ setup_retry:
     server->n_packets++;
 }
 
+void qserver_disconnect(struct qserver* server)
+{
+#ifdef _WIN32
+    int i;
+#endif
+    if ( server->fd != -1)  {
+	close( server->fd);
+#ifdef _ISUNIX
+	connmap[server->fd]= NULL;
+#endif
+#ifdef _WIN32
+	for ( i= 0; i < max_connmap; i++)  {
+	    if ( connmap[i] == server)  {
+		connmap[i]= NULL;
+		break;
+	    }
+	}
+#endif
+	server->fd= -1;
+	connected--;
+    }
+}
+
 /* Functions for figuring timeouts and when to give up
  * Returns 1 if the query is done (server may be freed) and 0 if not.
  */
@@ -5106,9 +5102,6 @@ int
 cleanup_qserver( struct qserver *server, int force)
 {
     int close_it= force;
-#ifdef _WIN32
-    int i;
-#endif
     if ( server->server_name == NULL)  {
 	close_it= 1;
 	if ( server->type->id & MASTER_SERVER && server->master_pkt != NULL)
@@ -5140,23 +5133,8 @@ cleanup_qserver( struct qserver *server, int force)
 	    server->saved_data.next= NULL;
 	}
 
-	if ( server->fd != -1)  {
-	    close( server->fd);
-#ifdef _ISUNIX
-	    connmap[server->fd]= NULL;
-#endif
-#ifdef _WIN32
-	    for ( i= 0; i < max_connmap; i++)  {
-		if ( connmap[i] == server)  {
-		    connmap[i]= NULL;
-		    break;
-		}
-	    }
-#endif
-	    server->fd= -1;
-	    connected--;
-	}
-
+	qserver_disconnect(server);
+		
 	if ( server->server_name != TIMEOUT)  {
 	    num_servers_returned++;
 	    if ( server->server_name != DOWN)  {
@@ -11111,7 +11089,7 @@ swap_short_from_little( void *l)
 }
 
 /** write four byte to buf */
-static void put_long_little(unsigned val, char* buf)
+void put_long_little(unsigned val, char* buf)
 {
 	buf[0] = val & 0xFF;
 	buf[1] = (val >> 8) & 0xFF;
@@ -11574,53 +11552,6 @@ set_non_blocking( int fd)
 #endif
 }
 
-static unsigned count = 0;
-static void dump_packet(const char* buf, int buflen)
-{
-	char fn[PATH_MAX] = {0};
-	int fd;
-	sprintf(fn, "dump%03u", count++);
-	fprintf(stderr, "dumping to %s\n", fn);
-	fd = open(fn, O_WRONLY|O_CREAT|O_EXCL, 0644);
-	if(fd == -1) { perror("open"); return; }
-	if(write(fd, buf, buflen) == -1)
-		perror("write");
-	close(fd);
-}
-
-void
-print_packet( struct qserver *server, char *buf, int buflen)
-{
-    static char *hex= "0123456789abcdef";
-    unsigned char *p= (unsigned char*)buf;
-    int i, h, a, b, offset= 0;
-    char line[256];
-
-    if ( server != NULL)
-	fprintf( stderr, "FROM %s\n", server->arg);
-
-    for ( i= buflen; i ; offset+= 16)  {
-	memset( line, ' ', 256);
-	h= 0;
-	h+= sprintf( line, "%5d:", offset);
-	a= h + 16*2 + 16/4 + 2;
-	for ( b=16; b && i; b--, i--, p++)  {
-	    if ( (b & 3) == 0)
-		line[h++]= ' ';
-	    line[h++]= hex[*p >> 4];
-	    line[h++]= hex[*p & 0xf];
-	    if ( isprint( *p))
-		line[a++]= *p;
-	    else
-		line[a++]= '.';
-	}
-	line[a]= '\0';
-	fputs( line, stderr);
-	fputs( "\n", stderr);
-    }
-    fputs( "\n", stderr);
-}
-
 char *
 quake_color( int color)
 {
@@ -11699,7 +11630,7 @@ quake_color( int color)
 }
 
 
-char *
+const char *
 unreal_color( int color )
 {
 	if ( color_names )
@@ -12002,57 +11933,4 @@ qpartition( void **array, int a, int b, int (*compare)(void*,void*))
     }
 }
 
-#ifdef DEBUG
-static void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
-{
-	va_list ap;
-	char buf[9];
-	time_t now;
-
-	now = time(NULL);
-	strftime(buf,9,"%T",localtime(&now));
-
-	fprintf(stderr, "debug(%d) %s %s:%d %s() - ", level, buf, file, line, function);
-
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	fputs("\n", stderr);
-	return;
-}
-#endif
-
-static int debug_level = 0;
-
-static void set_debug_level (int level)
-{
-  debug_level = level;
-}
-
-static int get_debug_level (void)
-{
-  return (debug_level);
-}
-
-static void malformed_packet(struct qserver* server, const char* msg)
-{
-	if(!show_errors) return;
-
-	fputs("malformed packet", stderr);
-
-	if(server)
-	{
-		fprintf(stderr, " from %d.%d.%d.%d:%hu",
-			(server->ipaddr>>24)&0xff,
-			(server->ipaddr>>16)&0xff,
-			(server->ipaddr>>8)&0xff,
-			server->ipaddr&0xff,
-			server->port);
-	}
-	fputs(": ", stderr);
-	fputs(msg, stderr);
-	if(*msg && msg[strlen(msg)-1] != '\n')
-	{
-		fputc('\n',stderr);
-	}
-}
+// vim: sw=4 ts=4 noet
