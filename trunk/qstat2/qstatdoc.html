@@ -113,6 +113,7 @@ for the supported game types.  The type string is used with the
 <tr><td>-q2s<td>q2s<td>27910<td>Quake II
 <tr><td>-uns<td>uns<td>7777<td>Unreal
 <tr><td>-ut2s<td>ut2s<td>7777<td>Unreal Tournament 2003
+<tr><td>-ut2004m<td>ut2004m<td>28902<td>Unreal Tournament 2004 Master <b>requires CD Key</b>
 <tr><td>-hls<td>hls<td>27015<td>Half-Life
 <tr><td>-sns<td>sns<td>22450<td>Sin
 <tr><td>-sgs<td>sgs<td>27888<td>Shogo: Mobile Armor Division
@@ -296,6 +297,7 @@ I know about.
 <tr><td>Descent 3<td>gt.pxo.net
 <tr><td>Return to Castle Wolfenstein<td>wolfmaster.idsoftware.com
 <tr><td>Star Trek: Elite Force<td>master.stef1.ravensoft.com
+<tr><td>UT2004<td>ut2004master1.epicgames.com, ut2004master2.epicgames.com, ut2004master3.epicgames.com
 </table>
 
 <H4>Gamespy Master</H4>
@@ -483,16 +485,61 @@ to the server type.  The general syntax is:
 </blockquote>
 <table border=1>
 <tr><th>Query Argument</th><th>Values</th><th>Description</th></tr>
-<tr><td>status</td><td><i>colon separated list of</i>password, nopassword, notfull, notfullnotempty</td>
+<tr><td>status</td><td><i>colon separated list</i> of password, nopassword, notfull, notfullnotempty</td>
 <td>Limit servers to those matching this status.  The list is
 one or more status flags separated by colons (':'). To filter on
 servers without password that are not full, specify <b>status=nopassword:notfull</b></td></tr>
-<tr><td>gametype</td><td><i>one of</i>dm, tdm or tourney</td>
+<tr><td>gametype</td><td><i>one of</i> dm, tdm or tourney</td>
 <td>limit servers to those mathing the specified gametype</td></tr>
 </table>
 
 See the Tribes 2 master server above for example usage.<br>
 A special option is a number major.minor which specifies the protocol version.
+
+<H4>UT2004 Master</H4>
+
+The UT2004 master server supports a number of filtering options.
+You can set these filters with QStat by appending query arguments
+to the server type. The general syntax is:
+
+<blockquote>
+  <b>hlm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+</blockquote>
+<table border=1>
+  <tr>
+    <th>Query Argument</th>
+    <th>Values</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><b>cdkey</b></td>
+    <td>path to the UT2004 cdkey file</td>
+    <td>You MUST specify a valid CD key to be able to query the master server</td>
+  </tr>
+  <tr>
+    <td>status</td>
+    <td><i>colon separated list</i> of password, nopassword, notfull, notempty,
+      standard, nostandard, nobots, stats, nostats, weaponstay, noweaponstay,
+      transloc, notransloc</td>
+    <td>Limit servers to those matching this status.  The list is one or more
+      status flags separated by colons (':'). To filter on standard servers
+      without password that are not full, specify
+      <b>status=standard:nopassword:notfull</b></td>
+  </tr>
+  <tr>
+    <td>gametype</td>
+    <td>any UT2004 gametype, e.g. xMutantGame</td>
+    <td>limit servers to those mathing the specified gametype</td>
+  </tr>
+  <tr>
+    <td>mutator</td>
+    <td><i>colon separated list</i> of Mutators.</td>
+    <td>limit servers to those running the specified mutators. Prepend a dash
+      to include servers that do NOT run the specified mutator</td>
+  </tr>
+</table>
+
+See the Tribes 2 master server above for example usage.<br>
 
 <H4>Option Usage</H4>
 
