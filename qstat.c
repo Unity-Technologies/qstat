@@ -21,7 +21,7 @@
 # include "gnuconfig.h"
 #else
 # ifndef VERSION
-#  define VERSION "2.6.CVS"
+#  define VERSION "2.7"
 # endif
 #endif
 
