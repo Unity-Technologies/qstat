@@ -6184,6 +6184,14 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				player->frags= atoi( value);
 			}
 		}
+		else if ( strncmp( key, "kills_", 6) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+6 ) );
+			if ( NULL != player )
+			{
+				player->frags= atoi( value);
+			}
+		}
 		else if ( player && strncmp( key, "team_", 5) == 0)
 		{
 			player = get_player_by_number( server, atoi( key+5 ) );
@@ -6262,8 +6270,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			player->ship= atoi( value);
 		}
 		else if (
-			strncmp( key, "keyhash_", 8) == 0 ||
-			strncmp( key, "kills_", 6) == 0
+			strncmp( key, "keyhash_", 8) == 0
 		)
 		{
 			// Ensure these dont make it into the rules
