@@ -453,8 +453,8 @@ char unreal_masterlist[23] = "\\list\\\\gamename\\unreal";
 
 /* UT 2003 */
 char ut2003_basicstatus[] = { 0x78, 0,0,0, 0 };
-char ut2003_ruleinfo[] = { 0x78, 0,0,0, 1 };
-char ut2003_playerinfo[] = { 0x78, 0,0,0, 2 };
+//char ut2003_ruleinfo[] = { 0x78, 0,0,0, 1 };
+//char ut2003_playerinfo[] = { 0x78, 0,0,0, 2 };
 char ut2003_allinfo[] = { 0x78, 0,0,0, 3 };
 
 /* HALF LIFE */
@@ -1050,17 +1050,17 @@ server_type builtin_types[] = {
     1,				/* port_offset */
     TF_U2_NAMES,				/* flags */
     "gametype",			/* game_rule */
-    "UNREALTOURNAMENT2003",		/* template_var */
-    (char*) &ut2003_basicstatus,	/* status_packet */
-    sizeof( ut2003_basicstatus),	/* status_len */
-    (char*) &ut2003_playerinfo,		/* player_packet */
-    sizeof( ut2003_playerinfo),		/* player_len */
-    (char*) &ut2003_ruleinfo,		/* rule_packet */
-    sizeof( ut2003_ruleinfo),		/* rule_len */
-    (char*) &ut2003_allinfo,		/* master_packet */
-    sizeof( ut2003_allinfo),		/* master_len */
+    "UNREALTOURNAMENT2003",	/* template_var */
+    (char*) &ut2003_basicstatus,/* status_packet */
+    sizeof( ut2003_basicstatus),/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    (char*) &ut2003_allinfo,	/* rule_packet */
+    sizeof( ut2003_allinfo),	/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
     NULL,			/* master_protocol */
-    NULL,			/* master_query */
+    0,				/* master_query */
     display_unreal_player_info,	/* display_player_func */
     display_server_rules,	/* display_rule_func */
     raw_display_unreal_player_info,	/* display_raw_player_func */
@@ -2452,7 +2452,7 @@ void add_file( char *filename);
 int add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg);
 struct qserver* add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
 	server_type* type, int *new_server);
-void init_qserver( struct qserver *server);
+void init_qserver( struct qserver *server, server_type* type);
 int bind_qserver( struct qserver *server);
 int bind_sockets();
 void send_packets();

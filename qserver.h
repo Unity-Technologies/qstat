@@ -42,7 +42,7 @@ struct qserver {
      *
      * That means
      * if s->retry1 == (global)n_retries then no retries were necessary so far.
-     * if s->retry1 == 0 then the server has to be cleaned up */
+     * if s->retry1 == 0 then the server has to be cleaned up after timeout */
     int retry1;
     /** \brief number retries _left_ for player query. @see retry1 */
     int retry2;
@@ -106,15 +106,22 @@ struct qserver {
 
     /** \brief number of the next player to retrieve info for.
      *
+     * Only meaningful for servers that have type->player_packet.
      * This is used by q1 as it sends packets for each player individually.
-     * Also used in get_next_timeout() for calculating timeouts
-     * (next_player_info < num_players, retry2, packet_time2) and in
-     * send_packets()
+     * cleanup_qserver() cleans up a server if next_rule == NULL and
+     * next_player_info >= num_players
      */
     int next_player_info;
+    /** \brief number of player info packets received */
     int n_player_info;
     struct player *players;
 
+    /** \brief name of next rule to retreive
+     *
+     * Used by Q1 as it needs to send a packet for each rule. Other games would
+     * set this to an empty string to indicate that rules need to be retrieved.
+     * After rule packet is received set this to NULL.
+     */
     char *next_rule;
     int n_rules;
     struct rule *rules;
