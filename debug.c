@@ -108,7 +108,7 @@ print_packet( struct qserver *server, char *buf, int buflen)
 {
     static char *hex= "0123456789abcdef";
     unsigned char *p= (unsigned char*)buf;
-    int i, h, a, b, offset= 0;
+    int i, h, a, b, astart, offset= 0;
     char line[256];
 
     if ( server != NULL)
@@ -118,7 +118,7 @@ print_packet( struct qserver *server, char *buf, int buflen)
 	memset( line, ' ', 256);
 	h= 0;
 	h+= sprintf( line, "%5d:", offset);
-	a= h + 16*2 + 16/4 + 2;
+	a= astart = h + 16*2 + 16/4 + 2;
 	for ( b=16; b && i; b--, i--, p++)  {
 	    if ( (b & 3) == 0)
 		line[h++]= ' ';
@@ -128,6 +128,7 @@ print_packet( struct qserver *server, char *buf, int buflen)
 		line[a++]= *p;
 	    else
 		line[a++]= '.';
+	    if((a-astart)==8) line[a++] = ' ';
 	}
 	line[a]= '\0';
 	fputs( line, stderr);

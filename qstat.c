@@ -3577,12 +3577,11 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 	print_file_location();
 	fprintf( stderr, "%s: %s\n", arg, strherror(h_errno));
 	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
-	init_qserver( server);
+	init_qserver( server, type);
 	server->arg= arg_copy;
 	server->server_name= HOSTNOTFOUND;
 	server->error= strdup( strherror(h_errno));
 	server->port= port;
-	server->type= type;
 	if ( last_server != &servers)  {
 	    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
 	    server->prev= prev_server;
@@ -3616,7 +3615,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     server->flags= flags;
     if ( query_arg)
 	parse_query_params( server, query_arg);
-    init_qserver( server);
+    init_qserver( server, type);
 
     if ( server->type->master)
 	waiting_for_masters++;
@@ -3683,8 +3682,7 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
 	server->host_name= strdup( arg);
 
     server->port= port;
-    server->type= type;
-    init_qserver( server);
+    init_qserver( server, type);
 
     if ( num_servers_total % 10 == 0)
 	hcache_update_file();
@@ -3778,7 +3776,7 @@ add_servers_from_masters()
 }
 
 void
-init_qserver( struct qserver *server)
+init_qserver( struct qserver *server, server_type* type)
 {
     server->server_name= NULL;
     server->map_name= NULL;
@@ -3809,8 +3807,10 @@ init_qserver( struct qserver *server)
     server->saved_data.pkt_max= 0;
     server->saved_data.next= NULL;
 
+    server->type = type;
     server->next_rule= (get_server_rules) ? "" : NO_SERVER_RULES;
-    server->next_player_info= (get_player_info) ? 0 : NO_PLAYER_INFO;
+    server->next_player_info= (get_player_info &&
+		    type->player_packet) ? 0 : NO_PLAYER_INFO;
 
     server->n_player_info= 0;
     server->players= NULL;
@@ -4106,7 +4106,7 @@ send_packets()
 	    interval= master_retry_interval;
 	else
 	    interval= retry_interval;
-	debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %p, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
+	debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
 	prev_n_sent= n_sent;
 	if ( server->server_name == NULL ||
 		!(server->type->flags & TF_SINGLE_QUERY) )  {
@@ -5146,6 +5146,9 @@ send_player_request_packet( struct qserver *server)
 {
     int rc;
 
+    if(!server->type->player_packet)
+	return;
+
     /* Server created via broadcast, so bind it */
     if ( server->fd == -1)  {
 	if ( bind_qserver( server) < 0)
@@ -5211,8 +5214,8 @@ cleanup_qserver( struct qserver *server, int force)
     }
     else if ( server->type->flags & TF_SINGLE_QUERY)
 	close_it= 1;
-    else if ( server->next_rule == NO_SERVER_RULES &&
-		server->next_player_info >= server->num_players)
+    else if ( server->next_rule == NO_SERVER_RULES
+		&& server->next_player_info >= server->num_players)
 	close_it= 1;
 
     if ( close_it)  {
@@ -5275,7 +5278,7 @@ static int qserver_get_timeout(struct qserver* server, struct timeval* now)
 		if ( server->next_rule != NO_SERVER_RULES)
 			diff1= interval*(n_retries-server->retry1+1) -
 				time_delta( now, &server->packet_time1);
-		if ( server->next_player_info < server->num_players)
+		if ( server->type->player_packet && server->next_player_info < server->num_players)
 			diff2= interval*(n_retries-server->retry2+1) -
 				time_delta( now, &server->packet_time2);
 	}
@@ -6835,17 +6838,17 @@ add_player( struct qserver *server, int player_number )
 
     for ( player = server->players; player; player = player->next )
     {
-		if ( player->number == player_number)
-		{
-		    return NULL;
-		}
+	if ( player->number == player_number)
+	{
+	    return NULL;
 	}
+    }
 
     player = (struct player *) calloc( 1, sizeof( struct player));
     player->number = player_number;
     player->next = server->players;
     player->n_info = 0;
-	player->last_info = NULL;
+    player->last_info = NULL;
     server->players = player;
     server->n_player_info++;
     return player;
@@ -7489,10 +7492,12 @@ ut2003_strdup( const char *string, const char *end, char **next )
 		last = string + len;
 		if ( last > end )
 		{
+			*next = (char*)end;
 			fprintf( stderr, "Type 2 string format error ( too short )\n" );
 			return NULL;
 		}
 
+		*next = (char*)last+1;
 		if ( NULL == ( result = (char*)calloc( last - string, sizeof(char) ) ) )
 		{
 			fprintf( stderr, "Failed to malloc string memory\n" );
@@ -7527,7 +7532,6 @@ ut2003_strdup( const char *string, const char *end, char **next )
 			resp++;
 			pos += 2;
 		}
-		*next = pos;
 	}
 
 	//fprintf( stderr, "'%s'\n", result );
@@ -7538,8 +7542,8 @@ ut2003_strdup( const char *string, const char *end, char **next )
 STATIC int
 ut2003_player_packet( struct qserver *server, char *rawpkt, char *end)
 {
-	// Type
-    rawpkt++;
+	// skip type
+	rawpkt++;
 	switch ( server->protocol_version )
 	{
 	case 0x7e:
@@ -7552,9 +7556,9 @@ ut2003_player_packet( struct qserver *server, char *rawpkt, char *end)
 			unsigned char no_props;
 			if ( rawpkt + 24 > end )
 			{
-				fprintf( stderr, "Short player info\n" );
+				malformed_packet( server, "player info too short" );
 				rawpkt = end;
-				break;
+				return 1;
 			}
 
 			// Player Number never set
@@ -7622,22 +7626,40 @@ ut2003_player_packet( struct qserver *server, char *rawpkt, char *end)
 		{
 			struct player *player;
 
+			if(rawpkt+4 > end)
+			{
+				malformed_packet(server, "player packet too short");
+				return 1;
+			}
+
 			if ( NULL == ( player = add_player( server, swap_long_from_little(rawpkt) ) ) )
 			{
 				return 0;
 			}
 
 			player->name = ut2003_strdup( rawpkt+4, end, &rawpkt );
+			if(rawpkt+8 > end)
+			{
+				malformed_packet(server, "player packet too short");
+				return 1;
+			}
 			player->ping = swap_long_from_little(rawpkt);
 			rawpkt+= 4;
 			player->frags = swap_long_from_little(rawpkt);
 			rawpkt+= 4;
-			player->ship = swap_long_from_little(rawpkt);
-			rawpkt+= 4;
+			{
+				unsigned team = swap_long_from_little(rawpkt);
+				rawpkt+= 4;
+				player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
+				if(team & 1<<29)
+					player->team_name = "red";
+				else if(team & 1<<30)
+					player->team_name = "blue";
+			}
 		}
 	}
 
-    return 0;
+	return 0;
 }
 
 
@@ -7660,8 +7682,8 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	// For protocol spec see:
 	// http://unreal.student.utwente.nl/UT2003-queryspec.html
 
-	char *end, *str;
-	int error= 0, minplayers= -1, before;
+	char *end;
+	int error= 0,  before;
 	unsigned int packet_header;
 
 	if ( server->server_name == NULL )
@@ -7687,12 +7709,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    && packet_header != 0x80 // UT2004 Retail
 	    )
 	{
-		unsigned int ipaddr = ntohl(server->ipaddr);
-		fprintf( stderr,
-			"Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
-			(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-			(ipaddr>>8)&0xff, ipaddr&0xff, server->port
-		);
+		malformed_packet(server, "Unknown type 0x%x", packet_header);
 	}
 
 	switch( rawpkt[0] )
@@ -7702,82 +7719,53 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 		error = ut2003_basic_packet( server, rawpkt, end );
 		if ( ! error )
 		{
-			if ( get_player_info && server->num_players && get_server_rules )
-			{
-				/* Hack; packet to get both player and rule info is stored
-				 * in the master packet field.  But we want to send it as
-				 * if it were the player packet, so swap the fields
-				 * temporarily */
-				char *pkt_temp = server->type->player_packet;
-				int len_temp = server->type->player_len;
-				server->type->player_packet = server->type->master_packet;
-				server->type->player_len = server->type->master_len;
-				send_player_request_packet( server );
-				server->type->player_packet = pkt_temp;
-				server->type->player_len = len_temp;
-			}
-			else if ( get_player_info && server->num_players )
-			{
-				send_player_request_packet( server );
-			}
-			else if ( get_server_rules )
+			if(get_server_rules || get_player_info)
 			{
 				server->next_rule = "";
 				server->retry1 = n_retries;
-				send_rule_request_packet( server );
+				send_rule_request_packet( server);
 			}
 			else
 			{
-				error = 1;
+				// basic packet is a single response
+				cleanup_qserver(server, 0);
 			}
 		}
 		break;
 
-    case 0x01:
-    	// Game info
-		minplayers = ut2003_rule_packet( server, rawpkt, end );
+	case 0x01:
+		// Game info
+		ut2003_rule_packet( server, rawpkt, end );
 		server->next_rule = NULL;
+		server->retry1 = 0; /* we received at least one rule packet so
+				       no need to retry. We'd get double
+				       entries otherwise. */
 		break;
 
 	case 0x02:
 		// Player info
 		before = server->n_player_info;
 		error = ut2003_player_packet( server, rawpkt, end);
-		if ( server->n_player_info >= server->num_players || before == server->n_player_info )
+		if (before == server->n_player_info )
 		{
 			error = 1;
 		}
-
-		if ( ! server->next_rule )
-		{
-			str = get_rule( server, "minplayers" );
-			if ( str )
-			{
-				minplayers = atoi(str);
-			}
-		}
 		break;
 
-    default:
-    	printf( "Unknown packet type %d\n", (int)rawpkt[0]);
-    	break;
+	default:
+		malformed_packet(server, "Unknown packet type 0x%x", (unsigned)rawpkt[0]);
+		break;
 	}
 
-    if ( minplayers != -1 && server->players && server->n_player_info < minplayers)
+	/* don't cleanup if we fetch server rules. We would lose
+	 * rule packets as we don't know how many we get
+	 * We do clean up if we don't fetch server rules so we don't
+	 * need to wait for timeout.
+	 */
+	if ( error || (!get_server_rules && server->num_players == server->n_player_info))
 	{
-		server->num_players= server->n_player_info;
-		error= 1;
-    }
-
-    if ( error )
-    {
-		if ( server->n_player_info > server->num_players)
-		{
-			server->num_players = server->n_player_info;
-		}
-    }
-
-    cleanup_qserver( server, error );
+		cleanup_qserver( server, 1 );
+	}
 }
 
 int
