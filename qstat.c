@@ -5510,7 +5510,7 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
     server->game= dup_nstring( next, end, &next);
     if ( server->game == NULL)
 	return -1;
-    add_rule( server, "gametype", server->game, NO_FLAGS);
+    add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
     server->num_players= swap_long_from_little( next);
     next+= 4;
     server->max_players= swap_long_from_little( next);
@@ -5521,6 +5521,9 @@ STATIC int
 ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end)
 {
     char *key, *value;
+    int chkdup= 0, result= 0;
+    if ( server->rules)
+	chkdup= CHECK_DUPLICATE_RULES;
     rawpkt++;
     while ( rawpkt < end)  {
 	key= dup_nstring( rawpkt, end, &rawpkt);
@@ -5529,9 +5532,11 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end)
 	value= dup_nstring( rawpkt, end, &rawpkt);
 	if ( value == NULL)
 	    break;
-	add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY);
+	add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | chkdup);
+	if ( strcmp( key, "minplayers") == 0)
+	    result= atoi(value);
     }
-    return 0;
+    return result;
 }
 
 STATIC int
@@ -5555,11 +5560,23 @@ ut2003_player_packet( struct qserver *server, char *rawpkt, char *end)
     return 0;
 }
 
+char *
+get_rule( struct qserver *server, char *name)
+{
+    struct rule *rule;
+    rule= server->rules;
+    for ( ; rule != NULL; rule= rule->next)  {
+	if ( strcmp( name, rule->name) == 0)
+	    return rule->value;
+    }
+    return NULL;
+}
+
 void
 deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *end, *next;
-    int error= 0;
+    int error= 0, minplayers= -1;
     unsigned int packet_header;
 
     if ( server->server_name == NULL)
@@ -5597,8 +5614,9 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 		server->type->player_packet= pkt_temp;
 		server->type->player_len= len_temp;
 	    }
-	    else if ( get_player_info && server->num_players)
+	    else if ( get_player_info && server->num_players) {
 		send_player_request_packet( server);
+	    }
 	    else if ( get_server_rules)  {
 		server->next_rule= "";
 		server->retry1= n_retries;
@@ -5609,18 +5627,35 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
     }
     else if ( rawpkt[0] == '\1')  {
-	ut2003_rule_packet( server, rawpkt, end);
+	minplayers= ut2003_rule_packet( server, rawpkt, end);
 	server->next_rule= NULL;
     }
     else if ( rawpkt[0] == '\2')  {
+	char *str;
 	int before= server->n_player_info;
 	error= ut2003_player_packet( server, rawpkt, end);
 	if ( ! error && ( server->n_player_info >= server->num_players ||
 		before == server->n_player_info))
 	    error= 1;
+	if ( ! server->next_rule)  {
+	    str= get_rule( server, "minplayers");
+	    if ( str) minplayers= atoi(str);
+	}
     }
     else
 	printf( "Unknown packet type %d\n", (int)rawpkt[0]);
+
+    if ( minplayers != -1 && server->players &&
+		server->n_player_info < minplayers)  {
+	server->num_players= server->n_player_info;
+	error= 1;
+    }
+    if ( error)  {
+	if ( server->n_player_info > server->num_players)
+	    server->num_players= server->n_player_info;
+	if ( server->n_player_info > server->max_players)
+	    server->max_players= server->n_player_info;
+    }
 
     cleanup_qserver( server, error);
 }
@@ -7512,21 +7547,21 @@ swap_short_from_little( void *l)
 char *
 xml_escape( char *string)
 {
-    static char _buf[4][MAXSTRLEN];
-    static int _buf_index= 0, c;
-    char *result, *b;
+    static char _buf[4][MAXSTRLEN+8];
+    static int _buf_index= 0;
+    char *result, *b, *end;
+    unsigned char c;
     
     if ( string == NULL)
 	return "";
 
-    if ( xml_encoding == ENCODING_LATIN_1 && strpbrk( string, "&<>") == NULL)
-	return string;
-
     result= &_buf[_buf_index][0];
     _buf_index= (_buf_index+1) % 4;
 
+    end= &result[MAXSTRLEN];
+
     b= result;
-    for ( ; *string; string++)  {
+    for ( ; *string && b < end; string++)  {
 	c= *string;
 	switch ( c)  {
 	case '&':
