@@ -10295,13 +10295,15 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		ptr++;
 
 		debug(2, "protocol: 0x%02X", protocolver );
-
+		// Commented out till out of beta
+/*
 		if( '\x02' != protocolver )
 		{
 			malformed_packet(server, "protocol version != 0x02");
 			cleanup_qserver( server, 1);
 			return;
 		}
+*/
 
 		server->protocol_version = protocolver;
 		sprintf( temp, "%d", protocolver );
