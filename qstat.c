@@ -8847,6 +8847,9 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
 	return;
     }
 
+    server->ping_total += time_delta( &packet_recv_time,
+				    &server->packet_time1);
+
     end= rawpkt + pktlen;
     pkt_index= rawpkt[3] - '0';
 
