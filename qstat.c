@@ -172,8 +172,20 @@ int gettimeofday(struct timeval *now, void *blah)
 #include <unistd.h>
 #endif
 
-#ifdef DEBUG
-#include <stdarg.h>
+
+// NOTE: Windows doesn't support debugging ATM
+#ifdef _WIN32
+	#define debug 0 &&
+#else
+	#ifdef DEBUG
+		#include <stdarg.h>
+		static void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...);
+		#define debug(level,fmt,rem...) \
+		  if( level <= get_debug_level() ) \
+			_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
+	#else
+		#define debug(...)
+	#endif
 #endif
 
 server_type *types;
@@ -601,18 +613,7 @@ static void malformed_packet(struct qserver* server, const char* msg);
 
 static int get_debug_level (void);
 static void set_debug_level (int level);
-#ifdef DEBUG
-static void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...);
-#define debug(level,fmt,rem...) \
-  if( level <= get_debug_level() ) \
-    _debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
-#else
-#  ifdef _WIN32
-     static inline void debug(int level, const char* fmt, ...) { return; };
-#  else
-#    define debug(...)
-#  endif
-#endif
+
 
 /* MODIFY HERE
  * Change these functions to display however you want
@@ -1057,24 +1058,10 @@ display_doom3_player_info( struct qserver *server)
 }
 
 void
-display_hl2_player_info( struct qserver *server)
+display_hl2_player_info( struct qserver *server )
 {
-    struct player *player;
-    player= server->players;
-    for ( ; player != NULL; player= player->next)  {
-	if ( player->team_name)
-	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
-		player->score,
-		ping_time(player->ping),
-		player->team_name,
-		xform_name( player->name, server));
-	else
-	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
-		player->score,
-		ping_time(player->ping),
-		player->team,
-		xform_name( player->name, server));
-    }
+	// ATM this looks like halflife player info
+	display_halflife_player_info( server );
 }
 
 void
@@ -1569,34 +1556,10 @@ raw_display_doom3_player_info( struct qserver *server)
 }
 
 void
-raw_display_hl2_player_info( struct qserver *server)
+raw_display_hl2_player_info( struct qserver *server )
 {
-    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
-    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
-    struct player *player;
-
-    player= server->players;
-    for ( ; player != NULL; player= player->next)  {
-	if ( player->team_name)
-	    fprintf( OF, fmt_team_name,
-		xform_name( player->name, server),
-		RD, player->score,
-		RD, player->ping,
-		RD, player->team_name,
-		RD, player->skin ? player->skin : "",
-		RD, play_time( player->connect_time,1)
-	);
-	else
-	    fprintf( OF, fmt,
-		xform_name( player->name, server),
-		RD, player->score,
-		RD, player->ping,
-		RD, player->team,
-		RD, player->skin ? player->skin : "",
-		RD, play_time( player->connect_time,1)
-	);
-	fputs( "\n", OF);
-    }
+	// ATM this looks like halflife player info
+	raw_display_halflife_player_info( server );
 }
 
 void
@@ -2243,39 +2206,10 @@ xml_display_doom3_player_info( struct qserver *server)
 }
 
 void
-xml_display_hl2_player_info( struct qserver *server)
+xml_display_hl2_player_info( struct qserver *server )
 {
-    struct player *player;
-
-    fprintf( OF, "\t\t<players>\n");
-
-    player= server->players;
-    for ( ; player != NULL; player= player->next)  {
-		fprintf( OF, "\t\t\t<player>\n");
-
-		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
-			xml_escape(xform_name( player->name, server)));
-		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
-			player->score);
-		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
-			player->ping);
-		if ( player->team_name)
-		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
-			xml_escape(player->team_name));
-		else
-		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
-			player->team);
-		if ( player->skin)
-		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
-			xml_escape(player->skin));
-		if ( player->connect_time)
-		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
-			xml_escape(play_time( player->connect_time,1)));
-
-		fprintf( OF, "\t\t\t</player>\n");
-    }
-
-    fprintf( OF, "\t\t</players>\n");
+	// ATM this looks like halflife player info
+	xml_display_halflife_player_info( server );
 }
 
 void
@@ -6657,10 +6591,11 @@ add_nrule( struct qserver *server, char *key, char *value, int len)
 }
 
 STATIC struct player *
-add_player( struct qserver *server, int player_number)
+add_player( struct qserver *server, int player_number )
 {
     struct player *player;
-    for ( player= server->players; player; player= player->next)
+
+    for ( player = server->players; player; player = player->next )
     {
 		if ( player->number == player_number)
 		{
@@ -6668,10 +6603,10 @@ add_player( struct qserver *server, int player_number)
 		}
 	}
 
-    player= (struct player *) calloc( 1, sizeof( struct player));
-    player->number= player_number;
-    player->next= server->players;
-    server->players= player;
+    player = (struct player *) calloc( 1, sizeof( struct player));
+    player->number = player_number;
+    player->next = server->players;
+    server->players = player;
     server->n_player_info++;
     return player;
 }
@@ -10459,8 +10394,11 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		break;
 
 	case HL2_RULES:
-		// rule count?
-		ptr += 2;
+		// num_players
+		ptr++;
+
+		// max_players
+		ptr++;
 		while ( ptr < end )
 		{
 			char *var = ptr;
@@ -10479,6 +10417,29 @@ deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
 		break;
 
 	case HL2_PLAYERS:
+		// num_players
+		ptr++;
+
+		while ( ptr < end )
+		{
+			struct player *player = add_player( server, server->n_player_info );
+
+			// player no
+			ptr++;
+
+			// name
+			player->name = strdup( ptr );
+			ptr += strlen( ptr ) + 1;
+
+			// frags
+			player->frags = swap_long_from_little( ptr );
+			ptr += 4;
+
+			// time
+			player->connect_time = swap_float_from_little( ptr );
+			ptr += 4;
+		}
+
 		break;
 
 	default:
@@ -10953,7 +10914,7 @@ swap_long_from_little( void *l)
 }
 
 float
-swap_float_from_little( void *f)
+swap_float_from_little( void *f )
 {
 	union {
 		int i;
