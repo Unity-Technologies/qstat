@@ -47,7 +47,7 @@ hp hpux: $(SRC)
 	$(CC) $(CFLAGS) -Ae -o qstat $(SRC) $(NO_LIBS)
 
 windows: $(SRC)
-	$(CC) $(CFLAGS) /ML $(SRC) /Feqstat.exe wsock32.lib
+	$(CC) $(CFLAGS) /ML $(SRC) /Feqstat.exe $(WINDOWS_LIBS)
 
 windows_debug: $(SRC)
 	rm -f *.pdb
