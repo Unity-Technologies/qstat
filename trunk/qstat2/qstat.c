@@ -7407,6 +7407,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    && packet_header != 0x79 // UT2003 Retail
 	    && packet_header != 0x7e // Unreal2 XMP
 	    && packet_header != 0x7f // UT2004 Demo
+	    && packet_header != 0x80 // UT2004 Retail
 	    )
 	{
 		unsigned int ipaddr = ntohl(server->ipaddr);
