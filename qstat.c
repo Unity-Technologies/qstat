@@ -4033,7 +4033,7 @@ build_hlmaster_packet( struct qserver *server, int *len)
 			{
 				int i = 0;
 				region = 0xFF;
-				for(;*steam_region[i]; ++i)
+				for(;steam_region[i]; ++i)
 				{
 					if(!strcmp(regionstring, steam_region[i]))
 					{
