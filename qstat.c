@@ -4105,29 +4105,7 @@ build_hlmaster_packet( struct qserver *server, int *len)
 void
 send_qwmaster_request_packet( struct qserver *server)
 {
-	int rc= 0, query_len= 0;
-	char query_buf[4096];
-
-	if ( server->type->master_len == 0 &&
-		( 
-			Q3_MASTER == server->type->id ||
-			RTCW_MASTER == server->type->id || 
-			STEF_MASTER == server->type->id ||
-			JK3_MASTER == server->type->id
-		)
-	)
-	{
-		// fill in the master protocol details
-		char *master_protocol= server->query_arg;
-		if ( master_protocol == NULL)
-		{
-			master_protocol= server->type->master_protocol;
-		}
-		query_len= sprintf( query_buf, server->type->master_packet,
-			master_protocol?master_protocol:"",
-			server->type->master_query?server->type->master_query:""
-		);
-	}
+	int rc= 0;
 
 	if ( server->type->id == Q2_MASTER)
 	{
@@ -4151,16 +4129,10 @@ send_qwmaster_request_packet( struct qserver *server)
 	{
 		char *packet;
 		int packet_len;
-		if ( query_len)
-		{
-			packet= query_buf;
-			packet_len= query_len;
-		}
-		else
-		{
-			packet= server->type->master_packet;
-			packet_len= server->type->master_len;
-		}
+		char query_buf[4096] = {0};
+
+		packet= server->type->master_packet;
+		packet_len= server->type->master_len;
 
 		if ( server->type->id == HL_MASTER)
 		{
@@ -4206,6 +4178,20 @@ send_qwmaster_request_packet( struct qserver *server)
 				packet_len++;
 			}
 		}
+		else if ( server->type->flags & TF_QUERY_ARG)
+		{
+			// fill in the master protocol details
+			char *master_protocol= server->query_arg;
+			if ( master_protocol == NULL)
+			{
+				master_protocol= server->type->master_protocol;
+			}
+			packet_len = snprintf( query_buf, sizeof(query_buf), server->type->master_packet,
+				master_protocol?master_protocol:"",
+				server->type->master_query?server->type->master_query:"");
+			packet = query_buf;
+		}
+
 		rc= send( server->fd, packet, packet_len, 0);
 	}
 
