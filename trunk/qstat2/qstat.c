@@ -160,7 +160,6 @@ int n_server_types;
  */
 
 
-
 int hostname_lookup= 0;		/* set if -H was specified */
 int new_style= 1;		/* unset if -old was specified */
 int n_retries= DEFAULT_RETRIES;
@@ -243,7 +242,8 @@ time_t run_timeout= 0;
 time_t start_time;
 int waiting_for_masters;
 
-#define ADDRESS_HASH_LENGTH	503
+#define ADDRESS_HASH_LENGTH	2999
+static unsigned num_servers; /* current number of servers in memory */
 static struct qserver **server_hash[ADDRESS_HASH_LENGTH];
 static unsigned int server_hash_len[ADDRESS_HASH_LENGTH];
 static void free_server_hash();
@@ -2735,19 +2735,194 @@ out:
 #endif // ENABLE_DUMP
 }
 
+struct rcv_pkt
+{
+	struct qserver* server;
+	struct sockaddr_in addr;
+	struct timeval recv_time;
+	char data[PACKET_LEN];
+	int len;
+	int _errno;
+};
+
+void do_work(void)
+{
+	int pktlen, rc, fd;
+	char *pkt= NULL;
+	int bind_retry= 0;
+	struct timeval timeout;
+	struct rcv_pkt* buffer;
+	unsigned buffill = 0, i = 0;
+	unsigned bufsize = max_simultaneous*2;
+
+	struct timeval t,ts;
+	gettimeofday(&t, NULL);
+	ts = t;
+
+	buffer = malloc(sizeof(struct rcv_pkt) * bufsize);
+
+	if(!buffer) return;
+
+	if(pkt_dump_pos)
+	{
+		replay_pkt_dumps();
+	}
+	else
+	{
+		bind_retry = bind_sockets();
+	}
+
+	send_packets();
+
+	while ( connected || (!connected && bind_retry==-2))
+	{
+		if ( ! connected && bind_retry==-2)
+		{
+			rc= wait_for_timeout( 60);
+			bind_retry= bind_sockets();
+			continue;
+		}
+		bind_retry= 0;
+
+		set_file_descriptors();
+
+		if ( progress)
+			display_progress();
+
+		get_next_timeout( &timeout);
+
+		rc= wait_for_file_descriptors( &timeout);
+
+		if ( rc == SOCKET_ERROR)
+		{
+#ifdef _ISUNIX
+			if ( errno == EINTR)
+				continue;
+#endif
+			perror("select");
+			break;
+		}
+
+		fd= 0;
+		for ( ; rc && buffill < bufsize; rc--)
+		{
+			int addrlen= sizeof(buffer[buffill].addr);
+			struct qserver* server= get_next_ready_server();
+			if ( server == NULL)
+				break;
+			gettimeofday( &buffer[buffill].recv_time, NULL);
+
+			pktlen = recvfrom( server->fd,
+						buffer[buffill].data,
+						sizeof(buffer[buffill].data),
+						0,
+						(struct sockaddr*)&buffer[buffill].addr,
+						&addrlen);
+
+			if ( pktlen == SOCKET_ERROR)
+			{
+				if(errno == EAGAIN)
+				{
+					malformed_packet(server, "EAGAIN on UDP socket, probably incorrect checksum");
+				}
+				else if ( connection_refused())
+				{
+					server->server_name= DOWN;
+					num_servers_down++;
+					cleanup_qserver( server, 1);
+				}
+				continue;
+			}
+
+			debug(1, "recv %3d %3d %d.%d.%d.%d:%hu\n",
+					time_delta(&buffer[buffill].recv_time, &ts),
+					time_delta(&buffer[buffill].recv_time, &t),
+					server->ipaddr&0xff,
+					(server->ipaddr>>8)&0xff,
+					(server->ipaddr>>16)&0xff,
+					(server->ipaddr>>24)&0xff,
+					server->port);
+
+			t = buffer[buffill].recv_time;
+
+			buffer[buffill].server = server;
+			buffer[buffill].len = pktlen;
+			++buffill;
+		}
+
+		for(i = 0; i < buffill; ++i)
+		{
+			struct qserver* server = buffer[i].server;
+			pkt = buffer[i].data;
+			pktlen = buffer[i].len;
+			memcpy(&packet_recv_time, &buffer[i].recv_time, sizeof(packet_recv_time));
+
+			if ( get_debug_level() > 0 )
+				print_packet( server, pkt, pktlen);
+
+#ifdef ENABLE_DUMP
+			if (get_debug_level() > 2)
+				dump_packet(pkt, pktlen);
+#endif
+
+			if ( server->flags & FLAG_BROADCAST)
+			{
+				struct qserver *broadcast= server;
+				unsigned short port= ntohs(buffer[i].addr.sin_port);
+				/* create new server and init */
+				if ( ! (no_port_offset || server->flags & TF_NO_PORT_OFFSET))
+					port-= server->type->port_offset;
+				server= add_qserver_byaddr( ntohl(buffer[i].addr.sin_addr.s_addr),
+					port, server->type, NULL);
+				if ( server == NULL)
+				{
+					server= find_server_by_address( buffer[i].addr.sin_addr.s_addr,
+					ntohs(buffer[i].addr.sin_port));
+					if ( server == NULL)
+					continue;
+	/*
+					if ( show_errors)
+					{
+						fprintf(stderr,
+							"duplicate or invalid packet received from 0x%08x:%hu\n",
+							ntohl(buffer[i].addr.sin_addr.s_addr), ntohs(buffer[i].addr.sin_port));
+						print_packet( NULL, pkt, pktlen);
+					}
+					continue;
+	*/
+				}
+				else
+				{
+					server->packet_time1= broadcast->packet_time1;
+					server->packet_time2= broadcast->packet_time2;
+					server->ping_total= broadcast->ping_total;
+					server->n_requests= broadcast->n_requests;
+					server->n_packets= broadcast->n_packets;
+					broadcast->n_servers++;
+				}
+			}
+
+			server->type->packet_func( server, pkt, pktlen);
+		}
+		buffill = 0;
+
+		if ( run_timeout && time(0)-start_time >= run_timeout)
+			break;
+		send_packets();
+		if ( connected < max_simultaneous)
+			bind_retry= bind_sockets();
+	}
+
+	free(buffer);
+}
+
 int
 main( int argc, char *argv[])
 {
-    int pktlen, rc, fd;
-    long pkt_data[PACKET_LEN/sizeof(long)];
-    char *pkt= (char*)&pkt_data[0];
-    struct timeval timeout;
     int arg, n_files, i;
-    struct qserver *server;
     char **files, *outfilename, *query_arg;
     struct server_arg *server_args= NULL;
     int n_server_args= 0, max_server_args= 0;
-    int bind_retry= 0;
     int default_server_type_id;
 
 #ifdef _WIN32
@@ -3007,14 +3182,15 @@ main( int argc, char *argv[])
 		return 1;
 	}
 	else if ( strcmp( argv[arg], "-sort") == 0)  {
+		size_t pos;
 	    arg++;
 	    if ( arg >= argc)
 		usage( "missing argument for -sort\n", argv, NULL);
 	    strncpy( sort_keys, argv[arg], sizeof(sort_keys)-1);
-	    rc= strspn( sort_keys, SUPPORTED_SORT_KEYS);
-	    if ( rc != strlen( sort_keys))  {
+	    pos= strspn( sort_keys, SUPPORTED_SORT_KEYS);
+	    if ( pos != strlen( sort_keys))  {
 		fprintf( stderr, "Unknown sort key \"%c\", valid keys are \"%s\"\n",
-			sort_keys[rc], SUPPORTED_SORT_KEYS);
+			sort_keys[pos], SUPPORTED_SORT_KEYS);
 		return 1;
 	    }
 	    server_sort= strpbrk( sort_keys, SUPPORTED_SERVER_SORT) != NULL;
@@ -3198,137 +3374,7 @@ main( int argc, char *argv[])
 	h2_serverinfo.length= htons( h2_serverinfo.length);
 	q_player.length= htons( q_player.length);
 
-	if(pkt_dump_pos)
-	{
-		replay_pkt_dumps();
-	}
-	else
-	{
-		bind_sockets();
-	}
-
-	while ( connected || (!connected && bind_retry==-2))
-	{
-		int last_connected= connected;
-
-		if ( ! connected && bind_retry==-2)
-		{
-			rc= wait_for_timeout( 60);
-			bind_retry= bind_sockets();
-			continue;
-		}
-		bind_retry= 0;
-
-		set_file_descriptors();
-
-		if ( progress)
-			display_progress();
-		get_next_timeout( &timeout);
-
-		rc= wait_for_file_descriptors( &timeout);
-
-		if ( rc == 0)
-		{
-			if ( run_timeout && time(0)-start_time >= run_timeout)
-				break;
-			send_packets();
-			bind_retry= bind_sockets();
-			continue;
-		}
-		if ( rc == SOCKET_ERROR)
-		{
-#ifdef _ISUNIX
-			if ( errno == EINTR)
-				continue;
-#endif
-			perror("select");
-			break;
-		}
-
-		gettimeofday( &packet_recv_time, NULL);
-		fd= 0;
-		for ( ; rc; rc--)
-		{
-			struct sockaddr_in addr;
-			int addrlen= sizeof(addr);
-			server= get_next_ready_server();
-			if ( server == NULL)
-				break;
-			if ( server->flags & FLAG_BROADCAST)
-				pktlen= recvfrom( server->fd, pkt, sizeof(pkt_data), 0,
-				(struct sockaddr*)&addr, &addrlen);
-			else
-				pktlen= recv( server->fd, pkt, sizeof(pkt_data), 0);
-
-			if ( pktlen == SOCKET_ERROR)
-			{
-				if(errno == EAGAIN)
-				{
-					malformed_packet(server, "EAGAIN on UDP socket, probably incorrect checksum");
-				}
-				else if ( connection_refused())
-				{
-					server->server_name= DOWN;
-					num_servers_down++;
-					cleanup_qserver( server, 1);
-					if ( ! connected)
-						bind_retry= bind_sockets();
-				}
-				continue;
-			}
-			if ( server->flags & FLAG_BROADCAST)
-			{
-				struct qserver *broadcast= server;
-				unsigned short port= ntohs(addr.sin_port);
-				/* create new server and init */
-				if ( ! (no_port_offset || server->flags & TF_NO_PORT_OFFSET))
-					port-= server->type->port_offset;
-				server= add_qserver_byaddr( ntohl(addr.sin_addr.s_addr),
-					port, server->type, NULL);
-				if ( server == NULL)
-				{
-					server= find_server_by_address( addr.sin_addr.s_addr,
-					ntohs(addr.sin_port));
-					if ( server == NULL)
-					continue;
-	/*
-					if ( show_errors)
-					{
-						fprintf(stderr,
-							"duplicate or invalid packet received from 0x%08x:%hu\n",
-							ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-						print_packet( NULL, pkt, pktlen);
-					}
-					continue;
-	*/
-				}
-				else
-				{
-					server->packet_time1= broadcast->packet_time1;
-					server->packet_time2= broadcast->packet_time2;
-					server->ping_total= broadcast->ping_total;
-					server->n_requests= broadcast->n_requests;
-					server->n_packets= broadcast->n_packets;
-					broadcast->n_servers++;
-				}
-			}
-
-			if ( get_debug_level() > 0 )
-				print_packet( server, pkt, pktlen);
-
-#ifdef ENABLE_DUMP
-			if (get_debug_level() > 2)
-				dump_packet(pkt, pktlen);
-#endif
-
-			server->type->packet_func( server, pkt, pktlen);
-		}
-
-		if ( run_timeout && time(0)-start_time >= run_timeout)
-			break;
-		if ( connected != last_connected)
-			bind_retry= bind_sockets();
-	}
+	do_work();
 
 	finish_output();
 	free_server_hash();
@@ -3579,6 +3625,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     else if ( one_server_type_id != type->id)
 	one_server_type_id= 0;
 
+    ++num_servers;
     return 0;
 }
 
@@ -3637,6 +3684,8 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
     last_server= & server->next;
 
     add_server_to_hash( server);
+
+    ++num_servers;
 
     return server;
 }
@@ -3941,26 +3990,34 @@ bind_qserver( struct qserver *server)
     return 0;
 }
 
+static struct timeval t_lastsend = {0,0};
+
 int
 bind_sockets()
 {
-    struct qserver *server;
-    int rc, retry_count= 0;;
+	struct qserver *server;
+	struct timeval now;
+	int rc, retry_count= 0;;
 
-    if ( !waiting_for_masters)
+	gettimeofday(&now, NULL);
+	if(connected && time_delta(&now, &t_lastsend) < 5)
+	{
+		server = NULL;
+	}
+	else if ( !waiting_for_masters)
 	{
 		if ( last_server_bind == NULL)
 		{
 			last_server_bind= servers;
 		}
 		server= last_server_bind;
-    }
-    else
+	}
+	else
 	{
 		server= servers;
 	}
 
-    for ( ; server != NULL && connected < max_simultaneous; server= server->next)
+	for ( ; server != NULL && connected < max_simultaneous; server= server->next)
 	{
 		if ( server->server_name == NULL && server->fd == -1)
 		{
@@ -3971,26 +4028,35 @@ bind_sockets()
 
 			if ( (rc= bind_qserver( server)) == 0)
 			{
+				debug(1, "send %d.%d.%d.%d:%hu\n",
+						server->ipaddr&0xff,
+						(server->ipaddr>>8)&0xff,
+						(server->ipaddr>>16)&0xff,
+						(server->ipaddr>>24)&0xff,
+						server->port);
+
+				gettimeofday(&t_lastsend, NULL);
 				server->type->status_query_func( server);
 				connected++;
 				if ( !waiting_for_masters)
 				{
 					last_server_bind= server;
 				}
+				break;
 			}
 			else if ( rc == -2 && ++retry_count > 2)
 			{
 				return -2;
 			}
 		}
-    }
+	}
 
-    if ( ! connected && retry_count)
+	if ( ! connected && retry_count)
 	{
 		return -2;
 	}
 
-    return 0;
+	return 0;
 }
 
 
@@ -3999,17 +4065,29 @@ bind_sockets()
 void
 send_packets()
 {
-    struct qserver *server= servers;
-    struct qserver *next= NULL;
+    struct qserver *server;
     struct timeval now;
     int interval, n_sent=0, prev_n_sent;
+    unsigned i;
 
     gettimeofday( &now, NULL);
 
-    for ( ; server != NULL; server= next)  {
-	next= server->next;
-	if ( server->fd == -1)
-	    continue;
+    if(!t_lastsend.tv_sec)
+    {
+    }
+    else if(connected && time_delta(&now, &t_lastsend) < 5)
+    {
+	return;
+    }
+
+    for (i = 0; i < max_connmap; ++i)  {
+	server = connmap[i];
+	if(!server) continue;
+	if(server->fd == -1)
+	{
+	    debug(0, "invalid entry in connmap\n");
+	}
+
 	if ( server->type->id & MASTER_SERVER)
 	    interval= master_retry_interval;
 	else
@@ -4026,6 +4104,7 @@ send_packets()
 		continue;
 	    }
 	    server->type->status_query_func( server);
+	    gettimeofday(&t_lastsend, NULL);
 	    n_sent++;
 	    continue;
 	}
@@ -4041,6 +4120,7 @@ send_packets()
 		continue;
 	    }
 	    send_rule_request_packet( server);
+	    gettimeofday(&t_lastsend, NULL);
 	    n_sent++;
 	}
 	if ( server->next_player_info < server->num_players &&
@@ -4058,6 +4138,7 @@ send_packets()
 		server->retry2= n_retries;
 	    }
 	    send_player_request_packet( server);
+	    gettimeofday(&t_lastsend, NULL);
 	    n_sent++;
 	}
 	if ( prev_n_sent == n_sent)  {
@@ -5167,7 +5248,9 @@ get_next_timeout( struct timeval *timeout)
 
     for ( ; server != NULL && server->fd == -1; server= server->next)
 	;
-    if ( server == NULL)  {
+
+    /* if there are unconnected servers and slots left we retry in 10ms */
+    if ( server == NULL || (num_servers > connected && connected < max_simultaneous))  {
 	timeout->tv_sec= 0;
 	timeout->tv_usec= 10 * 1000;
 	return;
@@ -5200,8 +5283,10 @@ get_next_timeout( struct timeval *timeout)
 	    smallest= diff;
 	bind_count++;
     }
+
     if ( smallest < 10)
 	smallest= 10;
+
     timeout->tv_sec= smallest / 1000;
     timeout->tv_usec= (smallest % 1000) * 1000;
 }
@@ -5215,7 +5300,7 @@ static int select_cursor;
 int
 set_fds( fd_set *fds)
 {
-	int maxfd= 1, i;
+	int maxfd= -1, i;
 
 	for ( i= 0; i < max_connmap; i++)
 	{
@@ -5394,12 +5479,14 @@ free_server( struct qserver *server)
 	    server->server_name != BFRIS_SERVER_NAME)  {
 	free( server->server_name);
     }
+
 /*
 params ...
 saved_data ...
 */
 
     free( server);
+    --num_servers;
 }
 
 void
@@ -11955,4 +12042,4 @@ qpartition( void **array, int a, int b, int (*compare)(void*,void*))
     }
 }
 
-// vim: sw=4 ts=4 noet
+// vim: sw=8 ts=8 noet
