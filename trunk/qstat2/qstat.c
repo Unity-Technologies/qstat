@@ -181,6 +181,7 @@ int no_empty_servers= 0;
 int no_header_display= 0;
 int raw_display= 0;
 char *raw_delimiter= "\t";
+char *multi_delimiter = "|";
 int player_address= 0;
 int hex_player_names= 0;
 int hex_server_names= 0;
@@ -284,6 +285,7 @@ int html_entity( const char c, char *dest );
 #define NO_VALUE_COPY 1
 #define CHECK_DUPLICATE_RULES 2
 #define NO_KEY_COPY 4
+#define COMBINE_VALUES 8
 
 static char * unreal_colors[] = {
 	"AliceBlue",
@@ -2138,6 +2140,7 @@ usage( char *msg, char **argv, char *a1)
     printf( "-of\t\toutput file\n");
 	printf( "-af\t\tLike -of, but append to the file\n" );
     printf( "-raw <delim>\toutput in raw format using <delim> as delimiter\n");
+	printf( "-mdelim <delim>\tFor rules with multi values use <delim> as delimiter\n");
     printf( "-xml\t\toutput status data as an XML document\n");
     printf( "-Th,-Ts,-Tpt\toutput templates: header, server and player\n");
 	printf( "-Tr,-Tt\t\toutput templates: rule, and trailer\n");
@@ -2516,17 +2519,42 @@ main( int argc, char *argv[])
 	else if ( strcmp( argv[arg], "-R") == 0)
 	    get_server_rules= 1;
 	else if ( strncmp( argv[arg], "-raw", 4) == 0)  {
-	    if ( argv[arg][4] == ',')  {
-		if ( strcmp( &argv[arg][5], "game") == 0)
-		    show_game_in_raw= 1;
-		else
-		    usage( "Unknown -raw option\n", argv, NULL);
+	    if ( argv[arg][4] == ',')
+		{
+			if ( strcmp( &argv[arg][5], "game") == 0)
+			{
+				show_game_in_raw= 1;
+			}
+			else
+			{
+				usage( "Unknown -raw option\n", argv, NULL);
+			}
 	    }
 	    arg++;
 	    if ( arg >= argc)
-		usage( "missing argument for -raw\n", argv,NULL);
+		{
+			usage( "missing argument for -raw\n", argv,NULL);
+		}
 	    raw_delimiter= argv[arg];
+
+		// Check the multi rule delimiter isnt the same
+		// If it is fix to maintain backwards compatibility
+		if ( 0 == strcmp( raw_delimiter, multi_delimiter ) &&
+			0 == strcmp( raw_delimiter, "|" )
+		)
+		{
+			multi_delimiter = ":";
+		}
 	    raw_display= 1;
+	}
+	else if ( strcmp( argv[arg], "-mdelim" ) == 0 )
+	{
+		arg++;
+		if ( arg >= argc)
+		{
+			usage( "missing argument for -mdelim\n", argv,NULL);
+		}
+		multi_delimiter = argv[arg];
 	}
 	else if ( strcmp( argv[arg], "-xml") == 0) {
 	    xml_display= 1;
@@ -5744,30 +5772,62 @@ struct rule *
 add_rule( struct qserver *server, char *key, char *value, int flags)
 {
     struct rule *rule;
-    if ( flags & CHECK_DUPLICATE_RULES)
+    if ( flags & CHECK_DUPLICATE_RULES )
 	{
-		for ( rule= server->rules; rule; rule= rule->next)
+		for ( rule = server->rules; rule; rule = rule->next )
 		{
-			if ( strcmp( rule->name, key) == 0 && strcmp( rule->value, value) == 0 )
+			if ( 0 == strcmp( rule->name, key ) )
 			{
 				return NULL;
 			}
 		}
     }
 
-    rule= (struct rule *) malloc( sizeof( struct rule));
+	if ( flags & COMBINE_VALUES )
+	{
+		for ( rule = server->rules; rule; rule = rule->next )
+		{
+			if ( 0 == strcmp( rule->name, key ) )
+			{
+				char *full_value = (char*)calloc( sizeof(char), strlen( rule->value ) + strlen( value ) + 2 );
+				if ( NULL == full_value )
+				{
+					fprintf( stderr, "Failed to malloc combined value\n" );
+					exit( 1 );
+				}
+				sprintf( full_value, "%s%s%s", rule->value, multi_delimiter, value );
+
+				// We should be able to free this
+				free( rule->value );
+				rule->value = full_value;
+
+				return rule;
+			}
+		}
+	}
+
+    rule = (struct rule *) malloc( sizeof( struct rule));
     if ( flags & NO_KEY_COPY)
-	rule->name= key;
+	{
+		rule->name = key;
+	}
     else
-	rule->name= strdup(key);
+	{
+		rule->name = strdup(key);
+	}
     if ( flags & NO_VALUE_COPY)
-	rule->value= value;
+	{
+		rule->value = value;
+	}
     else
-	rule->value= strdup(value);
-    rule->next= NULL;
-    *server->last_rule= rule;
-    server->last_rule= & rule->next;
+	{
+		rule->value = strdup(value);
+	}
+    rule->next = NULL;
+    *server->last_rule = rule;
+    server->last_rule = & rule->next;
     server->n_rules++;
+
     return rule;
 }
 
@@ -6278,11 +6338,6 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
     char *key, *value;
     int chkdup = 0, result= 0;
 
-    if ( server->rules )
-    {
-		chkdup = CHECK_DUPLICATE_RULES;
-	}
-
 	// Packet Type
     rawpkt++;
 
@@ -6302,7 +6357,7 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 			result = atoi(value);
 		}
 
-		if ( NULL == add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | chkdup ) )
+		if ( NULL == add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | COMBINE_VALUES ) )
 		{
 			/* duplicate, so free key and value */
 			free(value);
