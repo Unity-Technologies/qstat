@@ -1,10 +1,7 @@
 #!/bin/sh -x
+set -e
 
-if which autoreconf >/dev/null 2>&1; then
-	autoreconf -i
-else
-	aclocal
-	autoconf
-	autoheader
-	automake
-fi
+aclocal
+autoconf
+autoheader
+automake -a --foreign
