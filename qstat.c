@@ -3129,12 +3129,14 @@ void
 send_packets()
 {
     struct qserver *server= servers;
+    struct qserver *next= NULL;
     struct timeval now;
     int interval, n_sent=0, prev_n_sent;
 
     gettimeofday( &now, NULL);
 
-    for ( ; server != NULL; server= server->next)  {
+    for ( ; server != NULL; server= next)  {
+	next= server->next;
 	if ( server->fd == -1)
 	    continue;
 	if ( server->type->id & MASTER_SERVER)
@@ -4159,6 +4161,7 @@ free_server( struct qserver *server)
 	    server->server_name != SYSERROR &&
 	    server->server_name != MASTER &&
 	    server->server_name != SERVERERROR &&
+	    server->server_name != TIMEOUT &&
 	    server->server_name != GAMESPY_MASTER_NAME &&
 	    server->server_name != BFRIS_SERVER_NAME)  {
 	free( server->server_name);
