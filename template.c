@@ -28,7 +28,10 @@
 #ifdef _AIX
 #include <sys/types.h>
 #include <netinet/in.h>
+#else
+#include <netinet/in.h>
 #endif
+
 
 #include "qstat.h"
 
@@ -946,7 +949,7 @@ STATIC int
 is_true( struct qserver *server, struct player *player, struct rule *rule,
 	char *expr)
 {
-    int i, len, arglen;
+    int i, len = 0, arglen = 0;
     char *arg= NULL, *lparen, *rparen;
     server_type *t;
 

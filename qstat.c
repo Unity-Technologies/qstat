@@ -31,6 +31,7 @@ char *qstat_version= VERSION;
 #include <sys/types.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #define QUERY_PACKETS
 #include "qstat.h"
@@ -275,7 +276,6 @@ static void decode_stefmaster_packet( struct qserver *server, char *pkt, int pkt
 static void decode_q3master_packet( struct qserver *server, char *pkt, int pktlen);
 static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
-static int unreal_player_realslash( char *s, char *end);
 static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
 static int unreal_max_players( struct qserver *server );
 char * ut2003_strdup( const char *string, const char *end, char **next );
@@ -737,7 +737,7 @@ display_q_player_info( struct qserver *server)
     if ( color_names)
 	strcat( fmt, "%9s:%-9s ");
     else
-	strcat( fmt, "%2d:%-2d ");
+	strcat( fmt, "%2s:%-2s ");
     if ( player_address)
 	strcat( fmt, "%22s ");
     else
@@ -768,7 +768,7 @@ display_qw_player_info( struct qserver *server)
     if ( color_names)
 	strcat( fmt, "%9s:%-9s ");
     else
-	strcat( fmt, "%2d:%-2d ");
+	strcat( fmt, "%2s:%-2s ");
     strcat( fmt, "%s\n");
 
     player= server->players;
@@ -1173,14 +1173,8 @@ raw_display_server_rules( struct qserver *server)
 void
 raw_display_q_player_info( struct qserver *server)
 {
-    char fmt[128];
+    char fmt[] = "%d" "%s%s" "%s%s" "%s%d" "%s%s" "%s%s" "%s%s";
     struct player *player;
-
-    strcpy( fmt, "%d" "%s%s" "%s%s" "%s%d" "%s%s");
-    if ( color_names)
-	strcat( fmt, "%s%s" "%s%s");
-    else
-	strcat( fmt, "%s%d" "%s%d");
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
@@ -1203,11 +1197,7 @@ raw_display_qw_player_info( struct qserver *server)
     char fmt[128];
     struct player *player;
 
-    strcpy( fmt, "%d" "%s%s" "%s%d" "%s%s");
-    if ( color_names)
-	strcat( fmt, "%s%s" "%s%s");
-    else
-	strcat( fmt, "%s%d" "%s%d");
+    strcpy( fmt, "%d" "%s%s" "%s%d" "%s%s" "%s%s" "%s%s");
     strcat( fmt, "%s%d" "%s%s");
 
     player= server->players;
@@ -1476,7 +1466,6 @@ void
 xml_display_server( struct qserver *server)
 {
 	char *prefix;
-	int server_type= server->type->id;
 	prefix= server->type->type_prefix;
 
 	if ( server->server_name == DOWN)
@@ -1628,9 +1617,9 @@ xml_display_q_player_info( struct qserver *server)
 		}
 		else
 		{
-			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%d</color>\n",
+			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n",
 				quake_color(player->shirt_color));
-			fprintf( OF, "\t\t\t\t<color for=\"pants\">%d</color>\n",
+			fprintf( OF, "\t\t\t\t<color for=\"pants\">%s</color>\n",
 				quake_color(player->pants_color));
 		}
 
@@ -1669,9 +1658,9 @@ xml_display_qw_player_info( struct qserver *server)
 		}
 		else
 		{
-			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%d</color>\n",
+			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n",
 				quake_color(player->shirt_color));
-			fprintf( OF, "\t\t\t\t<color for=\"pants\">%d</color>\n",
+			fprintf( OF, "\t\t\t\t<color for=\"pants\">%s</color>\n",
 				quake_color(player->pants_color));
 		}
 
@@ -1806,7 +1795,6 @@ xml_display_tribes_player_info( struct qserver *server)
 void
 xml_display_tribes2_player_info( struct qserver *server)
 {
-	static char fmt[]= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
 	struct player *player;
 	char *type;
 
@@ -2410,6 +2398,7 @@ revert_server_types()
 }
 
 
+int
 main( int argc, char *argv[])
 {
     int pktlen, rc, fd;
@@ -3032,7 +3021,7 @@ void
 add_file( char *filename)
 {
     FILE *file;
-    char name[200], *comma, *query_arg;
+    char name[200], *comma, *query_arg = NULL;
     server_type* type;
 
     if ( strcmp( filename, "-") == 0)  {
@@ -4300,17 +4289,17 @@ static struct _gamespy_query_map  {
     char *qstat_type;
     char *gamespy_type;
 } gamespy_query_map[] = {
-    "qws", "quakeworld",
-    "q2s", "quake2",
-    "q3s", "quake3",
-    "tbs", "tribes",
-    "uns", "ut",
-    "sgs", "shogo",
-    "hls", "halflife",
-    "kps", "kingpin",
-    "hrs", "heretic2",
-    "sfs", "sofretail",
-    NULL, NULL
+    { "qws", "quakeworld" },
+    { "q2s", "quake2" },
+    { "q3s", "quake3" },
+    { "tbs", "tribes" },
+    { "uns", "ut" },
+    { "sgs", "shogo" },
+    { "hls", "halflife" },
+    { "kps", "kingpin" },
+    { "hrs", "heretic2" },
+    { "sfs", "sofretail" },
+    { NULL, NULL }
 };
 
 void
@@ -4418,7 +4407,10 @@ setup_retry:
 int
 cleanup_qserver( struct qserver *server, int force)
 {
-    int close_it= force, i;
+    int close_it= force;
+#ifdef _WIN32
+    int i;
+#endif
     if ( server->server_name == NULL)  {
 	close_it= 1;
 	if ( server->type->id & MASTER_SERVER && server->master_pkt != NULL)
@@ -4916,7 +4908,6 @@ void
 deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *key, *value, *end;
-    struct rule *rule;
     struct player *player= NULL, **last_player= &server->players;
     int len, rc, complete= 0;
     int number, frags, connect_time, ping;
@@ -5049,7 +5040,6 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 	int check_duplicate_rules)
 {
     char *key, *value, *end;
-    struct rule *rule;
     struct player *player= NULL;
     struct player **last_player= & server->players;
     int len, rc, complete= 0;
@@ -5298,7 +5288,6 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 	pktlen-= 8;
     }
     else if ( strncmp( rawpkt, "getserversResponse", 18) == 0)  {
-    	char *p;
 	static int q3m_debug= 0;
 
 	rawpkt+= 18;
@@ -6336,7 +6325,7 @@ STATIC int
 ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 {
     char *key, *value;
-    int chkdup = 0, result= 0;
+    int result= 0;
 
 	// Packet Type
     rawpkt++;
@@ -6564,7 +6553,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	// For protocol spec see:
 	// http://unreal.student.utwente.nl/UT2003-queryspec.html
 
-	char *end, *next, *str;
+	char *end, *str;
 	int error= 0, minplayers= -1, before;
 	unsigned int packet_header;
 
@@ -6884,7 +6873,6 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
     /* 'rules' response */
     else if ( rawpkt[4] == 'E' && server->next_rule != NULL)  {
 	int n= 0;
-	struct rule *rule;
 	n= ((unsigned char*)rawpkt)[5] + ((unsigned char *)rawpkt)[6]*256;
 	pkt= &rawpkt[7];
 	while ( n)  {
@@ -7415,7 +7403,7 @@ static const char PacketStart='\x42';
 static char Dat2Reply1_2_10[]={'\xf4','\x03','\x14','\x02','\x0a','\x41','\x02','\x0a','\x41','\x00','\x00','\x78','\x30','\x63'};
 static char Dat2Reply1_3[]   ={'\xf4','\x03','\x14','\x03','\x05','\x41','\x03','\x05','\x41','\x00','\x00','\x78','\x30','\x63'};
 static char Dat2Reply1_4[]   ={'\xf4','\x03','\x14','\x04','\x00','\x41','\x04','\x00','\x41','\x00','\x00','\x78','\x30','\x63'};
-static char HDat2[]={'\xea','\x03','\x02','\x00','\x14'};
+//static char HDat2[]={'\xea','\x03','\x02','\x00','\x14'};
 
 #define SHORT_GR_LEN	75
 #define LONG_GR_LEN	500
@@ -7424,18 +7412,15 @@ static char HDat2[]={'\xea','\x03','\x02','\x00','\x14'};
 #define VERSION_1_3	2
 #define VERSION_1_4	3
 
-static int ghostrecon_debug= 0;
-
 void
 deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen)
 {
-    char str[256], /* str2[256], */ *pktstart= pkt, *start, *end, StartFlag, *lpszIgnoreServerPlayer;
+    char str[256], *start, *end, StartFlag, *lpszIgnoreServerPlayer;
     char *lpszMission;
     unsigned int iIgnoreServerPlayer, iDedicatedServer, iUseStartTimer;
     unsigned short GrPayloadLen;
-    int i, n_teams= 0;
-    struct player **teams= NULL, *player, *nextplayer;
-    struct player **last_player= & server->players;
+    int i; 
+    struct player *player;
     int iLen, iTemp;
 	short sLen;
 	int iSecsPlayed;
@@ -9385,7 +9370,6 @@ xform_name( char *string, struct qserver *server)
 	{
 		for ( ; *s; s++)
 		{
-			int inc;
 			if ( 0 == memcmp( s, "^\1", 2 ) )
 			{
 				// Color follows
@@ -9663,6 +9647,25 @@ quake_color( int color)
 	"#0000ff"	/* 15 */
     };
 
+    static char *color_nr[] = {
+	"0",
+	"1",
+	"2",
+	"3",
+	"4",
+	"5",
+	"6",
+	"7",
+	"8",
+	"9",
+	"10",
+	"11",
+	"12",
+	"13",
+	"14",
+	"15"
+    };
+
 	if ( color_names )
 	{
 		if ( color_names == 1)
@@ -9674,8 +9677,10 @@ quake_color( int color)
 			return rgb_colors[color&0xf];
 		}
 	}
-
-	return (char*)color;
+	else
+	{
+		return color_nr[color&0xf];
+	}
 }
 
 

@@ -326,27 +326,27 @@ struct {
     char prefix[4];
     char command[7];
 } qw_serverstatus =
-{ '\377', '\377', '\377', '\377', 's', 't', 'a', 't', 'u', 's', '\n' };
+{ { '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', '\n' } };
 
 /* QUAKE3 */
 struct {
     char prefix[4];
     char command[10];
 } q3_serverstatus =
-{ '\377', '\377', '\377', '\377', 'g', 'e', 't', 's', 't', 'a', 't', 'u', 's', '\n' };
+{ { '\377', '\377', '\377', '\377' }, { 'g', 'e', 't', 's', 't', 'a', 't', 'u', 's', '\n' } };
 
 struct {
     char prefix[4];
     char command[8];
 } q3_serverinfo =
-{ '\377', '\377', '\377', '\377', 'g', 'e', 't', 'i', 'n', 'f', 'o', '\n' };
+{ { '\377', '\377', '\377', '\377' }, { 'g', 'e', 't', 'i', 'n', 'f', 'o', '\n' } };
 
 /* HEXEN WORLD */
 struct {
     char prefix[5];
     char command[7];
 } hw_serverstatus =
-{ '\377', '\377', '\377', '\377', '\377', 's', 't', 'a', 't', 'u', 's', '\n' };
+{ { '\377', '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', '\n' } };
 
 /* HEXEN 2 */
 /* The \004 below is the protocol version */

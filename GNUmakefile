@@ -25,6 +25,10 @@ else
   OBJ = $(SRC:%=%.o)
 endif
 
+ifeq ($(OS),Linux)
+  CFLAGS += -Wall
+endif
+
 ifeq ($(OS),SunOS)
   LIBS = -lsocket -lnsl
 endif
