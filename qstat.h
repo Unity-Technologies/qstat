@@ -1729,6 +1729,7 @@ struct player;
 
 #define FLAG_BROADCAST		(1<<1)
 #define FLAG_PLAYER_TEAMS	(1<<2)
+#define FLAG_DO_NOT_FREE_GAME	(1<<3)
 
 struct query_param  {
     char *key;
@@ -1794,11 +1795,14 @@ struct qserver {
     int missing_rules;
 
     struct qserver *next;
+    struct qserver *prev;
 };
 
 #define PLAYER_TYPE_NORMAL	1
 #define PLAYER_TYPE_BOT		2
 #define PLAYER_TYPE_ALIAS	4
+
+#define PLAYER_FLAG_DO_NOT_FREE_TEAM	1
 
 struct player  {
     int number;
@@ -1811,9 +1815,10 @@ struct player  {
     int pants_color;
     char *address;
     int ping;
+    short flags;
+    short type_flag;	/* Tribes 2 only */
     int packet_loss;	/* Tribes only */
-    int type_flag;	/* Tribes 2 only */
-    char * tribe_tag;	/* Tribes 2 only */
+    char *tribe_tag;	/* Tribes 2 only */
     char *skin;
     char *mesh;		/* Unreal only */
     char *face;		/* Unreal only */
