@@ -1,85 +1,10 @@
 Compilation instructions for QStat
 ----------------------------------
 
-FIXME: the instructions are obsolete
+Linux
+-----
+./configure && make
 
 WINDOWS
 -------
-Windows users can find a pre-built binary in the win32/ directory
-of the QStat zip file.  If you need to compile a new Windows binary,
-run (requires an Microsoft C/C++ compiler):
-
-nmake windows
-
-UNIX
-----
-You will need a C compiler and a make utility to compile qstat.
-
-Two makefiles are available for qstat.  If you have GNU make, then
-just running it should compile qstat on your platform.  If you are
-on Linux, then 'make' is probably GNU make.  On other platforms
-it's probably called 'gmake'.  The GNU make compile is controlled
-by the GNUmakefile.  Modify it if you need extra flags to compile
-on your platform.  If you need to modify the GNUmakefile, let me know
-and I'll integrate your changes into the next release.
-
-The GNUmakefile will allow you to set the sysconfdir at compile time.
-The command is:
-	gmake SYSCONFDIR=config-directory
-The default sysconfdir is /etc.  The sysconfdir determines where
-QStat will look for a configuration file.  See qstatdoc.html for
-more about QStat config files.
-
-If you do not have GNU make, then you'll be using some older form
-of make.  There is a Makefile for available for older make, but
-you need to tell it what operating system you are using:
-
-	make <operating system>
-
-Instructions for VMS can be found at the end of this file.
-
-The supported operating systems are in the Makefile:
-
-solaris		Sun Solaris 2.4, 2.5, 2.6
-sgi irix	SGI Irix 5.3, 6.4
-freebsd		FreeBSD
-openbsd		OpenBSD
-linux		Linux
-windows		Windows 95/NT using Microsoft compiler
-os2		OS/2 Warp using IBM Visual Age compiler
-os2emx		OS/2 Warp using EMX compiler
-hp		HP-UX 10.20 and 11.0 using their ANSI C compiler
-aix		AIX 4.2
-osx		Macintosh OSX (Darwin)
-
-If your system uses GNU cc, edit the Makefile appropriately, or run
-
-make CC=gcc <operating system>
-
-If it doesn't compile for you, try tweaking the library settings
-in the Makefile.  If your version of Unix is not listed, try freebsd.
-On most Unixes, this should be enough to compile qstat:
-
-cc -o qstat qstat.c hcache.c template.c config.c
-
-As a last resort, send me email and I'll try to help.
-steve@qstat.org
-
-
-Instructions for VMS
---------------------
-VMS patches by John Ross Hunt (bigboote@ais.net) Tested with DEC C
-V5.6-003 on OpenVMS Alpha V7.1
-
-It was tested with DEC C V5.6-003 on OpenVMS Alpha V7.1.  It should
-work on OpenVMS Alpha V7.0.  OpenVMS V6.2 and below doesn't support
-"h_errno" so you will have to comment out the affected chunks of code.
-I have no idea if will work on OpenVMS VAX.
-
-$ cc/prefix=all/standard=vaxc qstat
-$ link qstat
-$ qstat :== $'f$environ("default")'qstat.exe
-$ qstat "-P" "-qws" 38.241.43.118:27910
-
-Note: Use quotes to preserve case in the command line switches.
-
+nmake /f Makefile.w32
