@@ -71,3 +71,7 @@ qstat.obj: qstat.h config.h
 config.obj: config.h qstat.h
 template.obj: qstat.h
 hcache.obj: qstat.h
+
+cl:
+	cvs2cl.pl --utc --no-wrap --separate-header --no-times -f ChangeLog.cvs
+	rm -f ChangeLog.cvs.bak
