@@ -4016,31 +4016,31 @@ send_tribes_request_packet( struct qserver *server)
 {
     int rc;
 
-    if ( get_player_info || get_server_rules)  {
 	if ( server->flags & FLAG_BROADCAST && server->server_name == NULL)
-	    rc= send_broadcast( server, server->type->player_packet,
+	{
+		rc= send_broadcast( server, server->type->player_packet,
 		server->type->player_len);
+	}
 	else
-	    rc= send( server->fd, server->type->player_packet,
+	{
+		rc= send( server->fd, server->type->player_packet,
 		server->type->player_len, 0);
-    }
-    else  {
-	if ( server->flags & FLAG_BROADCAST && server->server_name == NULL)
-	    rc= send_broadcast( server, server->type->status_packet,
-		server->type->status_len);
-	else
-	    rc= send( server->fd, server->type->status_packet,
-		server->type->status_len, 0);
     }
 
     if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
+	{
+		perror( "send");
+	}
+
+    if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
     }
     else
-	server->n_retries++;
+	{
+		server->n_retries++;
+	}
     server->retry1--;
     server->n_packets++;
 }
@@ -7114,27 +7114,27 @@ deal_with_tribes_packet( struct qserver *server, char *rawpkt, int pktlen)
     char buf[24];
 
     if ( server->server_name == NULL)
-	server->ping_total+= time_delta( &packet_recv_time,
-		&server->packet_time1);
-    else
-	gettimeofday( &server->packet_time1, NULL);
-
-    if ( pktlen < sizeof( tribes_info_reponse))  {
-	cleanup_qserver( server, 1);
-	return;
-    }
-    if ( get_player_info || get_server_rules)  {
-	if ( strncmp( rawpkt, tribes_players_reponse,
-			sizeof( tribes_players_reponse)) != 0)  {
-	    cleanup_qserver( server, 1);
-	    return;
+	{
+		server->ping_total+= time_delta( &packet_recv_time,
+			&server->packet_time1);
 	}
+    else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
+
+    if ( pktlen < sizeof( tribes_info_reponse))
+	{
+		cleanup_qserver( server, 1);
+		return;
     }
-    else if ( strncmp( rawpkt, tribes_info_reponse,
-		sizeof( tribes_info_reponse)) != 0)  {
-	cleanup_qserver( server, 1);
-	return;
-    }
+
+	if ( strncmp( rawpkt, tribes_players_reponse,
+			sizeof( tribes_players_reponse)) != 0)
+	{
+		cleanup_qserver( server, 1);
+		return;
+	}
 
     pkt= (unsigned char*) &rawpkt[sizeof( tribes_info_reponse)];
 
@@ -7153,11 +7153,6 @@ deal_with_tribes_packet( struct qserver *server, char *rawpkt, int pktlen)
     pkt++;		/* flag: password on server */
     server->num_players= *pkt++;
     server->max_players= *pkt++;
-
-    if ( !get_player_info && !get_server_rules)  {
-	cleanup_qserver( server, 0);
-	return;
-    }
 
     sprintf( buf, "%u", (unsigned int)pkt[0] + (unsigned int)pkt[1]*256);
     add_rule( server, "cpu", buf, NO_FLAGS);
