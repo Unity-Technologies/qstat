@@ -126,6 +126,8 @@ for the supported game types.  The type string is used with the
 <tr><td>-t2m<td>t2m<td>28002<td>Tribes 2 master
 <tr><td>-q3s<td>q3s<td>27960<td>Quake III
 <tr><td>-q3m<td>q3m<td>27950<td>Quake III master
+<tr><td>-dm3s<td>dm3s<td>27666<td>Doom 3
+<tr><td>-dm3m<td>dm3m<td>27650<td>Doom 3 master
 <tr><td>-bfs<td>bfs<td>44001<td>BFRIS
 <tr><td>-kps<td>kps<td>31510<td>Kingpin
 <tr><td>-hrs<td>hrs<td>28910<td>Heretic II
@@ -288,6 +290,7 @@ I know about.
 <tr><td>Half-Life (stm)<td>steam1.steampowered.com:27010, steam2.steampowered.com:27010
 <tr><td>Tribes<td>tribes.dynamix.com
 <tr><td>Quake III<td>master3.idsoftware.com
+<tr><td>Doom 3<td>idnet.ua-corp.com
 <tr><td>Gamespy<td>master0.gamespy.com
 <tr><td>Tribes 2<td>211.233.32.77:28002, 217.6.160.205:28002
 <tr><td>Descent 3<td>gt.pxo.net
@@ -470,6 +473,26 @@ dedicated servers that are not empty, specify <b>status=dedicated:notempty</b>
 
 See the Tribes 2 master server above for example usage.
 
+<H4>Doom 3 Master</H4>
+
+The Doom 3 master server supports a number of filtering options.
+You can set these filters with QStat by appending query arguments
+to the server type.  The general syntax is:
+<blockquote>
+<b>hlm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+</blockquote>
+<table border=1>
+<tr><th>Query Argument</th><th>Values</th><th>Description</th></tr>
+<tr><td>status</td><td><i>colon separated list of</i>password, nopassword, notfull, notfullnotempty</td>
+<td>Limit servers to those matching this status.  The list is
+one or more status flags separated by colons (':'). To filter on
+servers without password that are not full, specify <b>status=nopassword:notfull</b></td></tr>
+<tr><td>gametype</td><td><i>one of</i>dm, tdm or tourney</td>
+<td>limit servers to those mathing the specified gametype</td></tr>
+</table>
+
+See the Tribes 2 master server above for example usage.<br>
+A special option is a number major.minor which specifies the protocol version.
 
 <H4>Option Usage</H4>
 

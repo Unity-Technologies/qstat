@@ -1,7 +1,8 @@
-Aug 05, 2004
+Aug 07, 2004
 Summary of New Features
 -----------------------
-Added Doom 3 initial support N.B. Score appears not to be reported.
+Full Doom3 support thanks to Timothee Besset from id Software who provided the
+necessary information.
 
 Fixes
 -----
