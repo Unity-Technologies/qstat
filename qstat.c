@@ -8,7 +8,7 @@
  * Thanks to John Ross Hunt for the OpenVMS Alpha patches (bigboote@ais.net)
  * Thanks to Scott MacFiggen for the quicksort code (smf@webmethods.com)
  * Thanks to Simon Garner for the XML patch (sgarner@gameplanet.co.nz)
- * Thanks to Bob Marriott for teh Ghost Recon code (bmarriott@speakeasy.net)
+ * Thanks to Bob Marriott for the Ghost Recon code (bmarriott@speakeasy.net)
  *
  * Inspired by QuakePing by Len Norton
  *
@@ -225,7 +225,8 @@ void sort_servers( struct qserver **array, int size);
 void sort_players( struct qserver *server);
 int server_compare( struct qserver *one, struct qserver *two);
 int player_compare( struct player *one, struct player *two);
-int unreal_html_color( short color, char *dest, int *font_tag );
+int u2xmp_html_color( short color, char *dest, int *font_tag );
+int ut2k4_html_color( char *color, char *dest, int *font_tag );
 
 int show_errors= 0;
 
@@ -10340,9 +10341,16 @@ xform_name( char *string, struct qserver *server)
 		{
 			if ( 0 == memcmp( s, "^\1", 2 ) )
 			{
-				// Color follows
+				// xmp Color follows
 				s += 2;
-				q += unreal_html_color( (unsigned char)*s, q, &font_tag );
+				q += u2xmp_html_color( (unsigned char)*s, q, &font_tag );
+			}
+			else if ( 0 == memcmp( s, "\x1b", 1 ) )
+			{
+				// Color follows
+				s += 1;
+				q += ut2k4_html_color( s, q, &font_tag );
+				s += 2;
 			}
 			else
 			{
@@ -10431,12 +10439,27 @@ xform_name( char *string, struct qserver *server)
 	return _q;
 }
 
-int unreal_html_color( short color, char *dest, int *font_tag )
+int u2xmp_html_color( short color, char *dest, int *font_tag )
 {
 	if ( 1 == html_names )
 	{
 		int len = sprintf( dest, "%s<font color=\"%s\">",
 			*font_tag ? "</font>" : "", unreal_rgb_colors[ color - 1 ]
+		);
+		*font_tag = 1;
+
+		return len;
+	}
+	return 0;
+}
+
+int ut2k4_html_color( char *color, char *dest, int *font_tag )
+{
+	if ( 1 == html_names )
+	{
+		char hexcolor[7];
+		int len = sprintf( dest, "%s<font color=\"#%02hhx%02hhx%02hhx\">",
+			*font_tag ? "</font>" : "", color[0], color[1], color[2]
 		);
 		*font_tag = 1;
 
