@@ -277,7 +277,7 @@ static void decode_q3master_packet( struct qserver *server, char *pkt, int pktle
 static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
 static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
-static int unreal_max_players( struct qserver *server );
+static int unreal_max_players( struct qserver *server, int player_number );
 char * ut2003_strdup( const char *string, const char *end, char **next );
 struct rule * add_rule( struct qserver *server, char *key, char *value,	int flags);
 int html_entity( const char c, char *dest );
@@ -5994,19 +5994,19 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			}
 		}
 
-		if ( player == NULL && unreal_player_info_key( key, end))
+		if ( player == NULL )
 		{
 			int len = unreal_player_info_key( key, end);
 			if ( len )
 			{
 				// We have player info
-				int player_number = atoi( key + 1 );
+				int player_number = atoi( key + len );
 				player = get_player_by_number( server, player_number);
 
 				// && unreal_max_players( server ) due to bf1942 issue
 				// where the actual no players is correct but more player
 				// details are returned
-				if ( player == NULL && unreal_max_players( server ) )
+				if ( player == NULL && unreal_max_players( server, player_number ) )
 				{
 					player= add_player( server, player_number);
 				}
@@ -6046,7 +6046,13 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else if ( strncmp( key, "player_", 7) == 0 )
 		{
-			if ( player && player->number == atoi(key+7))
+			int no = atoi(key+7);
+			if ( player && player->number == no )
+			{
+				player->name= strdup( value);
+				player= NULL;
+			}
+			else if ( NULL == player && NULL != ( player = get_player_by_number( server, no ) ) )
 			{
 				player->name= strdup( value);
 				player= NULL;
@@ -6054,9 +6060,9 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			// unreal_max_players( server ) due to bf1942 issue
 			// where the actual no players is correct but more player
 			// details are returned
-			else if ( unreal_max_players( server ) )
+			else if ( unreal_max_players( server, no ) )
 			{
-				player= add_player( server, atoi(key+7));
+				player= add_player( server, no );
 				if ( player)
 				{
 					player->name= strdup( value);
@@ -6142,7 +6148,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			player = get_player_by_number( server, atoi( key+6 ) );
 			if ( NULL != player )
 			{
-				player->score= atoi( value);
+				player->score = atoi( value);
 			}
 		}
 		else if ( player && strncmp( key, "playertype", 10) == 0)
@@ -6189,7 +6195,7 @@ unreal_player_info_key( char *s, char *end)
 		int len= strlen(keys[i]);
 		if ( s+len < end && strncmp( s, keys[i], len) == 0)
 		{
-			return 1;
+			return len;
 		}
 	}
     return 0;
@@ -6209,13 +6215,18 @@ unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname )
 }
 
 STATIC int
-unreal_max_players( struct qserver *server )
+unreal_max_players( struct qserver *server, int player_number )
 {
 	struct player *player;
 	int no_players = 0;
 	if ( 0 == server->num_players )
 	{
 		return 0;
+	}
+
+	if ( player_number )
+	{
+		return ( player_number < server->num_players ) ? 1 : 0;
 	}
 
 	for ( player= server->players; player; player= player->next)
