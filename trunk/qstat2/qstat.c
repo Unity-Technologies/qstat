@@ -1050,6 +1050,27 @@ display_doom3_player_info( struct qserver *server)
 }
 
 void
+display_hl2_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team_name,
+		xform_name( player->name, server));
+	else
+	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team,
+		xform_name( player->name, server));
+    }
+}
+
+void
 display_ravenshield_player_info( struct qserver *server)
 {
     struct player *player = server->players;
@@ -1511,6 +1532,37 @@ raw_display_eye_player_info( struct qserver *server)
 
 void
 raw_display_doom3_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, fmt_team_name,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team_name,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	else
+	    fprintf( OF, fmt,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_hl2_player_info( struct qserver *server)
 {
     static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
     static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
@@ -2149,6 +2201,42 @@ xml_display_eye_player_info( struct qserver *server)
 
 void
 xml_display_doom3_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->score);
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
+			player->ping);
+		if ( player->team_name)
+		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
+			xml_escape(player->team_name));
+		else
+		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
+			player->team);
+		if ( player->skin)
+		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
+			xml_escape(player->skin));
+		if ( player->connect_time)
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_hl2_player_info( struct qserver *server)
 {
     struct player *player;
 
@@ -4163,6 +4251,39 @@ send_ut2003_request_packet( struct qserver *server)
     server->n_packets++;
 }
 
+// First packet for an Half-Life 2 server
+void
+send_hl2_request_packet( struct qserver *server)
+{
+    int rc;
+
+    if ( server->flags & FLAG_BROADCAST)
+    {
+		rc= send_broadcast( server, server->type->status_packet, server->type->status_len);
+	}
+    else
+    {
+		rc= send( server->fd, server->type->status_packet, server->type->status_len, 0);
+	}
+
+    if ( rc == SOCKET_ERROR)
+    {
+		perror( "send");
+	}
+
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
+    {
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+    }
+    else
+    {
+		server->n_retries++;
+	}
+    server->retry1--;
+    server->n_packets++;
+}
+
 /* First packet for an Unreal master
  */
 void
@@ -4422,7 +4543,7 @@ send_qwmaster_request_packet( struct qserver *server)
 				query_buf[18] = build_doom3_masterfilter(server);
 				packet = query_buf;
 			}
-			
+
 		}
 		else if ( server->type->flags & TF_QUERY_ARG)
 		{
@@ -10104,7 +10225,7 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 			return;
 		}
 		*/
-		
+
 		if ( ptr + 7 > end ) // 2 pred + 4 rate + empty player name ('\0')
 		{
 			// run off the end and shouldnt have
@@ -10152,6 +10273,129 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	server->num_players = num_players;
+
+	cleanup_qserver( server, 1 );
+	return;
+}
+
+static const char hl2_statusresponse[] = "\xFF\xFF\xFF\xFFI";
+static const int hl2_statusresponse_size = sizeof(hl2_statusresponse) - 1;
+
+void
+deal_with_hl2_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	char *ptr = rawpkt;
+	char *end = rawpkt + pktlen;
+	char temp[512];
+	int type = 0;
+	unsigned num_players = 0;
+	unsigned challenge = 0;
+	unsigned char protocolver = 0;
+	unsigned char num;
+
+	server->n_servers++;
+	if ( server->server_name == NULL)
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+	}
+	else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
+
+	// Check if correct reply
+	if ( pktlen < hl2_statusresponse_size )
+	{
+		malformed_packet(server, "short response type");
+		cleanup_qserver( server, 1);
+		return;
+	}
+	else if ( 0 != memcmp( hl2_statusresponse, ptr, hl2_statusresponse_size ) )
+	{
+		malformed_packet(server, "unknown response");
+		cleanup_qserver( server, 1);
+		return;
+	}
+	else if ( pktlen < hl2_statusresponse_size + 20 )
+	{
+		malformed_packet(server, "short packet");
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	ptr += hl2_statusresponse_size;
+
+	// protocol version
+	protocolver = *ptr;
+	ptr++;
+
+	debug(2, "protocol: 0x%02X", protocolver );
+
+	if( '\x02' != protocolver )
+	{
+		malformed_packet(server, "protocol version != 0x02");
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	server->protocol_version = protocolver;
+
+	// server name
+	server->server_name = strdup( ptr );
+	ptr += strlen( ptr ) + 1;
+
+	// map
+	server->map_name = strdup( ptr );
+	ptr += strlen( ptr ) + 1;
+
+	// gamedir
+	server->game = strdup( ptr );
+	ptr += strlen( ptr ) + 1;
+
+	// description
+	add_rule( server, "description", ptr, NO_FLAGS );
+	ptr += strlen( ptr ) + 1;
+
+	// unknown
+	ptr += 2;
+
+	// max players
+	server->max_players = *ptr;
+	ptr++;
+
+	// max players
+	server->max_players = *ptr;
+	ptr++;
+
+	// bot players
+	num = *ptr;
+	sprintf( temp, "%d", num );
+	ptr++;
+	add_rule( server, "bot_players", temp, NO_FLAGS );
+
+	// dedicated
+	num = *ptr;
+	sprintf( temp, "%d", num );
+	ptr++;
+	add_rule( server, "dedicated", temp, NO_FLAGS );
+
+	// OS
+	num = *ptr;
+	add_rule( server, "os", temp, NO_FLAGS );
+	sprintf( temp, "%d", num );
+	ptr++;
+
+	// passworded
+	num = *ptr;
+	sprintf( temp, "%d", num );
+	add_rule( server, "passworded", temp, NO_FLAGS );
+	ptr++;
+
+	// secure
+	num = *ptr;
+	sprintf( temp, "%d", num );
+	add_rule( server, "secure", temp, NO_FLAGS );
+	ptr++;
 
 	cleanup_qserver( server, 1 );
 	return;
