@@ -1,0 +1,21 @@
+<TR $(IF:PLAYERS)bgcolor=#603030$(ENDIF)>
+<TD>$SERVERNAME
+<TD align=center>$(IFNOT:QWMASTER)$PLAYERS/$MAXPLAYERS$(ENDIF)
+<TD>$MAP
+<TD>$HOSTNAME
+<TD bgcolor=black>$(IF:RULE(AdminEMail))&nbsp;<a href="mailto:$(RULE:admin)">$(RULE:AdminEMail)</a>$(ENDIF)
+$(IF:PLAYERS)$(IF:FLAG(-P))
+<tr><td>
+<TR bgcolor=#603030>
+<TD colspan=4><TABLE cellpadding=1 border=0 cellspacing=0 width=45%>
+  <TR bgcolor=#555555>
+  <TH width=10 bgcolor=#603030>&nbsp;</TH>
+  <TH width=110>Player Name</TH>
+  <TH width=40 align=right>Frags</TH>
+  <TH width=40 align=right>Skin</TH>
+  <TH width=40 align=right>Team</TH>
+  <TH>&nbsp;</TH>
+$PLAYERTEMPLATE
+</TABLE>
+$ENDIF$ENDIF
+<tr><td>&nbsp;</td>

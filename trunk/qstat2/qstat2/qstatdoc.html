@@ -1,0 +1,1599 @@
+<html>
+
+<head>
+<title>QStat 2.5c documentation</title>
+</head>
+
+<BODY bgcolor=#543540 text=#e5e5e5 link=#ccffff vlink=#90e0e0>
+
+<dl>
+<H3><dt>NAME</H3>
+<dd>
+	qstat - Get statistics from on-line game servers
+
+<H3><dt>SYNOPSIS</H3>
+<dd>
+        <b>qstat</b> [<i>options</i> ...]
+		[<b>-f</b> <i>file</i>]
+		[<b>-of</b>|<b>-af</b> <i>output-file</i>]
+		[<b>-<i>server-option</i></b> <i>host</i>[:<i>port</i>]]
+<br>
+		[<b>-raw</b> <i>delimiter</i>]
+		[<b>-default</b> <i>server-type</i>]
+		<i>host</i>[:<i>port</i>] ...
+
+<H3><dt>Version 2.5c</H3>
+
+<H3><dt>DESCRIPTION</H3>
+<dd><p>
+        QStat is a command-line program that displays information about
+	Internet game servers.
+        The servers are either down, non-responsive, or running a
+        game.  For servers running a game, the server name, map name,
+        current number of players, and response time are displayed.
+	Server rules and player information may also be displayed.
+<p>
+	Games supported include Quake, QuakeWorld, Hexen II,
+	Quake II, HexenWorld, Unreal, Half-Life, Sin, Shogo,
+	Tribes, Tribes 2, Quake III: Arena, BFRIS, Kingpin, and
+	Heretic II, Unreal Tournament, Soldier of Fortune, Rogue Spear,
+	Redline, Turok II, Blood 2, Descent 3, Drakan, KISS, Nerf Arena Blast,
+	Rally Master, Terminous, Wheel of Time, and Daikatana and many more.
+	<b>Note for Tribes 2:</b> QStat only supports Tribes 2 builds
+	numbered 22075 or higher.
+	<b>Note for Ghost Recon</b> QStat only supports GhostRecon patch 1.2,
+	1.3, 1.4, Desert Siege, and Island Thunder.
+<p>
+	Some games use query protocols compatible with an existing
+	game.  These servers can be queried using the flags for
+	the compatible game.  For instance, Turok2 should work
+	using the <b>-uns</b> flag.  Unreal Tournament is also
+	supported by the <b>-uns</b> but is not really a different
+	game.  You can distinguish Unreal Tournament games with the
+	"minnetver" server rule (standard Unreal servers have a
+	"mingamever" server rule).
+<p>
+	The Quake servers can be divided into two categories: POQS
+	(Plain Old Quake Server) and QuakeWorld.  Quake shareware,
+	Quake commercial (from CD), winquake, winded, unixded, and
+	Hexen II are all POQS.  The various versions of QuakeWorld
+	and Quake II use a QuakeWorld type server.  The distinction
+	is based on network protocol used to query the servers, and
+	affects the kind of information available for display.
+<p>
+	The different server types can be queried simultaneously.
+	If QStat detects that this is being done, the output is
+	keyed by the type of server being displayed.  See DISPLAY
+	OPTIONS.
+<p>
+	The game server may be specified as an IP address or a hostname.
+	Servers can be listed on the command-line or, with the use
+	of the <b>-f</b> option, a text file.
+
+<H3><dt>DISPLAY MODES</H3>
+<dd><p>
+	One line will be displayed for each server queried.  The first
+	component of the line will be the server's address as given
+	on the command-line or the file.  This can be used as a key to
+	match input addresses to server status.  Server rules and player
+	information are displayed under the server info, indented by
+	one tab stop.
+<p>
+	QStat supports three additional display modes: <i>raw</i>,
+	<i>templates</i>, and <i>XML</i>.  In raw mode, the server information is
+	displayed using simple delimiters and no formatting.  This mode
+	is good for programs that parse and reformat QStat's output.
+	The template mode uses text files to layout the server information
+	within existing text.  This is ideal for generating web pages.
+	The XML mode outputs server information wrapped in simple
+	XML tags.
+	The raw mode is enabled using the <b>-raw</b> option, template
+	output is enabled using <b>-Ts</b>, and XML output is enabled
+	with <b>-xml</b>.
+
+<H3><dt>GAME OPTIONS</H3>
+
+<dd><p>These options select which servers to query and what game type
+they are running.  Servers are specified by IP address (for example:
+199.2.18.4) or hostname.  Servers can be listed on the command-line
+or in a file (see option <b>-f</b>.)  The game type of a server
+can be specified with its address, or a default game type can be
+set for all addresses that don't have a game type.
+<p>
+The following table shows the command-line option and type strings
+for the supported game types.  The type string is used with the
+<b>-default</b> option and in files with the <b>-f</b> option.
+<p>
+<table border=1 cellspacing=1>
+<tr><th width=70>Option<th width=80>Type String<th>Default Port<th>Game Server
+<tr><td>-qs<td>qs<td>26000<td>Quake
+<tr><td>-h2s<td>h2s<td>26900<td>Hexen II
+<tr><td>-qws<td>qws<td>27500<td>QuakeWorld
+<tr><td>-hws<td>hws<td>26950<td>HexenWorld
+<tr><td>-q2s<td>q2s<td>27910<td>Quake II
+<tr><td>-uns<td>uns<td>7777<td>Unreal
+<tr><td>-ut2s<td>ut2s<td>7777<td>Unreal Tournament 2003
+<tr><td>-hls<td>hls<td>27015<td>Half-Life
+<tr><td>-sns<td>sns<td>22450<td>Sin
+<tr><td>-sgs<td>sgs<td>27888<td>Shogo: Mobile Armor Division
+<tr><td>-tbs<td>tbs<td>28001<td>Starsiege: Tribes
+<tr><td>-t2s<td>t2s<td>28000<td>Tribes 2
+<tr><td>-qwm<td>qwm<td>27000<td>QuakeWorld master
+<tr><td>-q2m<td>q2m<td>27900<td>Quake II master
+<tr><td>-hlm<td>hlm<td>27010<td>Half-Life master
+<tr><td>-tbm<td>tbm<td>28000<td>Tribes master
+<tr><td>-t2m<td>t2m<td>28002<td>Tribes 2 master
+<tr><td>-q3s<td>q3s<td>27960<td>Quake III
+<tr><td>-q3m<td>q3m<td>27950<td>Quake III master
+<tr><td>-bfs<td>bfs<td>44001<td>BFRIS
+<tr><td>-kps<td>kps<td>31510<td>Kingpin
+<tr><td>-hrs<td>hrs<td>28910<td>Heretic II
+<tr><td>-sfs<td>sfs<td>28910<td>Soldier of Fortune
+<tr><td>-gsm<td>gsm<td>28900<td>Gamespy master
+<tr><td>-gps<td>gps<td>-<td>Game using "Gamespy style" protocol 
+<tr><td>-d3m<td>d3m<td>3445<td>Descent 3 PXO master
+<tr><td>-d3p<td>d3p<td>2092<td>Descent 3, PXO server
+<tr><td>-d3s<td>d3s<td>2092<td>Descent 3, LAN server
+<tr><td>-d3g<td>d3g<td>20142<td>Descent 3, Gamespy protocol
+<tr><td>-rws<td>rws<td>27960<td>Return to Castle Wolfestein
+<tr><td>-rwm<td>rwm<td>27950<td>Return to Castle Wolfestein master
+<tr><td>-efs<td>efs<td>27960<td>Star Trek: Elite Force
+<tr><td>-efm<td>efm<td>27953<td>Star Trek: Elite Force master
+<tr><td>-grs<td>grs<td>2346<td>Ghost Recon
+</table>
+<p>
+The command-line options can be specified multiple times, one for
+each server to be queried.
+
+<h4>Configuration Files</h4>
+
+The games supported by QStat can be customized with configuration
+files.  The query parameters
+of built-in game types can be modified and new games can be defined.
+<p>
+For built-in game types, certain parameters can be modified.  The
+parameters are limited to the master server protocol and master
+server query string.
+<p>
+New game types can be defined as a variation on an existing game
+type.  Most new games use a Quake 3 or Gamespy/Unreal based
+network engine.  These games can already be queried using <b>-q3s</b>
+or <b>-gps</b>, but they don't have game specific details such as the
+correct default port, the game name, and the correct "game" or "mod"
+server rule.  And, mostly importantly, they don't get their own
+game type string (e.g. q3s, rws, t2s).  All of these details
+can be specified in the QStat config file.
+<p>
+QStat comes with a default configuration file called 'qstat.cfg'.
+If this file is found in the directory where qstat is run, the
+file will be loaded.  Configuration files can also be specified
+with the QSTAT_CONFIG environment variable and the <b>-cfg</b>
+command-line option.  See <a href="#APPENDIXB">Appendix B</a> for
+a description of the configuration file format.
+
+
+<h4>Descent 3</h4>
+Support for Descent 3 is a bit fragmented.  There are three different
+protocols for getting status information from a Descent 3 server: PXO,
+LAN, and Gamespy.  If the server was acquired from the PXO master
+server, then the PXO protocol is used.  If the server is running on
+the local LAN (not reporting to a master server), then the LAN
+protocol should be used.  Finally, if the server's Gamespy query
+port is known (default is 20142) then the Gamespy protcol can be
+used.  The gamespy protocol can be used on servers listed in the PXO
+master.
+<p>
+Each protocol reports different information.  The Gamespy protocol
+provides player names, frags, deaths, and ping.  The PXO and LAN
+protocols only provide player names.
+<p>
+The ideal solution would be a PXO server list paired with each
+server's gamespy query port.  Most servers will use the default
+gamespy query port, unless there are multiple servers on the same
+machine.  A possible approach is to get the server list from the
+PXO master like this:<pre>qstat -d3m,outfile gt.pxo.net,d3pxo.txt</pre>
+Then convert the file from "d3p" to "d3g" and remove the port numbers:
+<pre>sed -e 's/d3p/d3g/' -e 's/:.*$//' d3pxo.txt > d3gs.txt</pre>
+Then run the servers in d3gs.txt with -f:
+<pre>qstat -f d3gs.txt</pre>
+This technique will retrieve the full player info for servers using
+the default gamespy query port.
+
+<H4>Broadcast Queries</H4>
+<dd>QStat has limited support for broadcast queries.  Broadcast queries
+use one network packet to find all the game servers on a local
+network.  A broadcast returns servers of one type on one port.
+You may only broadcast to networks to which you computer is
+directly attached (ie. local networks).  <b>In this release, broadcast
+queries are only supported for: Quake II servers and Gamespy style servers.</b>
+<p>
+A broadcast query is specified by prefixing an address with a '<tt>+</tt>'
+(plus sign).  The address should be 255.255.255.255 or a valid
+broadcast address for your local network.  On Unixes, 'ifconfig -a' will
+display the broadcast address for all attached networks.
+
+<H4>Query Arguments</H4>
+Some game types support customized server queries.  For example,
+many master servers can return a select list of servers based on
+the mod, number of players, or region.  Each query can be
+customized differently.
+<p>
+Server queries are customized by attaching query arguments to the
+server type option.  Each argument is separated by a comma (',').
+The argument has a name followed by an optional value separated
+with an equal-sign ('=').  The general format looks like this:
+<pre>
+<i>-server-option</i>,<i>query-arg</i>[=<i>arg-value</i>][, ...]
+</pre>
+See the Master Server sections below for more examples.
+<H5>General Query Arguments</H5>
+The follow query arguments can be applied to any server type.
+<table border=1>
+<tr><th>Query Argument<th>Description
+<tr><td>showgameport<td>Always display the game port in QStat
+output.  If the query port was different from the game port, then
+the query port will be saved in the "_queryport" server rule.
+This is the same as the <b>-showgameport</b> command-line option,
+but only applies to one server query.
+<tr><td>gp<td>Short-hand for showgameport.
+<tr><td>noportoffset<td>Do not apply the "status port offset" when
+sending the server query.  Some games use different ports for
+game play and status queries (for example, Unreal, Medal of Honor, etc).
+QStat will normally add an offset to the game port to find the
+query port.  But not all servers use the standard offset.  This
+option allows QStat to query servers where the query port is
+known.  The server address should be an IP address and a query
+port (not the game port).
+This is the same as the <b>-noportoffset</b> command-line option,
+but only applies to one server query.
+<tr><td>qp<td>Short-hand for noportoffset.
+</table>
+<p>
+Some examples of the general query arguments.
+<pre>
+qstat -uns,noportoffset 1.2.3.4:7787
+ADDRESS           PLAYERS      MAP   RESPONSE TIME    NAME
+1.2.3.4:7787        0/16      Kansas    119 / 0       Example server
+</pre>
+The default Unreal game port is 7777 and the query port is usually
+at offset 1 (port 7778).  But this server has a different query port.
+Note that qstat displays the query port.  To display the game port
+instead:
+<pre>
+qstat -uns,noportoffset,showgameport 1.2.3.4:7787
+ADDRESS           PLAYERS      MAP   RESPONSE TIME    NAME
+1.2.3.4:7777        0/16      Kansas    119 / 0       Example server
+</pre>
+Another common usage for "showgameport" is with broadcast queries:
+<pre>
+qstat -uns,showgameport +255.255.255.255
+</pre>
+
+
+<H4>Master Servers</H4>
+Master server addresses don't change very often, but some times they
+go off-line.  The following is a table of some of the master servers
+I know about.
+<p>
+<table border=1><tr><th align=left>Game<th align=left>Master Servers
+<tr><td>QuakeWorld<td>satan.idsoftware.com (ports 27000, 27002, 27003,
+27004, 27006), 204.182.161.2, 194.217.251.40, 203.34.140.1, 200.245.221.200,
+194.87.251.3
+<tr><td>Quake II<td>satan.idsoftware.com, q2master.planetquake.com
+<tr><td>Half-Life<td>half-life.west.won.net, half-life.east.won.net
+<tr><td>Tribes<td>tribes.dynamix.com
+<tr><td>Quake III<td>master3.idsoftware.com
+<tr><td>Gamespy<td>master0.gamespy.com
+<tr><td>Tribes 2<td>211.233.32.77:28002, 217.6.160.205:28002
+<tr><td>Descent 3<td>gt.pxo.net
+<tr><td>Return to Castle Wolfenstein<td>wolfmaster.idsoftware.com
+<tr><td>Star Trek: Elite Force<td>master.stef1.ravensoft.com
+</table>
+
+<H4>Gamespy Master</H4>
+
+<b>Access to the gamespy masters has been disabled by Gamespy Inc.</b>
+<p>
+Server lists can be fetched from Gamespy masters by using the <b>gsm</b>
+game type.  A <i>query argument</i> is required to use the Gamespy master.
+This extra argument indicates which server list to get from the master.
+The query argument can be one of the QStat supported game types or any
+other string that will fetch a server list.  The following game types
+can be used as query arguments: qws, q2s, q3s, tbs, uns, sgs, hls, kps,
+hrs, sfs.  For each of the game types, QStat will fetch the appropriate
+server list and get status from each server.
+<p>
+The query argument can also be any string that the Gamespy master
+responds to.  Most of these games support a "standard" server status
+protocol that I'll call the "Gamespy status protocol".  Not surprisingly,
+it is almost identical to the Unreal server status protocol.  This
+means that QStat can support any game that supports this protocol.
+In QStat these games are queried using the <b>gps</b> game type.
+Through experimentation I've found the following query arguments.
+<p>
+<table border=1>
+<tr><th>Query Argument<th>Game
+<tr><td>roguespear<td>Rainbow Six: Rogue Spear
+<tr><td>redline<td>Redline Racer
+<tr><td>turok2<td>Turok 2: Seeds of Evil
+<tr><td>blood2<td>Blood 2: The Chosen
+<tr><td>drakan<td>Drakan: Order of the Flame
+<tr><td>kiss<td>KISS Psycho Circus: The Nightmare Child
+<tr><td>nerfarena<td>Nerf Arena Blast
+<tr><td>rally<td>Rally Masters: Michelin Race Of Champions
+<tr><td>terminous<td>Terminous (?)
+<tr><td>wot<td>The Wheel of Time
+<tr><td>daikatana<td>Daikatana
+</table>
+
+<H4>Tribes 2 Master</H4>
+
+The Tribes 2 master server supports a number of filtering options.
+You can set these filters with QStat by appending query arguments
+to the server type.  The general syntax is:
+<blockquote>
+<b>t2m,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+</blockquote>
+<table border=1>
+<tr><th>Query Argument<th>Values<th>Description
+<tr><td>game<td><i>mod path</i><td>Mod path the server is using.  The mod
+path of unaltered servers is "base".  Use <b>query=types</b> to
+get the list of known game types.
+<tr><td>mission<td>Bounty, Capture the Flag, CnH, Deathmatch, Hunters,
+	Rabbit, Siege, TeamHunters<td>Mission type the server is currently running.
+Use <b>query=types</b> to get the list of known mission types.
+<tr><td>minplayers<td><i>0 - 255</i><td>Servers with fewer players than this will not be returned.
+<tr><td>maxplayers<td><i>1 - 255</i><td>Servers with more players than this will not be returned.
+<tr><td>regions<td><i>list of regions</i> or 0x<i>hex-value</i>
+<td>Limit servers to those in the given geographical
+regions.  See Region List table.  The regionlist is sent as a bit mask
+to the Tribes 2 master.  If you know the bit mask for a region QStat
+doesn't support, you can specify the bitmask directly by supplying a
+hex value: <b>regions=0x11</b>.
+<tr><td>build<td><i>build version #</i>
+<td>Only return servers matching this build version number.  <b>[4/20/2001]
+This filter only seems to work if the <i>build version #</i> is 22337.
+If the filter is 22228, then the master returns 0 servers.  This appears
+to be a bug in the T2 master.</b>
+<tr><td>status<td><i>list of </i>dedicated, linux, nopassword<br>or 0x<i>hex-value</i>
+<td>Limit servers to those with these status flags set.  The list is
+one or more status flags separated by colons (':').  To filter on
+dedicated Linux servers, specify <b>status=dedicated:linux</b><br>
+If you know a status flag that QStat doesn't support, you can specify
+the status flags directly by supplying a hex value: <b>status=0x3</b>
+<tr><td>maxbots<td><i>0 - 255</i><td>Servers with more bots than this will not be returned.
+<tr><td>mincpu<td><i>0 - 65535</i><td>Servers with lower CPU speed than this will not be returned.
+<tr><td>query<td>types<td>Get the list of game and mission types.  This
+is not a filter but a different master request.  Using this query
+argument overrides any other query arguments.  The list of game and
+mission types known to the master server will be displayed.  In raw
+mode, the first line is the list of game types and the second line is
+the list of mission types.  There is no output template support for
+game and mission lists.
+</table>
+
+<blockquote>
+<h5>Region List</h5>
+The region list is one or more region arguments separated by colons (':').
+For example, to filter on North American servers specify <b>regions=naeast:nawest</b>
+<p>
+<table border=1>
+<tr><th>Region Argument<th>Geography
+<tr><td>naeast<td>North America East
+<tr><td>nawest<td>North America West
+<tr><td>sa<td>South America
+<tr><td>aus<td>Australia
+<tr><td>asia<td>Asia
+<tr><td>eur<td>Europe
+</table>
+</blockquote>
+
+The Tribes 2 master query arguments can be used on the command-line
+or in a server list file (via the <b>-f</b> option).  If the values
+contain spaces, be sure to quote the arguments for your shell.  The
+second example below demonstrates this usage for most common shells.
+To query for
+Capture the Flag servers that have more than 6 players:
+<blockquote>
+<b>qstat -t2m,mission=Capture the Flag,minplayers=6</b> <i>master-server-ip</i><br>
+<b>qstat -t2m,mission="Capture the Flag",minplayers=6</b> <i>master-server-ip</i><br>
+</blockquote>
+If you want to do this in a server list file, that would look like
+this:
+<blockquote>
+<b>t2m,mission=Capture the Flag,minplayers=6</b> <i>master-server-ip</i><br>
+</blockquote>
+Master server filters can be combined with the "<b>outfile</b>" option.
+Just put <b>outfile</b> some where in the query argument list and put
+the name of the output file after the master IP address:
+<blockquote>
+<b>t2m,outfile,mission=Siege,minplayers=4</b> <i>master-server-ip</i><b>,siegeservers.txt</b>
+</blockquote>
+Warning: There is a bug in the 22075 build of Tribes 2 that
+doesn't return the game name.  For those builds, QStat will use the game
+info in place of the game name.  The bug is fixed in the 22228 build.
+In fixed servers, the game info can be found in the "info" server rule.
+
+<H4>Half-Life Master</H4>
+
+The Half-Like master server supports a number of filtering options.
+You can set these filters with QStat by appending query arguments
+to the server type.  The general syntax is:
+<blockquote>
+<b>hlm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+</blockquote>
+<table border=1>
+<tr><th>Query Argument<th>Values<th>Description
+<tr><td>game<td><i>mod path</i><td>Servers running this "mod".
+<tr><td>map<td><i>map name</i><td>Servers running this map.
+<tr><td>status<td><i>list of </i>dedicated, linux, notempty, notfull
+<td>Limit servers to those matching this status.  The list is
+one or more status flags separated by colons (':').  To filter on
+dedicated servers that are not empty, specify <b>status=dedicated:notempty</b>
+</table>
+
+See the Tribes 2 master server above for example usage.
+
+<H4>Option Usage</H4>
+
+<dl>
+<dt><b>-cfg</b> <i>configuration-file</i><dd>
+	Load the QStat configuration file.  New game types defined in
+	the config file can be used in subsequent command-line options.
+<dt><b>-<i>server-option</i></b> <i>host</i>[:<i>port</i>]<dd>
+	Query game server <i>host</i> for status.  The GAME OPTIONS
+	table lists the available <i>server-options</i> and their default
+	port.
+
+<dt><b>-nocfg</b>
+	Ignore qstat configuration loaded from any default location
+	(see <a href="#APPENDIXB">Appendix B</a> for a list of default locations).  Must be the
+	first option on the command-line.  Use this option to have
+	complete control over the configured game types.
+
+<dt><b>-<i>master-server-option</i></b> <i>host</i>[:<i>port</i>]<dd>
+	Query a game master for its server list and then query all
+	the servers.  The GAME OPTIONS
+	table lists the available <i>master-server-options</i>
+	and their default port.
+
+<dt><b>-<i>master-server-option</i>,outfile</b> <i>host</i>[:<i>port</i>],<i>file</i><dd>
+	Query a game master for its server list and store it
+	in <i>file</i>.  If the master cannot be contacted, then
+	<i>file</i> is not changed.  If <i>file</i> is <b>-</b> (a
+	single dash), then stdout is used.
+	The GAME OPTIONS table lists the available
+	<i>master-server-options</i> and their default port.
+
+<dt><b>-gsm,<i>query-argument</i></b> <i>host</i>[:<i>port</i>]<dd>
+	Query a Gamespy master for a server list and then query all
+	the servers.  The Gamespy Master section details the supported
+	values for <i>query-argument</i>.
+<dt><b>-gsm,<i>query-argument</i>,outfile</b> <i>host</i>[:<i>port</i>],<i>file</i><dd>
+	Query a Gamespy master for a server list and store it
+	in <i>file</i>.  If the master cannot be contacted, then
+	<i>file</i> is not changed.  If <i>file</i> is <b>-</b> (a
+	single dash), then stdout is used.
+	The Gamespy Master section details the supported
+	values for <i>query-argument</i>.
+
+<dt><b>-q3m,<i>query-argument</i></b> <i>host</i>[:<i>port</i>]<dd>
+	Query a Quake 3 Arena master for a protocol-specific server list
+	and then query all the servers.  The <i>query-argument</i> should
+	be a Quake 3 protocol version.  Protocol version 48 is Quake 3
+	version 1.27, protocol 46 is Quake 3
+	version 1.25, protocol 45 is Quake 3 1.17, protocol 43 is Quake 3
+	version 1.11.  The default is protocol version 48.
+<dt><b>-q3m,<i>query-argument</i>,outfile</b> <i>host</i>[:<i>port</i>],<i>file</i><dd>
+	Query a Quake 3 Arena master for a protocol-specific server list
+	and store it in <i>file</i>.  The <i>query-argument</i> should
+	be a Quake 3 protocol version.  Protocol version 46 is Quake 3
+	version 1.25, protocol 45 is Quake 3 1.17, protocol 43 is Quake 3
+	version 1.11.  The default is protocol version 45.
+
+<dt><b>-f</b><i> file</i><dd>
+	Read host addresses from the given file.  If <i>file</i> is <b>-</b>,
+	then read from stdin.  Multiple <b>-f</b> options may be
+	used.  The file should contain host names or IP
+	addresses separated by white-space (tabs, new-lines,
+	spaces, etc).  If an address is preceded by a server
+	type string, then QStat queries the address according
+	to the server type.  Otherwise QS is assumed, unless <b>-default</b>
+	is used.  The GAME OPTIONS table lists the available server
+	type strings and their default port.
+
+<dt><b>-default</b><i> type-string</i><dd>
+	Set the default server type for addresses where the type is not
+	obvious.  This affects the addresses at the end of the qstat
+	command-line and those in a file not prefixed by a server type
+	(see <b>-f</b>).
+	The GAME OPTIONS table lists the available server
+	type strings and their default port.
+
+<dt><b>-noportoffset</b><dd>
+	Do not apply the "status port offset" when
+	sending server queries.  Some games use different ports for
+	game play and status queries (for example, Unreal, Medal of Honor, etc).
+	QStat will normally add an offset to the game port to find the
+	query port.  But not all servers use the standard offset.  This
+	option allows QStat to query servers where the query port is
+	known.  The server addresses should be an IP address and a query
+	port (not the game port).
+	This is the same as the <b>noportoffset</b> server query argument,
+	but applies to all servers being queried.
+
+</dl>
+
+<H3><dt>INFO OPTIONS</H3>
+
+<dl compact><dt><b>-R</b><dd>
+	Fetch and display server rules.
+
+<dt><b>-P</b><dd>
+	Fetch and display player information.
+</dl>
+
+<H3><dt>DISPLAY OPTIONS</H3>
+
+<dd><p>The QStat output should be self explanatory.  However, the type of
+information returned is different between game types.  If QStat
+queries multiple server types, then each server status line is prefixed
+with its type string.  The GAME OPTIONS table lists the available
+type strings.
+
+<p>
+<dl compact>
+<dt><b>-of</b> <i>file</i><dd>
+	Write output to <i>file</i> instead of stdout or the console.
+	<i>file</i> is over written if it already exists.
+<dt><b>-af</b> <i>file</i><dd>
+	Like <b>-of</b>, but append to the file.  If <i>file</i> does
+	not exist, it is created.
+<dt><b>-u</b><dd>
+                Only display hosts that are up and running a game server.
+		Does not affect template output.
+ 
+<dt><b>-nf</b><dd>
+                Do not display full servers.  Does not affect template
+		output.
+
+<dt><b>-ne</b><dd>
+                Do not display empty servers.  Does not affect template
+		output.
+
+<dt><b>-nh</b><dd>
+                Do not display header line (does not apply to raw or
+		template output.)
+
+<dt><b>-cn</b><dd>
+		Display color names instead of numbers.  This is
+		the default.  Only applies to Quake, QuakeWorld,
+		Hexen II, and HexenWorld.
+
+<dt><b>-ncn</b><dd>
+		Display color numbers instead of color names.  This is
+		the default for <b>-raw</b> mode.  Only applies to Quake,
+		QuakeWorld, Hexen II, and HexenWorld.
+
+<dt><b>-hc</b><dd>
+		Display colors in #rrggbb format.  This is nice for
+		HTML output.  Only applies to Quake, QuakeWorld,
+		Hexen II, and HexenWorld.
+
+<dt><b>-tc</b><dd>
+		Display time in clock format (DhDDmDDs).  This is the default.
+
+<dt><b>-tsw</b><dd>
+		Display time in stop-watch format (DD:DD:DD).
+
+<dt><b>-ts</b><dd>
+		Display time in seconds.  This is the default for
+		<b>-raw</b> mode.
+ 
+<dt><b>-pa</b><dd>
+		Display player addresses.  This is the default for
+		<b>-raw</b> mode.  Only available for Quake and Hexen II.
+
+<dt><b>-sort</b><i> sort-keys</i><dd>
+		Sort servers and/or players.  Servers and players are sorted
+		according to <i>sort-keys</i>.  Lower case sort keys are
+		for servers and upper case keys are for players.  The
+		following sort keys are supported:
+		<ul>
+		<li>p - Sort by ping
+		<li>g - Sort by game (mod)
+		<li>i - Sort by IP address
+		<li>h - Sort by hostname
+		<li>n - Sort by number of players
+		<li>l - Sort by list order
+		<li>P - Sort by player ping
+		<li>F - Sort by frags
+		<li>T - Sort by team
+		</ul>
+		<p>
+		The 'l' (ell) sort key displays servers in the order they
+		were provided to qstat.  For example, the order in which
+		they are listed on the command-line or in a file.  The
+		'l' sort key cannot be combined with other server sort
+		keys, but it can be be combined with player sort keys.
+		If the 'l' sort key is used with other sort keys, then the
+		'l' sort key is ignored.
+
+<dt><b>-hpn</b><dd>
+		Display player names in hex.
+
+<dt><b>-old</b><dd>
+		Use pre-qstat 1.5 display style.
+
+<dt><b>-raw</b><i> delimiter</i><dd>
+	Display data in "raw" mode.  The argument to
+	<b>-raw</b> is used to separate columns of
+	information.  All information returned by the game
+	server is displayed.
+<br>
+	<b>POQS output</b> -- General server information is
+	displayed in this order: command-line arg (IP address
+	or host name), server name, server address (as returned
+	by Quake server), protocol version, map name, maximum
+	players, current players, average response time,
+	number of retries.  Server rules are displayed on one
+	line as <i>rule-name</i>=<i>value</i>.  If significant packet
+	loss occurs, rules may be missing.  Missing rules are
+	indicated by a "?" as the last rule.  Player information
+	is displayed one per line: player number, player name,
+	player address, frags, connect time, shirt color, pants
+	color.  A blank line separates each set of server
+	information.
+<br>
+	<b>QuakeWorld and HexenWorld server output</b> -- General server information is
+	displayed in this order: command-line arg (IP address
+	or host name), server name, map name, maximum
+	players, current players, average response time,
+	number of retries, game (mod).  Server rules are displayed on one
+	line as <i>rule-name</i>=<i>value</i>. Player information
+	is displayed one per line: player number, player name,
+	frags, connect time, shirt color, pants
+	color, ping time (milliseconds), skin name.  A blank line
+	separates each set of server information.
+<br>
+	<b>All master server output</b> -- Master server information is
+	displayed in this order: command-line arg (IP address
+        or host name), number of servers.  No other information
+	is displayed about master servers.
+<br>
+	<b>Quake II, Quake III, Half-Life, Sin, BFRIS, Kingpin, Heretic II, Unreal, Tribes 2, and Shogo server output</b> -- General server information and
+	server rules are the same as a QuakeWorld server.
+	The player information varies for each game:
+<ul>
+<li>Quake II/III, Sin, Kingpin, Heretic II, Shogo: player name, frags, ping time
+<li>Half-Life: player name, frags, connect time
+<li>Tribes: player name, frags, ping time, team number, packet loss
+<li>Tribes 2: player name, frags, team number, team name, player type, tribe tag
+<li>Unreal: player name, frags, ping time, team number, skin, mesh, face
+<li>BFRIS: player number, ship, team name, ping time, score, frags, player name
+<li>Descent 3: player name, frags, deaths, ping time, team 
+</ul>
+	Ping time is in milli-seconds.  Connect time is in seconds.
+	A blank line separates each set of server information.
+<br>
+	<b>Ghost Recon server output</b> -- General server information and
+	server rules are the detailed in the GhostRecon.txt file.
+
+	Servers queried using the "Gamespy style" protocol use the
+	same raw output format as Unreal servers.
+	<p>
+<dt><b>-raw,game</b><i> delimiter</i><dd>
+	Same as <b>-raw</b> but adds the game or mod name as the last
+	item of server info.
+
+<dt><b>-raw-arg</b><dd>
+	When used with <b>-raw</b>, always display the server address
+	as it appeared in a file or on the command-line.  Note that
+	when <b>-H</b> is used with <b>-raw</b>, the first field of the
+	raw output could be a hostname if the server IP address was resolved.
+	This can make matching up input servers addresses with raw output
+	lines fairly difficult.  When <b>-raw-arg</b> is also used, an
+	additional field, the unresolved server address, is added at the
+	beginning of all raw output lines.
+
+<dt><b>-progress</b><dd>
+	Print a progress meter.  Displays total servers processed,
+	including timeouts and down servers.  The meter is just a
+	line of text that writes over itself with &lt;cr&gt;.  Handy
+	for interactive use when you are redirecting output to
+	a file (the meter is printed on stderr).
+
+<dt><b>-Tserver</b><i> file</i><br>
+<dt><b>-Tplayer</b><i> file</i><br>
+<dt><b>-Trule</b><i> file</i><br>
+<dt><b>-Theader</b><i> file</i><br>
+<dt><b>-Ttrailer</b><i> file</i><dd>
+	Output templates.  Each template should be a text file containing
+	QStat variables that are substituted for results from the server
+	query.  The <b>-Tserver</b> flag must present to enable template
+	output.  The other <b>-T</b> flags are optional.  The server template
+	is output once for each server queried.  The player template,
+	if present, is output once for each player (if <b>-P</b> is also
+	used).  The rule template is output once for each server rule (the
+	<b>-R</b> option may be required for some game types).
+	The header template is output once before any servers
+	are output.  The trailer template is output once after all servers
+	are output.  See <a href="#APPENDIXA">Appendix A</a> for the
+	output template formatting and variables.<br>
+	NOTE: All of of the <b>-T</b> flags may be abbreviated with two
+	characters: <b>-Ts</b>, <b>-Tp</b>, <b>-Tr</b>, <b>-Th</b>, and <b>-Tt</b>.
+
+<dt><b>-htmlnames</b><dd>
+	Colorize Quake 3 and Tribes 2 player names using html font tags.
+	Enabled by default if <b>$HTML</b> is used in an output template.
+
+<dt><b>-nohtmlnames</b><dd>
+	Do not colorize Quake 3 and Tribes 2 player names even if
+	<b>$HTML</b> is used in an output template.  The
+	<b>$HTMLPLAYERNAME</b> variable will always colorize player
+	names.
+
+<dt><b>-htmlmode</b><dd>
+	Convert &lt;, &gt;, and &amp; to the equivalent HTML entities.
+	This is the same as <b>$HTML</b> in an output template, but works for
+	raw display mode.  Using <b>-htmlmode</b> with <b>-xml</b> will
+	result in double-escaping.
+
+<dt><b>-carets</b><dd>
+	Display carets in Quake 3 player names.  Carets are
+	used for colorized player names and are remove by default.
+	This option has no effect if <b>-htmlnames</b> is
+	enabled.
+
+<dt><b>-xml</b><dd>
+	Output server information wrapped in XML tags.
+
+<dt><b>-utf8</b><dd>
+	Use the UTF-8 character encoding for XML output.
+
+<dt><b>-showgameport</b><dd>
+	Always display the game port in QStat
+	output.  If the query port was different from the game port, then
+	the query port will be saved in the "_queryport" server rule.
+	This is the same as the <b>showgameport</b> server query argument,
+	but applies to all server queries.
+
+<dt><b>-errors</b><dd>
+	Display errors.
+
+<dt><b>-d</b><dd>
+	Enable debug options.  By default, enables printing of all
+	received packets to stderr.
+
+</dl>
+
+<H3><dt>SEARCH OPTIONS</H3>
+
+<dl compact><dt><b>-H</b><dd>
+	Resolve IP addresses to host names.  Use with caution
+	as many game servers do not have registered host
+	names.  QStat may take up to a minute to timeout
+	on each unregistered IP address.  The duration of
+	the timeout is controlled by your operating system.  Names
+	are resolved before attempting to query any servers.
+
+<dt><b>-Hcache</b><i> cache-file</i><dd>
+	Cache host name and IP address resolutions in <i>cache-file</i>.
+	If the file does not exist, it is created.  If <b>-Hcache</b> is used
+	without <b>-H</b>, then the cache is only used for host to IP address
+	resolution.  <b>WARNING </b> A host cache file should <i>not</i> be
+	shared by QStat programs running at the same time.  If you run several
+	QStats at the same time, each should have its own cache file.
+
+<dt><b>-interval</b><i> seconds</i><dd>
+	Interval in seconds between server retries.  Specify as a
+	floating point number.  Default interval is 0.5 seconds.
+	This option does not apply to master servers (see <b>-mi</b>.)
+ 
+<dt><b>-mi</b><i> seconds</i><dd>
+	Interval in seconds between master server retries.  Specify as a
+	floating point number.  Default interval is 2 seconds.
+ 
+<dt><b>-retry</b><i> number</i><dd>
+	Number of retries.  QStat will send this many packets
+	to a host before considering it non-responsive.  Default
+	is 3 retries.
+
+<dt><b>-maxsimultaneous</b><i> number</i><dd>
+	Number of simultaneous servers to query.  Unix systems
+	have an operating system imposed limit on the number of
+	open sockets per process.  This limit varies between
+	32 and 100 depending on the platform.  On Windows 95 and
+	Windows NT, the "select" winsock function limits the number of
+	simultaneous queries to 64.  These limits can be increased
+	by minor changes to the code, but the change is different
+	for each platform.  Default is 20 simultaneous queries.
+	This option may be abbreviated <b>-maxsim</b>.
+
+<dt><b>-timeout</b><i> seconds</i><dd>
+        Total run time in seconds before giving up.  Default is
+	no timeout.
+
+</dl>
+
+<H3><dt>NETWORK OPTIONS</H3>
+
+<dl compact>
+<dt><b>-srcport</b> <i>port-number</i> | <i>port-range</i><dd>
+	Specify the source ports for sending packets.  The ports can
+	be a single number or a range.  A range is two numbers
+	separated by a dash ('-').  The numbers should be positive
+	and less than 65535.  Use this option to get through a
+	firewall that has source port restrictions.  Set <b>-srcport</b>
+	to the range of ports allowed by the firewall.
+	<p>
+	Example: If your firewall will allow outgoing UDP packets on
+	ports 26000-30000, the qstat option would be <b>-srcport 26000-30000</b>
+	<p>
+	<b>Note:</b> The number of source ports given should be greater
+	than or equal to the <b>-maxsim</b> (defaults to 20).  The
+	number of source ports will limit the number of simultaneous
+	server queries.
+
+<dt><b>-srcip</b> <i>IP-address</i><dd>
+	Specify a local IP address from which to send packets.  This
+	is useful on machines that have multiple IP addresses where
+	the source IP of a packet is checked by the receiver.
+	Normally this option is never needed.
+</dl>
+
+<H3><dt>NOTES</H3>
+
+<dd><p>
+	The response time is a measure of the expected playability
+	of the server.  The first number is the server's average
+	time in milli-seconds to respond to a request packet from
+	QStat.  The second number is the total number of retries
+	required to fetch the displayed information.  More retries
+	will cause the average response time to be higher.  The
+	response time will be more accurate if more requests are made
+	to the server.
+
+	For POQS, a request is made for each server rule and line
+	of player information.  So setting the <b>-P</b> and
+	<b>-R</b> options will result in a more accurate
+	response time.  Quake and Hexen II are POQS.
+
+	For most other game servers, QStat makes just one request to
+	retrieve all the server status information, including server
+	rules and player status.  The <b>-P</b> and <b>-R</b> options do
+	not increase the number of requests to the server.
+
+	Half-Life supports three different requests for information;
+	general status, players, and server rules.  Each requires a
+	separate request packet, so a total of three are used to
+	retrieve player and rules.
+
+<p>
+	Quake supports a number of control codes for special effects in
+	player names.  QStat normalizes the codes into the ASCII
+	character set before display.  The graphic codes are not
+	translated except the orange brackets (hex 90, 10, 91, and 11)
+	which are converted to '[' and ']'.  Use the hex-player-names
+	option <b>-hpn</b> to see the complete player name.
+
+<p>
+	POQS do not return version information.  But
+	some small amount of info can be gathered from the server
+	rules.  The noexit rule did not appear until version 1.01.
+	The Quake II server rules include a "<tt>version</tt>" key that
+	contains the id build number.  Recent releases of QuakeWorld
+	have a "<tt>*version</tt>" key in the server rules.  Unreal
+	servers include a "<tt>gamever</tt>" key in the server rules
+	that contains the server version without the decimal point.
+	Most other game servers include some kind of version info
+	in the server rules.
+
+<H3><dt>EXAMPLES</H3>
+
+<dd><p>The following is an example address file that queries a QuakeWorld
+master, several Hexen II servers, some POQS, and a few Quake II servers.
+</p>
+<pre>
+QWM 192.246.40.12:27004
+H2S 207.120.210.4
+H2S 204.145.225.124
+H2S 207.224.190.21
+H2S 165.166.140.154
+H2S 203.25.60.3
+QS 207.25.198.110
+QS 206.154.207.104
+QS 205.246.42.31
+QS 128.164.136.171
+Q2S sm.iquest.net
+Q2S 209.39.134.5
+Q2S 209.39.134.3
+</pre>
+<p>If the above text were in a file called <code>QSERVER.TXT</code>,
+then the servers could be queried by running:
+<br>
+	<code>qstat -f QSERVER.TXT</code>
+
+<H3><dt>IMPLEMENTATION NOTES</H3>
+<dd><p>
+        QStat sends packets to each host and waits for return packets.
+        After some interval, another packet is sent to each host which
+        has not yet responded.  This is done several times before the
+        host is considered non-responsive.  QStat can wait for responses
+        from up to 20 hosts at a time.  For host lists longer than
+        that, QStat checks more hosts as results are determined.
+<p>
+	The following applies only applies to POQS.  If QStat exceeds
+	the maximum number of retries when fetching
+	server information, it will give up and try to move on to
+	the next information.  This means that some rules or player
+	info may occasionally not appear.  Player info may also be
+	missing if a player drops out between getting the general
+	server info and requesting the player info.  If QStat times
+	out on one rule request, no further rules can be fetched.
+	This is a side-effect of the Quake protocol design.
+<p>
+        The number of available file descriptors limits the number of
+        simultaneous servers that can be checked.  QStat reuses file
+        descriptors so it can never run out.  The macro MAXFD in
+        qstat.c determines how many file descriptors will be
+        simultaneously opened.  Raise or lower this value as needed.  The
+        default is 20 file descriptors.
+<p>
+	Operating systems which translate ICMP Bad Port
+	(ICMP_PORT_UNREACHABLE) into a ECONNREFUSED will display some
+	hosts as DOWN.  These hosts are up and connected to the
+	network, but there is no program on the port.  Solaris 2.5 and
+	Irix 5.3 correctly support ICMP_PORT_UNREACHABLE, but Solaris
+	2.4 does not.  See page 442 of "Unix Network Programming" by
+	Richard Stevens for a description of this ICMP behavior.
+<p>
+	Operating systems without correct ICMP behavior will just
+	report hosts without Quake servers as non-responsive.
+	Windows NT and Windows 95 don't seem to support this ICMP.
+<p>
+	For hosts with multiple IP addresses, QStat will only send
+	packets to the first address returned from the name service.
+<p>
+	QStat supports Unreal version 2.15 or greater.
+
+
+<H3><dt>BUGS</H3>
+<dd><p>
+
+<H3><dt>PORTABILITY</H3>
+<dd><p>
+        <b>UNIX</b> - QStat has been compiled and tested on Solaris 2.x,
+        Irix 5.3/6.2/6.3/6.4, FreeBSD 2.2/3.0,
+	BSDi, HP-UX 10.20/11.0, and various flavors of Linux.
+<p>
+
+        <b>WINDOWS</b> - The Windows version of QStat (<tt>win32/qstat.exe</tt>) runs on Windows 95
+        and Windows NT as a console application.  On Windows 95 and NT 4.0,
+	short-cuts can be used to
+        set the arguments to qstat.  On Windows NT 3.51, use a batch file.
+<p>
+	<b>OS/2</b> - An OS/2 binary is no longer included.  Try contacting Per Hammer
+	for an OS/2 Warp binary.
+	<a href="mailto:per@mindbend.demon.co.uk">per@mindbend.demon.co.uk</a>.
+<p>
+	<b>VMS</b> - The source includes a VMS patch from John Ross Hunt.
+	This patch was tested on QStat 2.0b, but has not been tested on
+	the current version.  See COMPILE.txt for instructions.
+</p>
+
+<H3><dt>VERSION</H3>
+<dd><p>
+	This is QStat version 2.5c
+	The QStat webpage is updated for each new version and
+	contains links to Quake server listings and pages about
+	the Quake and Unreal network protocols.  The page can be found at
+<br>
+	<a href="http://www.qstat.org">http://www.qstat.org</a>
+</p>
+<p>Quake, Quake II, QuakeWorld, and Quake III created by id Software.
+Hexen II, HexenWorld, and Heretic II
+created by Raven Software.  Unreal created by Epic Games.  Half-Life
+created by Valve Software.  Sin created by Ritual Entertainment.
+Shogo: Mobile Armor Division was created by Monolith Productions Inc.
+Tribes and Tribes 2 created by Dynamix, Inc.  BFRIS created by Aegis Simulation
+Technologies.  Kingpin created by Xatrix Entertainment Inc.
+</p>
+
+<H3><dt>AUTHOR</H3>
+<dd><p>
+	<a href="http://www.activesw.com/people/steve/">Steve Jankowski</a>
+<br>
+	<a href="mailto:steve@qstat.org">steve@qstat.org</a>
+
+<H3><dt>COPYRIGHT</H3>
+<dd><p>
+	Copyright &copy; 1996,1997,1998,1999,2000,2001,2002 by Steve Jankowski
+<H3><dt>LICENSE</H3>
+<p>
+	QStat is covered by the terms of the Artistic
+	License.  The license terms can be found in <tt>LICENSE.txt</tt>
+	of the QStat package.
+</dl>
+
+<hr>
+
+<a name="APPENDIXA">
+<H3><dt>APPENDIX A - Output Templates</H3>
+<p>QStat output templates provide greater control of the appearance
+of server status information.  The results of a server query can be
+organized, formatted, and wrapped within any other text.  The most
+obvious use is to generate HTML for web pages.  However, it could
+also generate custom output for redisplay within another tool.
+<p>
+There are four output templates:
+<table border=1 cellspacing=1>
+<tr><th>Template<th>Option<th>&nbsp;
+<tr><td>server<td>-Ts<td>Output once for each server queried. (required)
+<tr><td>player<td>-Tp<td>Output once for each player.  Must be used with <b>-P</b>.
+Invoked by the <b>$PLAYERTEMPLATE</b> variable.
+<tr><td>rule<td>-Tr<td>Output once for each server rule.
+Invoked by the <b>$RULETEMPLATE</b> variable.
+<tr><td>header<td>-Th<td>Output once before any servers are queried.
+<tr><td>trailer<td>-Tt<td>Output once after all servers are output.
+</table>
+<p>
+The server template must be specified to enable template output.  The
+other templates are optional.
+<p>
+Each output template is a file containing text and QStat variables.
+The text is output unchanged by QStat, but the variables are processed
+and replaced by QStat.  Most variables are replaced by values from a
+queried server.  Some variables have hardcoded values,
+and some generate no output, but affect how the template is processed.
+<p>
+Variables are grouped according to the templates where they can be used.
+General variables may be used in any of the templates.  Server variables
+may be used in the server or player templates.  Player variables may be used in the
+player template.  Expression variables may only be used with the
+<b>$IF</b> and <b>$IFNOT</b> variables.  If a variable is used where it
+doesn't make sense, it is ignored and generates no output.
+<p>
+Variables are specified using one of several syntaxes:<br>
+<pre>
+    $VAR
+    $VAR:OPTION
+    $(VAR)
+    $(VAR:OPTION)
+    $(VAR:OPTION(ARGUMENT))
+</pre>
+The syntax used does not affect the output.  However using the <b>$()</b>
+syntax is somewhat more readable when the text gets cluttered.  If you
+want the variable to be followed immediately by text, then the <b>$()</b>
+syntax must be used.
+
+<H4>Download considerations</H4>
+If you are generating output to be downloaded, then you'll want to make
+your output as small as possible.  In the case of HTML, you can reduce
+the size of your pages by excluding stuff.
+<li>Remove unneeded spaces (indenting and newlines)
+<li>Remove unneeded end tags.  The HTML spec says the following tags can
+always be left out: &lt;/TD&gt; &lt;/TR&gt; &lt;/TH&gt;
+<li>When creating a table, "width" modifiers are only needed on one
+cell of a column.  Put them on the cells of the first row of the
+table.
+
+<H4>Display options</H4>
+The display options <b>-u</b>, <b>-ne</b>, and <b>-nf</b> have no
+affect on template output.  Use the $IF:UP, $IF:ISEMPTY,
+and $IF:ISFULL conditions to accomplish the same thing.
+
+
+<H4>General Variables</H4>
+<table border=1 cellspacing=1>
+<tr><td width=150>$QSTATURL<td>Output the web address of the QStat home page.
+<tr><td>$QSTATVERSION<td>Output the version of QStat being run.
+<tr><td>$QSTATAUTHOR<td>Output the name of the QStat programmer.
+<tr><td>$QSTATAUTHOREMAIL<td>Output the email address of the QStat programmer.
+<tr valign=top><td>$HTML<td>Enable HTML friendly string output.  Server
+results may
+include characters that have special meaning in HTML.  These are replaced
+by equivalent SGML entities.  QStat converts '<tt>&lt;<tt>', '<tt>&gt;<tt>',
+and '<tt>&amp;<tt>' to '<tt>&amp;lt;<tt>', '<tt>&amp;gt;<tt>', and
+'<tt>&amp;amp;<tt>'.  Use this variable once in the header template.
+<tr valign=top><td>$CLEARNEWLINES<td>Convert line feeds and carriage
+returns into spaces.  Applies to all variables that output strings.
+Use this variable once in the header template.
+<tr valign=top><td>$RULENAMESPACES<td>Allow spaces in rule names.
+Use this variable once in the header template.
+<tr valign=top><td>$IF<td>Conditional output.  If the variable option is "true,"
+the template is output up to a matching <b>$ENDIF</b> variable.  If the variable
+option is "false," the template is ignored until after a matching
+<b>$ENDIF</b>.  See Conditional Options for a list of supported conditional
+options.
+<tr><td>$IFNOT<td>Conditional output.  Same as <b>$IF</b>, but the opposite
+sense.
+<tr valign=top><td>$ENDIF<td>End conditional output.  There must be one <b>$ENDIF</b> for
+each <b>$IF</b> and <b>$IFNOT</b> within a template.
+<tr><td>$NOW<td>Output the current local time.
+<tr><td>$TOTALSERVERS<td>The total number of servers to be queried.
+<tr><td>$TOTALUP<td>The number of servers up and running.
+<tr><td>$TOTALNOTUP<td>The number of servers either DOWN or TIMEOUT.
+<tr><td>$TOTALPLAYERS<td>The number of players found on all servers.
+<tr><td>$TOTALMAXPLAYERS<td>The sum of the maximum player values
+for all servers.
+<tr><td>$TOTALUTILIZATION<td>The ratio of <b>$TOTALPLAYERS</b> to <b>$TOTALMAXPLAYERS</b>
+expressed as a percentage (a number between 0 and 100).  Reports how full
+the servers are.
+<tr valign=top><td>$\<td>Ignore the next newline.
+Not really a variable, but a way to curtail the output of extra newlines.
+Saves space in the output while the template remains readable.  Must be
+the last thing on the line.
+<tr><td>$DEFAULTTYPE<td>The full name of the default server type specified
+with <b>-default</b>.
+</table>
+
+<H4>Server Variables</H4>
+<table border=1 cellspacing=1>
+<tr valign=top><td width=150>$HOSTNAME<td>Output the host name of the server if known,
+otherwise the server address as given to QStat.
+</tr>
+<tr><td>$SERVERNAME<td>Output the name of the server.
+</tr>
+<tr valign=top><td>$PING<td>The time in milli-seconds to get a response from
+the server.  If the server is DOWN or TIMEOUT, nothing is output.
+</tr>
+<tr><td>$PLAYERS<td>The number of players on the server.
+</tr>
+<tr><td>$MAXPLAYERS<td>The maximum number of players allowed on the server.
+</tr>
+<tr><td>$MAP<td>The name of the map being played.
+</tr>
+<tr><td>$GAME<td>The name of the game being played.  This is usually the
+name of the "mod" run by the server.
+<tr><td>$GAMETYPE<td>The type of game being played.  Only applies to
+Quake 3.  Typical values are Free For All, Capture the Flag, and Arena.
+</tr>
+<tr><td>$RETRIES<td>The number of retries needed to get the server status.
+This is a measure of packet loss.
+</tr>
+<tr><td>$IPADDR<td>The IP address of the server.  Does not include the
+port number.
+</tr>
+<tr><td>$PORT<td>The port the server is running on.
+</tr>
+<tr><td>$ARG<td>The server address as given to QStat.
+</tr>
+<tr valign=top><td>$TYPE<td>Output one of the following depending on the server type:
+<pre>    Quake
+    Quake II
+    Quake II Master
+    QuakeWorld
+    QuakeWorld Master
+    Hexen II
+    HexenWorld
+    Unreal
+    Unreal Tournament 2003
+    Half-Life
+    Half-Life Master
+    Sin
+    Tribes
+    Tribes Master
+    Tribes 2
+    Tribes 2 Master
+    Shogo: Mobile Armor Division
+    Quake III: Arena
+    Quake III Master
+    BFRIS
+    Kingpin
+    Heretic II
+    Soldier of Fortune
+    Gamespy Master
+    Gamespy Protocol
+</pre>
+If the server type is not known, nothing is output.
+</tr>
+<tr valign=top><td>$TYPESTRING<td>The server's type string (see GAME OPTIONS table.)
+</tr>
+<tr valign=top><td>$TYPEPREFIX<td>The server's type prefix (same as <b>$TYPESTRING</b> but in all-caps.)
+</tr>
+<tr valign=top><td>$RULE:<i>name</i><td>The value of a server rule.  If the
+rule is not returned by the server, nothing is output.  Must be used with
+the <b>-R</b> flag.
+Server rule names can include any alpha-numeric
+character plus '*', '_', '.', or ' ' (space).  The use of space in a rule
+name will require use of the parenthesized format: <b>$(RULE:<i>name</i>)</b>
+</tr>
+<tr valign=top><td>$ALLRULES<td>Output all the server rules in the format
+<i>name</i>=<i>value</i> separated by commas.  Must be used with
+the <b>-R</b> flag.
+</tr>
+<tr valign=top><td>$PLAYERTEMPLATE<td>Invoke the player template.  The player
+template is output once for each player on the server.  Must be used with
+the <b>-P</b> flag.
+</tr>
+<tr valign=top><td>$RULETEMPLATE<td>Invoke the rule template.  The rule
+template is output once for each server rule.
+</tr>
+
+</table>
+
+<H4>Player Variables</H4>
+The player template is only invoked if <b>$PLAYERTEMPLATE</b> is used in the
+server template.<p>
+<table border=1 cellspacing=1>
+<tr><td width=150>$PLAYERNAME<td>The name of the player.  If
+<b>-htmlnames</b> or <b>$HTML</b> is used, then HTML color font tags will
+be added for Quake 3 and Tribes 2 player names.  If <b>$HTML</b> is used
+but <b>-nohtmlnames</b> is set, then player names will <i>not</i> be
+colorized.
+</tr>
+<tr><td width=150>$HTMLPLAYERNAME<td>The name of the player with HTML color
+font tags.  Only Quake 3 and Tribes 2 are supported.
+</tr>
+<tr><td>$FRAGS<td>The number of frags scored.
+</tr>
+<tr><td>$DEATHS<td>Descent 3 - The number of times player has died.
+Ghost Recon - Indicates if the player is dead.  Only available for
+Descent 3 or Ghost Recon.
+</tr>
+<tr><td>$PLAYERPING<td>The player's ping time to the server.
+This value is not available from Half-Life or Ghost Recon servers.
+</tr>
+<tr valign=top><td>$CONNECTTIME<td>How long the player has been playing.
+This value is only available from Quake, QuakeWorld, Hexen II, and
+Half-Life servers.
+</tr>
+<tr><td>$SKIN<td>The name of the player's skin texture.
+This value is not available from ?? and Ghost Recon servers.
+</tr>
+<tr valign=top><td>$MESH<td>The name of the player's mesh (model).
+This value is only available from Unreal servers.
+</tr>
+<tr valign=top><td>$FACE<td>The name of the player's face texture.
+This value is only available from Unreal version 405+ servers.
+</tr>
+<tr valign=top><td>$SHIRTCOLOR<td>Color of the player's shirt.
+This value is only available from Quake, QuakeWorld, and Hexen II servers.
+</tr>
+<tr valign=top><td>$PANTSCOLOR<td>Color of the player's pants.
+This value is not available from Quake, QuakeWorld, and Hexen II servers.
+</tr>
+<tr valign=top><td>$PLAYERIP<td>The IP address of the player's computer.
+This value is only available from Quake and Hexen II servers.
+</tr>
+<tr><td>$TEAMNUM<td>The player's team number.  This value is only
+available from Unreal, Tribes, Tribes 2 and Ghost Recon servers.
+<tr><td>$TEAMNAME<td>The player's team name.  This value is only
+available from Tribes and Tribes 2 servers.
+<tr><td>$TRIBETAG<td>The player's tribe tag.  This value is only
+available from Tribes 2 servers.
+<tr><td>$PLAYERSTATID<td>The player's global statistics id.  This value is only
+available from Unreal Tournament 2003 servers.
+<tr><td>$PACKETLOSS<td>The player's packet loss.  This value is only
+available from Tribes servers.
+<tr><td>$COLORNUMBERS<td>Display $SHIRTCOLOR and $PANTSCOLOR as
+numbers.  Equivalent to <b>-ncn</b> command-line option.  No output.
+<tr><td>$COLORNAMES<td>Display $SHIRTCOLOR and $PANTSCOLOR using
+color names.  Equivalent to <b>-cn</b> command-line option.  No output.
+<tr><td>$COLORRGB<td>Display $SHIRTCOLOR and $PANTSCOLOR using
+#rrggbb format.  Equivalent to <b>-hc</b> command-line option.  No output.
+<tr><td>$TIMESECONDS<td>Display $CONNECTTIME as number of seconds.
+Equivalent to <b>-ts</b> command-line option.  No output.
+<tr><td>$TIMECLOCK<td>Display $CONNECTTIME in clock format (DhDDmDDs).
+Equivalent to <b>-tc</b> command-line option.  No output.
+<tr><td>$TIMESTOPWATCH<td>Display $CONNECTTIME in stop-watch format (DD:DD:DD).
+Equivalent to <b>-tsw</b> command-line option.  No output.
+</tr>
+
+</table>
+
+<H4>Rule Variables</H4>
+The rule template is only invoked if <b>$RULETEMPLATE</b> is used in the
+server template.  The rule template supports equality tests on rule names
+and values.  See <b>RULENAME</b> and <b>RULEVALUE</b> under Conditional Options.
+
+<p>
+<table border=1 cellspacing=1>
+<tr><td width=150>$RULENAME<td>The server rule name.
+<tr><td width=150>$RULEVALUE<td>The server rule value.
+</table>
+
+
+<H4>Conditional Options</H4>
+<p>
+These options maybe used with the <b>$IF</b> and <b>$IFNOT</b> variables.
+For example, to display player information, the following could be used
+in the server template:
+<pre>
+    $(IF:PLAYERS)$(IF:FLAG(-P))
+    The server has $(PLAYERS) players:
+    $(PLAYERTEMPLATE)
+    $(ENDIF)$(ENDIF)
+</pre>
+The template between the <b>$IF</b> and <b>$ENDIF</b> variables will only be
+displayed if the server has one or more players and the <b>-P</b>
+flag was given to QStat.
+<p>
+
+<table border=1 cellspacing=1>
+<tr><td width=150>GAME<td>True if the server is running a "mod."
+<tr><td>PLAYERS<td>True if the server has one or more players.
+<tr><td>QUAKE<td>True if the server is running Quake (the original).
+<tr><td>QUAKE2<td>True if the server is running Quake II.
+<tr><td>Q2MASTER<td>True if the server is a Quake II master.
+<tr><td>QUAKEWORLD<td>True if the server is running QuakeWorld.
+<tr><td>QWMASTER<td>True if the server is a QuakeWorld master.
+<tr><td>HEXEN2<td>True if the server is running Hexen II.
+<tr><td>HEXENWORLD<td>True if the server is running HexenWorld.
+<tr><td>UNREAL<td>True if the server is running Unreal.
+<tr><td>UNREALTOURNAMENT2003<td>True if the server is running Unreal Tournament 2003.
+<tr><td>HALFLIFE<td>True if the server is running Half-Life.
+<tr><td>HLMASTER<td>True if the server is a Half-Life master.
+<tr><td>SIN<td>True if the server is running Sin.
+<tr><td>TRIBES<td>True if the server is running Tribes.
+<tr><td>TRIBESMASTER<td>True if the server is a Tribes master.
+<tr><td>TRIBES2<td>True if the server is running Tribes 2.
+<tr><td>TRIBES2MASTER<td>True if the server is a Tribes 2 master.
+<tr><td>SHOGO<td>True if the server is running Shogo.
+<tr><td>QUAKE3<td>True if the server is running Quake III.
+<tr><td>Q3MASTER<td>True if the server is a Quake III master.
+<tr><td>BFRIS<td>True if the server is running BFRIS.
+<tr><td>KINGPIN<td>True if the server is running Kingpin.
+<tr><td>HERETIC2<td>True if the server is running Heretic II.
+<tr><td>SOLDIEROFFORTUNE<td>True if the server is running Soldier of Fortune.
+<tr><td>DESCENT3<td>True if the server is running Descent 3.
+<tr><td>GAMESPYMASTER<td>True if the server is a Gamespy Master.
+<tr><td>GAMESPYPROTOCOL<td>True if the server is running a "Gamespy style" status protocol.
+<tr><td>RULE(<i>name</i>)<td>True if the rule <i>name</i> is set on
+the server.
+Server rule names can include any alpha-numeric
+character plus '*', '_', or '.'.  If <b>$RULENAMESPACES</b> is enabled,
+then rule names may contain a ' ' (space).
+<tr valign=top><td>FLAG(<i>name</i>)<td>True if the flag <i>name</i> was used
+on the QStat command-line.  The only flag names supported are:
+<b>-H</b>, <b>-P</b>, and <b>-R</b>.  Any other flag name returns
+false.
+</tr>
+<tr><td>UP<td>True if the server is up and running.
+</tr>
+<tr valign=top><td>DOWN<td>True if the server is known to be not running.  This
+is true if the server computer returns an ICMP indicating that nothing
+is running on the port.  Only supported by some operating systems.
+</tr>
+<tr><td>TIMEOUT<td>True if the server never responded to a status query.
+<tr><td>HOSTNOTFOUND<td>True if the host name lookup failed.
+<tr><td>ISEMPTY<td>True if the server has no players.
+<tr><td>ISMASTER<td>True if this is a master server.
+<tr><td>ISFULL<td>True if the server has the maximum players.
+<tr valign=top><td>ISTEAM<td>True if the player is a team.  Only available
+with Tribes and Tribes 2 servers.  <b>Only applies to the player template.<b>
+<tr valign=top><td>ISBOT<td>True if the player is a bot.  Only available
+with Tribes 2 servers.  <b>Only applies to the player template.<b>
+<tr valign=top><td>ISALIAS<td>True if the player is using an alias.
+Only available with Tribes 2 servers.  <b>Only applies to the player template.<b>
+<tr valign=top><td>TRIBETAG<td>True if the player has a tribe tag.
+Only available with Tribes 2 servers.  <b>Only applies to the player template.<b>
+</tr>
+
+<tr valign=top><td>RULENAME<td>True if the rule name matches the
+variable argument.  For example <b>$(IF:RULENAME(version))</b> will be true
+when the rule template is outputing a "version" server rule.
+<b>Only applies to the rule template.<b>
+
+<tr valign=top><td>RULEVALUE<td>True if the rule value matches the
+variable argument.  For example <b>$(IF:RULEVALUE(1))</b> will be true
+when the rule template is outputing a server rule whose value is "1".
+<b>Only applies to the rule template.<b>
+
+<tr><td>DEATHS<td>True if the player has recorded DEATHS in Descent 3 or if the 
+player is dead in Ghost Recon.  <b>NOTE</b> if the Ghost Recon player
+has spawns available they can go from dead to alive.
+
+</table>
+
+<a name="APPENDIXB">
+<H3><dt>APPENDIX B - QStat Configuration File</H3>
+QStat configuration files modify built-in game types or create new
+game types.  New command-line options and template variables are created
+for new game types.
+<p>
+Please refer to the default configuration file for examples.  The
+default configuration file <tt>qstat.cfg</tt> can be found in the
+QStat package.
+
+<h4>Config File Load Order</h4>
+QStat will load one default configuration file and zero or more
+command-line configuration files.  The default configuration file
+will be the first readable file found by the following search.
+
+<ol>
+<li>File named in $QSTAT_CONFIG environment variable.
+<li><b>Unix:</b> $HOME/.qstatrc<br>
+<b>Windows:</b> $HOME/qstat.cfg
+<li><b>Unix:</b> <i>sysconfdir</i>/qstat.cfg<br>
+<b>Windows:</b> <i>location-of-qstat.exe</i>/qstat.cfg
+</ol>
+
+The default configuration file will be loaded before reading any
+command-line parameters.  Configuration files specified on the command
+line will be merged with the contents of the default config file.
+In the case of duplicate game types, the command-line config files
+will be used.
+
+The QStat package includes a <tt>qstat.cfg</tt> that defines several
+new game types.  If you want to use these game types, you need to
+place the file where it can be found by the default config file
+search.  Or use the <b>-cfg</b> option.
+
+<blockquote><b>Unix</b> Note: The <i>sysconfdir</i> is determined when qstat is
+compiled.  For Unix compiles, the QStat makefiles default to <tt>/etc</tt>.
+To compile with a different <i>sysconfdir</i>, set SYSCONFDIR when
+compiling with <tt>gmake</tt>.  For example, to set <i>sysconfdir</i>
+to <tt>/usr/local/etc</tt>
+<blockquote>
+<table border=0 bgcolor=gray>
+<tr bgcolor=#555555><td>
+<pre>% gmake SYSCONFDIR=/usr/local/etc</pre></td></tr>
+</table>
+</blockquote>
+
+</blockquote>
+
+<blockquote><b>Windows</b> Note: The <i>location-of-qstat.exe</i> is the directory
+where the QStat executable (<tt>qstat.exe</tt>) is located.  Just put the
+default <tt>qstat.cfg</tt> in the same directory as <tt>qstat.exe</tt>.
+</blockquote>
+
+<h4>General Syntax</h4>
+QStat configuration files describe game types using "stanzas".  A stanza
+begins with a "gametype" line and is followed by several parameter lines
+ending with an "end" line.  The general syntax looks like this:
+<blockquote>
+<table border=0 bgcolor=gray>
+<tr bgcolor=#555555><td>
+<pre><b>gametype</b> <i>type-string</i> (<b>modify</b> | <b>new extend</b> <i>type-string</i>)
+    <i>parameter-name</i> <b>=</b> <i>parameter-value</i>
+    ...
+<b>end</b>
+</pre></td></tr>
+</table>
+</blockquote>
+The text in bold are keywords that must be used as shown.
+<p>
+Parameter names are one or more words separated by spaces.  The supported
+parameters and their meaning are listed in Gametype Parameters.  Extra
+white space before, after and within a parameter name is ignored.
+An equal sign ('<b>=</b>') must separate the parameter name and the
+parameter value.  There can be one parameter setting per line.
+<p>
+Parameter values are one more characters or escape sequences.  Leading
+and trailing spaces are ignored.  All characters are used as-is except
+for backslash ('\') which begins an escape sequence.
+<blockquote>
+<table border=0 bgcolor=gray>
+<tr bgcolor=#555555><td>\\<td>A single backslash ('\')
+<tr bgcolor=#555555><td>\n<td>A newline (ASCII char 10)
+<tr bgcolor=#555555><td>\r<td>A carriage return (ASCII char 13)
+<tr bgcolor=#555555 valign=top><td>\<i>(space)</i>&nbsp;<td>A space (ASCII char 32).  This escape should
+	be entered as two characters: backslash followed by one space.
+<tr bgcolor=#555555 valign=top><td>\x<i>HH</i><td>A single character represented by the two-digit
+	hexadecimal code.  The hex digits <i>H</i> must be 0-9, A-F, or a-f.
+<tr bgcolor=#555555 valign=top><td>\<i>DDD</i><td>A single character represented by the three-digit
+	octal code.  The octal digits <i>D</i> must be 0-7.
+</table>
+</blockquote>
+
+
+<h4>Defining New Game Types</h4>
+New game types are defined with the <b>new</b> keyword.
+<blockquote>
+<table border=0 bgcolor=gray>
+<tr bgcolor=#555555><td><pre>
+<b>gametype</b> <i>new-type-string</i> <b>new</b> <b>extend</b> <i>existing-type-string</i>
+    <i>parameter-name</i> <b>=</b> <i>parameter-value</i>
+    ...
+<b>end</b>
+</pre></td></tr>
+</table>
+</blockquote>
+The new-type-string must not be a built-in type string.  If a new gametype
+is defined multiple times in configuration files, only the last
+definition is used.  The existing-type-string can be any built-in or
+configuration defined game type.  However, QStat has the best support for
+extending Q3S, Q2S, GPS, UNS, and Q3M game types.
+<p>
+The new game type has command-line option, type string and type prefix
+derived from new-type-string.  The case of new-type-string is ignored.
+The command-line option and type string are always lower-case and the
+type prefix is always upper case.
+<p>
+The new game type starts with the same parameters as the existing-type-string
+except for the type string itself.  Game type parameters are set by the
+following parameter setting lines.  Some parameters may only be used
+with master server and some only with game servers.
+<p>
+We suggest that new-type-strings be as short as possible and end with
+an 's' for game servers and an 'm' for master servers.  New game types
+should, but are not required to, set the name, default port, and
+template var parameters.  The template var should be all upper-case
+and should not contain any spaces.
+
+
+<h4>Modifying Game Types</h4>
+Existing game types can be modified to update their query parameters.
+<blockquote>
+<table border=0 bgcolor=gray>
+<tr bgcolor=#555555><td><pre>
+<b>gametype</b> <i>existing-type-string</i> <b>modify</b>
+    <i>parameter-name</i> <b>=</b> <i>parameter-value</i>
+    ...
+<b>end</b>
+</pre></td></tr>
+</table>
+</blockquote>
+The existing-type-string can be a built-in game type or a configuration
+defined game type.
+<p>
+Only certain parameters can be modified: master protocol, master query,
+and master packet.
+
+
+<h4>Request Packets</h4>
+The request packets used for game server queries can be set with
+status packet, status2 packet, player packet, and rule packet.
+Request packets for master servers can be set with the master packet
+parameter.
+<p>
+A request packet can only be set if the extended game type uses the
+same type of request packet.  If a game type only uses the status
+packet, then an extending game type can only set the status packet.
+<p>
+Request packet typically contain binary characters (those beyond the
+printable ASCII character set).  These can be specified using the
+hex and octal character escapes.
+<p>
+If the master packet parameter is set, the master protocol and master
+query parameters will be ignored.
+
+
+<h4>Game Type Parameters</h4>
+
+<table border=1>
+<tr valign=top><td>name<td>Sets the name of the game type.  Should be the full game
+name as used by the publisher.
+<tr><td>default&nbsp;port<td>Default network port used by the status protocol.
+<tr><td>status&nbsp;port&nbsp;offset<td>Offset of the status/query port from the game port.
+<tr><td>game&nbsp;rule<td>The server rule containing the name of the game style or game mod.
+<tr><td>template&nbsp;var<td>The template variable used to test whether a server is of this game type.
+
+<tr><td>status&nbsp;packet<td>The status request packet.  This is the first
+packet sent to a server of this game type.
+<tr valign=top><td>status2&nbsp;packet<td>The second status request packet.  If the server
+responded to the first status packet, then this packet is sent, but only
+if player or rule info is needed (command-line options <b>-P</b> or <b>-R</b>).
+<tr><td>player&nbsp;packet<td>The player request packet.  Requests player
+information.
+<tr><td>rule&nbsp;packet<td>The rule request packet. Requests server rule information.
+<tr valign=top><td>master&nbsp;for&nbsp;gametype<td>Sets the type of game returned by this master.  The value must be a built-in or configuration defined game type.
+<tr valign=top><td>master&nbsp;protocol<td>The protocol number to use in the master request.
+The master server will respond with servers that match the protocol number.
+The numbers change with each version of the game that uses an incompatible
+network protocol.  The master protocol is used mainly with Quake 3 based
+games.
+<p>
+The master request packet will combine the master protocol and master
+query values.
+
+<tr valign=top><td>master&nbsp;query<td>The query string to use in the master request.
+The master query string provides additional filtering for the master
+server.
+<p>
+The default master request packet will combine the master protocol and
+master query values.
+
+<tr valign=top><td>master&nbsp;packet<td>The master request packet.  Requests a server
+list from the master server.  If master packet is set, master protocol
+and master query are ignored.
+</table>
+
+</body>
+ 
+ 
+</html>
+

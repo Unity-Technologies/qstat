@@ -1,0 +1,25 @@
+Unreal Tournament 2003 servers can be queried with the Gamespy style
+protocol (-gps) or with the native UT2003 protocol (-ut2s).  The
+query port offset for Gamespy is usually 10.  The query port offset
+for the native UT2003 protocol is always 1.
+
+The gamespy response returns a team name for each player, the UT2S
+response does not.  Don't be concerned because the team name is the
+same for all players, and seems to be map name followed by the string
+".xTeamRoster"   Probably a bug in the UT2003 gamespy support.
+
+The UT2S response includes a player global statistics id.  The gamespy
+response does not.  However, this id is zero for all players on both
+demo and retail servers.  I guess they don't have global stats implemented.
+
+The protocols return similar but different servers rules.  In UT2S the
+rule names are all lower-case.  In gamespy, they are mixed-case.  Some of
+the rules overlap, but each returns info not available from the other
+protocol.
+
+In the UT2S response, the "Mutator" rule (the only one with mixed-case)
+may appear multiple times.  If you use $(RULE:Mutator) only the value of
+the first Mutator will be output.
+
+UT2003 servers frequently do not return information for all of the
+players.  I don't know why.
