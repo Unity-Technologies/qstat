@@ -186,6 +186,8 @@ typedef struct _server_type server_type;
 #define TF_NO_PORT_OFFSET	(1<<14)
 #define TF_SHOW_GAME_PORT	(1<<15)
 
+#define TF_MASTER_STEAM		(1<<16)  /* supports steam server filter */
+
 #define TRIBES_TEAM	-1
 
 struct q_packet;
@@ -2173,7 +2175,7 @@ server_type builtin_types[] = {
     HL_SERVER,			/* master */
     STEAM_MASTER_DEFAULT_PORT,	/* default_port */
     0,				/* port_offset */
-    TF_SINGLE_QUERY|TF_OUTFILE|TF_QUERY_ARG, /* flags */
+    TF_SINGLE_QUERY|TF_OUTFILE|TF_QUERY_ARG|TF_MASTER_STEAM, /* flags */
     "",				/* game_rule */
     "STEAMMASTER",			/* template_var */
     NULL,			/* status_packet */
