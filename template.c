@@ -260,6 +260,8 @@ struct vardef variable_defs[] = {
 	{"PLAYERLEVEL", V_PLAYERLEVEL, NO_OPTIONS },
 #define V_TOTALUTILIZATION	87
 	{"TOTALUTILIZATION", V_TOTALUTILIZATION, NO_OPTIONS },
+#define V_SCORE			88
+	{"SCORE", V_SCORE, NO_OPTIONS },
 };
 
 int
@@ -729,6 +731,9 @@ display_player_var( struct player *player, int var, struct qserver *server)
 	break;
     case V_FRAGS:
 	fprintf( OF, "%d", player->frags);
+	break;
+    case V_SCORE:
+	fprintf( OF, "%d", player->score);
 	break;
     case V_DEATHS:
 	fprintf( OF, "%d", player->deaths);
