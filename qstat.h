@@ -113,8 +113,9 @@
 #define RAVENSHIELD_SERVER 37
 #define SAVAGE_SERVER 38
 #define FARCRY_SERVER 39
+#define GAMESPY2_PROTOCOL_SERVER 40
 
-#define LAST_BUILTIN_SERVER  39
+#define LAST_BUILTIN_SERVER  40
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -165,6 +166,7 @@ void display_savage_player_info( struct qserver *server);
 void display_farcry_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
+void display_gs2_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -183,6 +185,7 @@ void raw_display_farcry_player_info( struct qserver *server);
 void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
+void raw_display_gs2_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -203,6 +206,7 @@ void xml_display_bfris_player_info( struct qserver *server);
 void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
 void xml_display_eye_player_info( struct qserver *server);
+void xml_display_gs2_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -224,6 +228,7 @@ void send_tribes2_request_packet( struct qserver *server);
 void send_tribes2master_request_packet( struct qserver *server);
 void send_ghostrecon_request_packet( struct qserver *server);
 void send_eye_request_packet( struct qserver *server);
+void send_gs2_request_packet( struct qserver *server);
 
 void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
@@ -248,6 +253,7 @@ void deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
 
 typedef struct _server_type  {
     int id;
@@ -511,10 +517,15 @@ unsigned char ghostrecon_playerquery[] = {
 
 /* All Seeing Eye */
 char eye_status_query[1]= "s";
-//unsigned char eye_status_query[] = {
-//	0xfe, 0xfd, 0x00, 0x7e, 0x37, 0x2a, 0x00, 0xff, 0xff, 0xff, 0xff
-//};
 char eye_ping_query[1]= "p";
+
+// Gamespy v2 last 3 bytes:
+// 1: server + rules info (00 to disable)
+// 2: Player information (00 to disable)
+// 3: Team information (00 to disable)
+unsigned char gs2_status_query[] = {
+	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff
+};
 
 unsigned char savage_serverquery[] = {
 	0x9e,0x4c,0x23,0x00,0x00,0xc8,0x01,0x21,0x00,0x00
@@ -1380,6 +1391,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_eye_packet,	/* packet_func */
+},
+{
+    /* GAMESPY V2 PROTOCOL */
+    GAMESPY2_PROTOCOL_SERVER,	/* id */
+    "GS2",			/* type_prefix */
+    "gs2",			/* type_string */
+    "-gs2",			/* type_option */
+    "Gamespy V2 Protocol",	/* game_name */
+    0,				/* master */
+    0,				/* default_port */
+    10,				/* port_offset */
+    TF_SINGLE_QUERY,		/* flags */
+    "gametype",			/* game_rule */
+    "GPS2PROTOCOL",		/* template_var */
+    (char*) &gs2_status_query,	/* status_packet */
+    sizeof( gs2_status_query),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_gs2_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_gs2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_gs2_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_gs2_packet,	/* packet_func */
 },
 {
     /* RAVENSHIELD PROTOCOL */

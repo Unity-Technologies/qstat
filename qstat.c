@@ -980,6 +980,27 @@ display_eye_player_info( struct qserver *server)
 }
 
 void
+display_gs2_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team_name,
+		xform_name( player->name, server));
+	else
+	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
+		player->score,
+		ping_time(player->ping),
+		player->team,
+		xform_name( player->name, server));
+    }
+}
+
+void
 display_ravenshield_player_info( struct qserver *server)
 {
     struct player *player = server->players;
@@ -1410,6 +1431,37 @@ raw_display_ghostrecon_player_info( struct qserver *server)
 
 void
 raw_display_eye_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, fmt_team_name,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team_name,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	else
+	    fprintf( OF, fmt,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_gs2_player_info( struct qserver *server)
 {
     static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
     static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
@@ -1981,6 +2033,42 @@ xml_display_ghostrecon_player_info( struct qserver *server)
 
 void
 xml_display_eye_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->score);
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
+			player->ping);
+		if ( player->team_name)
+		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
+			xml_escape(player->team_name));
+		else
+		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
+			player->team);
+		if ( player->skin)
+		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
+			xml_escape(player->skin));
+		if ( player->connect_time)
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_gs2_player_info( struct qserver *server)
 {
     struct player *player;
 
@@ -4118,6 +4206,30 @@ send_eye_request_packet( struct qserver *server)
 }
 
 void
+send_gs2_request_packet( struct qserver *server)
+{
+    int rc;
+
+    if ( server->flags & FLAG_BROADCAST)
+	rc= send_broadcast( server, server->type->status_packet,
+		server->type->status_len);
+    else
+	rc= send( server->fd, server->type->status_packet,
+		server->type->status_len, 0);
+
+    if ( rc == SOCKET_ERROR)
+	perror( "send");
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
+	gettimeofday( &server->packet_time1, NULL);
+	server->n_requests++;
+    }
+    else
+	server->n_retries++;
+    server->retry1--;
+    server->n_packets++;
+}
+
+void
 send_ravenshield_request_packet( struct qserver *server)
 {
     int rc = send( server->fd, server->type->status_packet,
@@ -5996,10 +6108,13 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 	server->n_servers++;
     if ( server->server_name == NULL)
-	server->ping_total+= time_delta( &packet_recv_time,
-		&server->packet_time1);
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+	}
     else
-	gettimeofday( &server->packet_time1, NULL);
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
 
     rawpkt[pktlen]= '\0';
     end= &rawpkt[pktlen];
@@ -6717,7 +6832,6 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 			(ipaddr>>8)&0xff, ipaddr&0xff, server->port
 		);
 	}
-
 
 	switch( rawpkt[0] )
 	{
@@ -9319,6 +9433,327 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 eye_protocol_error:
     cleanup_qserver( server, 1);
+}
+
+// See the following for protocol details:
+// http://dev.kquery.com/index.php?article=42
+void
+deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	char *ptr = rawpkt;
+	char *end = rawpkt + pktlen;
+	unsigned char type = 0;
+	unsigned char no_players = 0;
+	unsigned char total_players = 0;
+	unsigned char no_teams = 0;
+	unsigned char total_teams = 0;
+	unsigned char no_headers = 0;
+	char **headers = NULL;
+
+	if ( pktlen < 15 )
+	{
+		// invalid packet?
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	server->n_servers++;
+    if ( server->server_name == NULL)
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+	}
+    else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
+
+	// Could check the header here should
+	// match the 4 byte id sent
+	ptr += 5;
+	while ( 0 == type && ptr < end )
+	{
+		// server info:
+		// name value pairs null seperated
+		// empty name && value signifies the end of section
+		char *var = ptr;
+		int var_len = strlen( var );
+		if ( ptr + var_len + 2 > end )
+		{
+			fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+		ptr += var_len + 1;
+
+		char *val = ptr;
+		int val_len = strlen( val );
+		ptr += val_len + 1;
+		//fprintf( stderr, "var:%s=%s\n", var, val );
+
+		// Lets see what we've got
+		if ( 0 == strcmp( var, "hostname" ) )
+		{
+			server->server_name = strdup( val );
+		}
+		else if( 0 == strcmp( var, "game_id" ) )
+		{
+			server->game = strdup( val );
+		}
+		else if( 0 == strcmp( var, "gamever" ) )
+		{
+			// format:
+			// v1.0
+			server->protocol_version = atoi( val+1 );
+		}
+		else if( 0 == strcmp( var, "mapname" ) )
+		{
+			server->map_name = strdup( val );
+		}
+		else if( 0 == strcmp( var, "maxplayers" ) )
+		{
+			server->max_players = atoi( val );
+		}
+		else if( 0 == strcmp( var, "numplayers" ) )
+		{
+			server->num_players = atoi( val );
+		}
+		else if ( 0 == var_len && 0 == val_len )
+		{
+			// check for end of section
+			type = 1;
+		}
+		else
+		{
+			add_rule( server, var, val, NO_FLAGS );
+		}
+	}
+
+	if ( 1 != type )
+	{
+		// no more info should be player headers here as we
+		// requested it
+		fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	// player info header
+	// format:
+	// first byte = player count
+	// followed by null seperated header
+	no_players = (unsigned char)*ptr;
+	//fprintf( stderr, "No Players:%d\n", no_players );
+
+	ptr++;
+	if ( ptr >= end )
+	{
+		fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	while ( 1 == type && ptr < end )
+	{
+		// first we have the headers null seperated
+		char **tmpp;
+		char *head = ptr;
+		int head_len = strlen( head );
+		no_headers++;
+		tmpp = (char**)realloc( headers, no_headers * sizeof( char* ) );
+		if ( NULL == tmpp )
+		{
+			fprintf( stderr, "Failed to realloc memory for headers\n" );
+			if ( NULL != headers )
+			{
+				free( headers );
+			}
+			cleanup_qserver( server, 1);
+			return;
+		}
+
+		headers = tmpp;
+		headers[no_headers-1] = head;
+
+		ptr += head_len + 1;
+
+		// end of headers check
+		if ( 0x00 == *ptr )
+		{
+			type = 2;
+			ptr++;
+		}
+	}
+
+	if ( 2 != type )
+	{
+		// no more info should be player info here as we
+		// requested it
+		fprintf( stderr, "Invalid packet detected (no players)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	while( 2 == type && ptr < end )
+	{
+		// now each player details
+		// add the player
+		struct player *player = add_player( server, total_players );
+		int i;
+		for ( i = 0; i < no_headers; i++ )
+		{
+			if ( ptr >= end )
+			{
+				fprintf( stderr, "Invalid packet detected (short player detail)\n" );
+				cleanup_qserver( server, 1);
+				return;
+			}
+			char *val = ptr;
+			int val_len = strlen( val );
+			ptr += val_len + 1;
+
+			// lets see what we got
+			if ( 0 == strcmp( headers[i], "player_" ) )
+			{
+				player->name = strdup( val );
+			}
+			else if ( 0 == strcmp( headers[i], "score_" ) )
+			{
+				player->score = atoi( val );
+			}
+			else if ( 0 == strcmp( headers[i], "deaths_" ) )
+			{
+				player->deaths = atoi( val );
+			}
+			else if ( 0 == strcmp( headers[i], "ping_" ) )
+			{
+				player->ping = atoi( val );
+			}
+			else if ( 0 == strcmp( headers[i], "kills_" ) )
+			{
+				player->frags = atoi( val );
+			}
+			else if ( 0 == strcmp( headers[i], "team_" ) )
+			{
+				player->team = atoi( val );
+			}
+			
+			//fprintf( stderr, "Player[%d][%s]=%s\n", total_players, headers[i], val );
+		}
+		total_players++;
+
+		if ( total_players > no_players )
+		{
+			fprintf( stderr, "Invalid packet detected (to many players)\n" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+
+		// check for end of player info
+		if ( 0x00 == *ptr )
+		{
+			if ( total_players != no_players )
+			{
+				fprintf( stderr, "Invalid packet detected (bad number of players)\n" );
+				cleanup_qserver( server, 1);    
+				return;    
+			}
+			type = 3;
+			ptr++;
+		}
+	}
+
+	if ( 3 != type )
+	{
+		// no more info should be team info here as we
+		// requested it
+		fprintf( stderr, "Invalid packet detected (no teams)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	no_teams = (unsigned char)*ptr;
+	ptr++;
+
+	//fprintf( stderr, "No teams:%d\n", no_teams );
+	no_headers = 0;
+
+	while ( 3 == type && ptr < end )
+	{
+		// first we have the headers null seperated
+		char **tmpp;
+		char *head = ptr;
+		int head_len = strlen( head );
+		no_headers++;
+		tmpp = (char**)realloc( headers, no_headers * sizeof( char* ) );
+		if ( NULL == tmpp )
+		{
+			fprintf( stderr, "Failed to realloc memory for headers\n" );
+			if ( NULL != headers )
+			{
+				free( headers );
+			}
+			cleanup_qserver( server, 1);
+			return;
+		}
+
+		headers = tmpp;
+		headers[no_headers-1] = head;
+
+		ptr += head_len + 1;
+
+		// end of headers check
+		if ( 0x00 == *ptr )
+		{
+			type = 4;
+			ptr++;
+		}
+	}
+
+	if ( 4 != type )
+	{
+		// no more info should be team info here as we
+		// requested it
+		fprintf( stderr, "Invalid packet detected (no teams)\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	while( 4 == type && ptr < end )
+	{
+		// now each teams details
+		int i;
+		for ( i = 0; i < no_headers; i++ )
+		{
+			if ( ptr >= end )
+			{
+				fprintf( stderr, "Invalid packet detected (short team detail)\n" );
+				cleanup_qserver( server, 1);
+				return;
+			}
+			char *val = ptr;
+			int val_len = strlen( val );
+			ptr += val_len + 1;
+
+			// lets see what we got
+			if ( 0 == strcmp( headers[i], "team_t" ) )
+			{
+				// BF being stupid again teams 1 based instead of 0
+				unreal_set_player_teamname( server, total_teams + 1, val );
+			}
+			//fprintf( stderr, "Team[%d][%s]=%s\n", total_teams, headers[i], val );
+		}
+		total_teams++;
+
+		if ( total_teams > no_teams )
+		{
+			fprintf( stderr, "Invalid packet detected (to many teams)\n" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+	}
+	
+	cleanup_qserver( server, 1);
+	return;
 }
 
 void
