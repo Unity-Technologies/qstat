@@ -5420,7 +5420,6 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
     }
     else if ( strncmp( &rawpkt[4], "infoResponse", 12) == 0 ||
 		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "infoResponse", 12) == 0) )  {
-fprintf( stderr, "INFO\n" ) ;
 	/* quake3 info response */
 	if ( rawpkt[4] == '\001')  {
 	    rawpkt++;
