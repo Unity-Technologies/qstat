@@ -1,5 +1,5 @@
 /*
- * qstat 2.5c
+ * qstat 2.6
  * by Steve Jankowski
  * steve@qstat.org
  * http://www.qstat.org
@@ -12,12 +12,12 @@
  *
  * Inspired by QuakePing by Len Norton
  *
- * Copyright 1996,1997,1998,1999,2000,2001,2002 by Steve Jankowski
+ * Copyright 1996,1997,1998,1999,2000,2001,2002,2003,2004 by Steve Jankowski
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#define VERSION "2.5c+cvs"
+#define VERSION "2.6"
 char *qstat_version= VERSION;
 
 /* OS/2 defines */
