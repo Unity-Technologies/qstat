@@ -69,6 +69,7 @@
 #define GHOSTRECON_PLAYER_DEFAULT_PORT	2346
 #define RAVENSHIELD_DEFAULT_PORT	8777
 #define SAVAGE_DEFAULT_PORT	11235
+#define FARCRY_DEFAULT_PORT	49001
 
 #define Q_UNKNOWN_TYPE 0
 #define MASTER_SERVER 0x40000000
@@ -111,8 +112,9 @@
 #define ALLSEEINGEYE_PROTOCOL_SERVER 36
 #define RAVENSHIELD_SERVER 37
 #define SAVAGE_SERVER 38
+#define FARCRY_SERVER 39
 
-#define LAST_BUILTIN_SERVER  38
+#define LAST_BUILTIN_SERVER  39
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -160,6 +162,7 @@ void display_bfris_player_info( struct qserver *server);
 void display_descent3_player_info( struct qserver *server);
 void display_ravenshield_player_info( struct qserver *server);
 void display_savage_player_info( struct qserver *server);
+void display_farcry_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
 
@@ -176,6 +179,7 @@ void raw_display_tribes2_player_info( struct qserver *server);
 void raw_display_bfris_player_info( struct qserver *server);
 void raw_display_ravenshield_player_info( struct qserver *server);
 void raw_display_savage_player_info( struct qserver *server);
+void raw_display_farcry_player_info( struct qserver *server);
 void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
@@ -194,6 +198,7 @@ void xml_display_tribes_player_info( struct qserver *server);
 void xml_display_tribes2_player_info( struct qserver *server);
 void xml_display_ravenshield_player_info( struct qserver *server);
 void xml_display_savage_player_info( struct qserver *server);
+void xml_display_farcry_player_info( struct qserver *server);
 void xml_display_bfris_player_info( struct qserver *server);
 void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
@@ -213,6 +218,7 @@ void send_player_request_packet( struct qserver *server);
 void send_rule_request_packet( struct qserver *server);
 void send_ravenshield_request_packet( struct qserver *server);
 void send_savage_request_packet( struct qserver *server);
+void send_farcry_request_packet( struct qserver *server);
 void send_gamespy_master_request( struct qserver *server);
 void send_tribes2_request_packet( struct qserver *server);
 void send_tribes2master_request_packet( struct qserver *server);
@@ -235,6 +241,7 @@ void deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_farcry_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
@@ -515,6 +522,10 @@ unsigned char savage_serverquery[] = {
 
 unsigned char savage_playerquery[] = {
 	0x9e,0x4c,0x23,0x00,0x00,0xce,0x76,0x46,0x00,0x00
+};
+
+unsigned char farcry_serverquery[] = {
+	0x08,0x80
 };
 
 char ravenshield_serverquery[] = "REPORT";
@@ -1437,6 +1448,40 @@ server_type builtin_types[] = {
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
     deal_with_savage_packet,	/* packet_func */
+},
+{
+    /* FARCRY PROTOCOL */
+    FARCRY_SERVER,		/* id */
+    "FCS",			/* type_prefix */
+    "fcs",			/* type_string */
+    "-fcs",			/* type_option */
+    "FarCry",		/* game_name */
+    0,				/* master */
+   	FARCRY_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_QUERY_ARG,		/* flags */
+    "gametype",			/* game_rule */
+    "FARCRY",			/* template_var */
+    (char*)farcry_serverquery,			/* status_packet */
+    sizeof( savage_serverquery ) - 1,	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_farcry_player_info,	/* display_player_func */
+    display_server_rules,		/* display_rule_func */
+    raw_display_farcry_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_farcry_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_farcry_request_packet,	/* status_query_func */
+    NULL,				/* rule_query_func */
+    NULL,				/* player_query_func */
+    deal_with_farcry_packet,	/* packet_func */
 },
 
 
