@@ -151,8 +151,8 @@ int gettimeofday(struct timeval *now, void *blah)
 #define USE_SELECT
 #endif
 
-#endif
-#endif
+#endif /* USE_SELECT */
+#endif /* USE_POLL */
 
 /* If did not chose, then use select()
 */
@@ -279,7 +279,7 @@ static void decode_q3master_packet( struct qserver *server, char *pkt, int pktle
 static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
 static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
-static int unreal_max_players( struct qserver *server, int player_number );
+static int unreal_max_players( struct qserver *server );
 char * ut2003_strdup( const char *string, const char *end, char **next );
 struct rule * add_rule( struct qserver *server, char *key, char *value,	int flags);
 int html_entity( const char c, char *dest );
@@ -2943,164 +2943,175 @@ main( int argc, char *argv[])
 	    add_server_arg( argv[arg], type->id, outfilename, query_arg,
 		&server_args, &n_server_args, &max_server_args);
 	}
-    }
+	}
 
-    start_time= time(0);
+	start_time= time(0);
 
-    default_server_type= find_server_type_id( default_server_type_id);
+	default_server_type= find_server_type_id( default_server_type_id);
 
-    for ( i= 0; i < n_files; i++)
+	for ( i= 0; i < n_files; i++)
 	add_file( files[i]);
 
-    for ( ; arg < argc; arg++)
+	for ( ; arg < argc; arg++)
 	add_qserver( argv[arg], default_server_type, NULL, NULL);
 
-    for ( i= 0; i < n_server_args; i++)  {
+	for ( i= 0; i < n_server_args; i++)  {
 	server_type *server_type= find_server_type_id( server_args[i].type_id);
 	add_qserver( server_args[i].arg, server_type,
 		server_args[i].outfilename, server_args[i].query_arg);
-    }
+	}
 
-    free( server_args);
+	free( server_args);
 
-    if ( servers == NULL)
-	exit(1);
+	if ( servers == NULL)
+		exit(1);
 
-    max_connmap= max_simultaneous + 10;
-    connmap= (struct qserver**) calloc( 1, sizeof(struct qserver*) * max_connmap);
+	max_connmap= max_simultaneous + 10;
+	connmap= (struct qserver**) calloc( 1, sizeof(struct qserver*) * max_connmap);
 
-    if ( color_names == -1)
-	color_names= ( raw_display) ? DEFAULT_COLOR_NAMES_RAW :
+	if ( color_names == -1)
+		color_names= ( raw_display) ? DEFAULT_COLOR_NAMES_RAW :
 		DEFAULT_COLOR_NAMES_DISPLAY;
 
-    if ( time_format == -1)
-	time_format= ( raw_display) ? DEFAULT_TIME_FMT_RAW :
+	if ( time_format == -1)
+		time_format= ( raw_display) ? DEFAULT_TIME_FMT_RAW :
 		DEFAULT_TIME_FMT_DISPLAY;
 
-    if ( (one_server_type_id & MASTER_SERVER) || one_server_type_id == 0)
-	display_prefix= 1;
+	if ( (one_server_type_id & MASTER_SERVER) || one_server_type_id == 0)
+		display_prefix= 1;
 
-    if ( xml_display)
-	xml_header();
-    else if ( new_style && ! raw_display && ! have_server_template())
-	display_header();
-    else if ( have_header_template())
-	template_display_header();
+	if ( xml_display)
+		xml_header();
+	else if ( new_style && ! raw_display && ! have_server_template())
+		display_header();
+	else if ( have_header_template())
+		template_display_header();
 
-    q_serverinfo.length= htons( q_serverinfo.length);
-    h2_serverinfo.length= htons( h2_serverinfo.length);
-    q_player.length= htons( q_player.length);
+	q_serverinfo.length= htons( q_serverinfo.length);
+	h2_serverinfo.length= htons( h2_serverinfo.length);
+	q_player.length= htons( q_player.length);
 
-    bind_sockets();
+	bind_sockets();
 
-    while ( connected || (!connected && bind_retry==-2))  {
-	int last_connected= connected;
+	while ( connected || (!connected && bind_retry==-2))
+	{
+		int last_connected= connected;
 
-	if ( ! connected && bind_retry==-2)  {
-	    rc= wait_for_timeout( 60);
-	    bind_retry= bind_sockets();
-	    continue;
-	}
-	bind_retry= 0;
-
-	set_file_descriptors();
-
-	if ( progress)
-	    display_progress();
-	get_next_timeout( &timeout);
-
-	rc= wait_for_file_descriptors( &timeout);
-
-	if ( rc == 0)  {
-	    if ( run_timeout && time(0)-start_time >= run_timeout)
-		break;
-	    send_packets();
-	    bind_retry= bind_sockets();
-	    continue;
-	}
-	if ( rc == SOCKET_ERROR)  {
-#ifdef _ISUNIX
-	    if ( errno == EINTR)
-		continue;
-#endif
-	    perror("select");
-	    break;
-	}
-
-	gettimeofday( &packet_recv_time, NULL);
-	fd= 0;
-	for ( ; rc; rc--)  {
-	    struct sockaddr_in addr;
-	    int addrlen= sizeof(addr);
-	    server= get_next_ready_server();
-	    if ( server == NULL)
-		break;
-	    if ( server->flags & FLAG_BROADCAST)
-		pktlen= recvfrom( server->fd, pkt, sizeof(pkt_data), 0,
-			(struct sockaddr*)&addr, &addrlen);
-	    else
-	        pktlen= recv( server->fd, pkt, sizeof(pkt_data), 0);
-
-	    if ( pktlen == SOCKET_ERROR)  {
-		if ( connection_refused())  {
-		    server->server_name= DOWN;
-		    num_servers_down++;
-		    cleanup_qserver( server, 1);
-		    if ( ! connected)
+		if ( ! connected && bind_retry==-2)
+		{
+			rc= wait_for_timeout( 60);
 			bind_retry= bind_sockets();
-		}
-		continue;
-	    }
-	    if ( server->flags & FLAG_BROADCAST)  {
-		struct qserver *broadcast= server;
-		unsigned short port= ntohs(addr.sin_port);
-		/* create new server and init */
-		if ( ! (no_port_offset || server->flags & TF_NO_PORT_OFFSET))
-		    port-= server->type->port_offset;
-		server= add_qserver_byaddr( ntohl(addr.sin_addr.s_addr),
-			port, server->type, NULL);
-		if ( server == NULL)  {
-		    server= find_server_by_address( addr.sin_addr.s_addr,
-			ntohs(addr.sin_port));
-		    if ( server == NULL)
 			continue;
-/*
-		    if ( show_errors)  {
-			fprintf(stderr,
-				"duplicate or invalid packet received from 0x%08x:%hu\n",
-				ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
-			print_packet( NULL, pkt, pktlen);
-		    }
-		    continue;
-*/
 		}
-		else  {
-		    server->packet_time1= broadcast->packet_time1;
-		    server->packet_time2= broadcast->packet_time2;
-		    server->ping_total= broadcast->ping_total;
-		    server->n_requests= broadcast->n_requests;
-		    server->n_packets= broadcast->n_packets;
-		    broadcast->n_servers++;
-		}
-	    }
+		bind_retry= 0;
 
-	    if ( show_recv_packets)
-		print_packet( server, pkt, pktlen);
-	    server->type->packet_func( server, pkt, pktlen);
+		set_file_descriptors();
+
+		if ( progress)
+			display_progress();
+		get_next_timeout( &timeout);
+
+		rc= wait_for_file_descriptors( &timeout);
+
+		if ( rc == 0)
+		{
+			if ( run_timeout && time(0)-start_time >= run_timeout)
+				break;
+			send_packets();
+			bind_retry= bind_sockets();
+			continue;
+		}
+		if ( rc == SOCKET_ERROR)
+		{
+#ifdef _ISUNIX
+			if ( errno == EINTR)
+				continue;
+#endif
+			perror("select");
+			break;
+		}
+
+		gettimeofday( &packet_recv_time, NULL);
+		fd= 0;
+		for ( ; rc; rc--)
+		{
+			struct sockaddr_in addr;
+			int addrlen= sizeof(addr);
+			server= get_next_ready_server();
+			if ( server == NULL)
+				break;
+			if ( server->flags & FLAG_BROADCAST)
+				pktlen= recvfrom( server->fd, pkt, sizeof(pkt_data), 0,
+				(struct sockaddr*)&addr, &addrlen);
+			else
+				pktlen= recv( server->fd, pkt, sizeof(pkt_data), 0);
+
+			if ( pktlen == SOCKET_ERROR)
+			{
+				if ( connection_refused())
+				{
+					server->server_name= DOWN;
+					num_servers_down++;
+					cleanup_qserver( server, 1);
+					if ( ! connected)
+						bind_retry= bind_sockets();
+				}
+				continue;
+			}
+			if ( server->flags & FLAG_BROADCAST)
+			{
+				struct qserver *broadcast= server;
+				unsigned short port= ntohs(addr.sin_port);
+				/* create new server and init */
+				if ( ! (no_port_offset || server->flags & TF_NO_PORT_OFFSET))
+					port-= server->type->port_offset;
+				server= add_qserver_byaddr( ntohl(addr.sin_addr.s_addr),
+					port, server->type, NULL);
+				if ( server == NULL)
+				{
+					server= find_server_by_address( addr.sin_addr.s_addr,
+					ntohs(addr.sin_port));
+					if ( server == NULL)
+					continue;
+	/*
+					if ( show_errors)
+					{
+						fprintf(stderr,
+							"duplicate or invalid packet received from 0x%08x:%hu\n",
+							ntohl(addr.sin_addr.s_addr), ntohs(addr.sin_port));
+						print_packet( NULL, pkt, pktlen);
+					}
+					continue;
+	*/
+				}
+				else
+				{
+					server->packet_time1= broadcast->packet_time1;
+					server->packet_time2= broadcast->packet_time2;
+					server->ping_total= broadcast->ping_total;
+					server->n_requests= broadcast->n_requests;
+					server->n_packets= broadcast->n_packets;
+					broadcast->n_servers++;
+				}
+			}
+
+			if ( show_recv_packets)
+			print_packet( server, pkt, pktlen);
+			server->type->packet_func( server, pkt, pktlen);
+		}
+
+		if ( run_timeout && time(0)-start_time >= run_timeout)
+			break;
+		if ( connected != last_connected)
+			bind_retry= bind_sockets();
 	}
 
-	if ( run_timeout && time(0)-start_time >= run_timeout)
-	    break;
-	if ( connected != last_connected)
-	    bind_retry= bind_sockets();
-    }
+	finish_output();
+	free_server_hash();
+	free(files);
+	free(connmap);
 
-    finish_output();
-    free_server_hash();
-    free(files);
-    free(connmap);
-
-    return 0;
+	return 0;
 }
 
 void
@@ -4860,16 +4871,21 @@ static int select_cursor;
 int
 set_fds( fd_set *fds)
 {
-    int maxfd= 1, i;
+	int maxfd= 1, i;
 
-    for ( i= 0; i < max_connmap; i++)
-	if ( connmap[i] != NULL)  {
-	    FD_SET( connmap[i]->fd, fds);
-	    if ( connmap[i]->fd > maxfd)
-		maxfd= connmap[i]->fd;
+	for ( i= 0; i < max_connmap; i++)
+	{
+		if ( connmap[i] != NULL)
+		{
+			FD_SET( connmap[i]->fd, fds);
+			if ( connmap[i]->fd > maxfd)
+			{
+				maxfd= connmap[i]->fd;
+			}
+		}
 	}
 
-    return maxfd;
+	return maxfd;
 }
 
 void
@@ -4889,13 +4905,15 @@ wait_for_file_descriptors( struct timeval *timeout)
 struct qserver *
 get_next_ready_server()
 {
-    while ( select_cursor < max_connmap &&
+	while ( select_cursor < max_connmap &&
 		( connmap[select_cursor] == NULL ||
 		! FD_ISSET( connmap[select_cursor]->fd, &select_read_fds)) )
-	select_cursor++;
-    if ( select_cursor >= max_connmap)
-	return NULL;
-    return connmap[select_cursor++];
+	{
+		select_cursor++;
+	}
+	if ( select_cursor >= max_connmap)
+		return NULL;
+	return connmap[select_cursor++];
 }
 
 int
@@ -4949,10 +4967,12 @@ struct qserver *
 get_next_ready_server()
 {
     for ( ; poll_cursor < n_pollfds; poll_cursor++)
-	if ( pollfds[ poll_cursor].revents)
-	    break;
+	{
+		if ( pollfds[ poll_cursor].revents)
+			break;
+	}
     if ( poll_cursor >= n_pollfds)
-	return NULL;
+		return NULL;
     return connmap[pollfds[poll_cursor++].fd];
 }
 
@@ -6302,7 +6322,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
        pkt_id is the id_major from the \queryid\
        pkt_max is the total number of packets expected
 	   pkt_index is a bit mask of the packets received.  The id_minor of
-          \queryid\ provides packet numbers (1 through pkt_max).  
+          \queryid\ provides packet numbers (1 through pkt_max).
     */
 	if ( server->saved_data.pkt_index == -1)
 	    server->saved_data.pkt_index= 0;
@@ -6422,7 +6442,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				// && unreal_max_players( server ) due to bf1942 issue
 				// where the actual no players is correct but more player
 				// details are returned
-				if ( player == NULL && unreal_max_players( server, player_number ) )
+				if ( player == NULL && unreal_max_players( server ) )
 				{
 					player= add_player( server, player_number);
 				}
@@ -6485,7 +6505,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			// unreal_max_players( server ) due to bf1942 issue
 			// where the actual no players is correct but more player
 			// details are returned
-			else if ( unreal_max_players( server, no ) )
+			else if ( unreal_max_players( server ) )
 			{
 				player= add_player( server, no );
 				if ( player)
@@ -6666,18 +6686,13 @@ unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname )
 }
 
 STATIC int
-unreal_max_players( struct qserver *server, int player_number )
+unreal_max_players( struct qserver *server )
 {
 	struct player *player;
 	int no_players = 0;
 	if ( 0 == server->num_players )
 	{
 		return 0;
-	}
-
-	if ( player_number )
-	{
-		return ( player_number < server->num_players ) ? 1 : 0;
 	}
 
 	for ( player= server->players; player; player= player->next)
