@@ -6856,7 +6856,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			*s++= '\0';
 		}
-		fprintf( stderr, "%s = %s\n", key, value );
+		//fprintf( stderr, "%s = %s\n", key, value );
 		if ( *value == '\0')
 		{
 			if ( strcmp( key, "final") == 0)
