@@ -62,6 +62,8 @@ static char *force_upper_case( char *string);
 static char *get_token();
 static void * memdup( void *mem, unsigned int len);
 
+int parse_config_file( FILE *file);
+
 static int (*parse_func)( char *, void *);
 static void *parse_context;
 static int line;
@@ -721,7 +723,6 @@ add_config_type( server_type *gametype)
 STATIC server_type *
 get_config_type( char *game_type)
 {
-    server_type **search= config_types;
     int i;
     for ( i= 0; i < n_config_types; i++)
 	if ( strcmp( config_types[i]->type_string, game_type) == 0)
@@ -826,8 +827,7 @@ STATIC char *
 parse_value( char *source, int len)
 {
     char *value, *v, *end;
-    int error= 0, rc;
-    unsigned int n;
+    int error= 0;
 
     value= (char*)malloc( len + 1);
     v= value;

@@ -105,7 +105,7 @@ hcache_open( char *filename, int update)
 	    printf( "%d: parse error\n", line_no);
 	    continue;
 	}
-	if ( sscanf( ipstr, "%u.%u.%u.%u", &ip1, &ip2, &ip3, &ip4) != 4)  {
+	if ( sscanf( ipstr, "%lu.%lu.%lu.%lu", &ip1, &ip2, &ip3, &ip4) != 4)  {
 	    init_entry( 0, ipstr, NULL);
 	    continue;
 	}
@@ -239,7 +239,7 @@ write_file( FILE *file)
 	unsigned long ipaddr= hcache[e].ipaddr;
 	if ( ipaddr == 0)
 	    continue;
-	fprintf( file, "%u.%u.%u.%u", (ipaddr&0xff000000)>>24,
+	fprintf( file, "%lu.%lu.%lu.%lu", (ipaddr&0xff000000)>>24,
 		(ipaddr&0xff0000)>>16, (ipaddr&0xff00)>>8, ipaddr&0xff);
 	if ( hcache[e].hostname[0])  {
 	    for ( h= 0; h < 5; h++)
@@ -254,7 +254,7 @@ write_file( FILE *file)
 void
 hcache_invalidate()
 {
-    int e, h;
+    int e;
     for ( e= 0; e < n_entry; e++)
 	if ( hcache[e].ipaddr != 0)
 	    memset( & hcache[e].hostname[0], 0, sizeof( hcache[e].hostname));
@@ -263,7 +263,7 @@ hcache_invalidate()
 void
 hcache_validate()
 {
-    int e, h;
+    int e;
     char **alias;
     struct hostent *ent;
     unsigned long ipaddr;
@@ -273,7 +273,7 @@ hcache_validate()
 	fprintf( stderr, "\r%d / %d  validating ", e, n_entry);
 	if ( hcache[e].ipaddr != 0)  {
 	    ipaddr= hcache[e].ipaddr;
-	    fprintf( stderr, "%u.%u.%u.%u", (ipaddr&0xff000000)>>24,
+	    fprintf( stderr, "%lu.%lu.%lu.%lu", (ipaddr&0xff000000)>>24,
 		(ipaddr&0xff0000)>>16, (ipaddr&0xff00)>>8, ipaddr&0xff);
 	    ipaddr= htonl( ipaddr);
 	    ent= gethostbyaddr( (char*)&ipaddr, sizeof(unsigned long),
@@ -376,7 +376,7 @@ if ( debug) printf( "validating %s\n", hostname);
 	entry= validate_entry( entry);
 	n_changes++;
     }
-if ( debug) printf( "returning %x\n", entry->ipaddr);
+if ( debug) printf( "returning %lx\n", entry->ipaddr);
     if ( entry != NULL && entry->ipaddr)
 	return entry->ipaddr;
     return INADDR_NONE;
@@ -391,7 +391,7 @@ hcache_lookup_ipaddr( unsigned long ipaddr)
 	if ( hcache[e].ipaddr == ipaddr)
 	    return hcache[e].hostname[0];
     entry= init_entry( ipaddr, 0, NULL);
-if ( debug) printf( "validating %x\n", ipaddr);
+if ( debug) printf( "validating %lx\n", ipaddr);
     validate_entry( entry);
     n_changes++;
     return entry ? entry->hostname[0] : NULL;
