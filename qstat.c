@@ -99,7 +99,7 @@ int gettimeofday(struct timeval *now, void *blah)
 #include <netinet/in.h>
 #include <netdb.h>
 #include <utils.h>
- 
+
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
 #define close(a)        soclose(a)
@@ -167,6 +167,7 @@ int n_server_types;
  */
 
 
+
 int hostname_lookup= 0;		/* set if -H was specified */
 int new_style= 1;		/* unset if -old was specified */
 int n_retries= DEFAULT_RETRIES;
@@ -211,7 +212,7 @@ int xml_display= 0;
 int xml_encoding= ENCODING_LATIN_1;
 
 #define SUPPORTED_SERVER_SORT	"pgihn"
-#define SUPPORTED_PLAYER_SORT	"PFT"
+#define SUPPORTED_PLAYER_SORT	"PFTN"
 #define SUPPORTED_SORT_KEYS	"l" SUPPORTED_SERVER_SORT SUPPORTED_PLAYER_SORT
 char sort_keys[32];
 int player_sort= 0;
@@ -221,6 +222,7 @@ void sort_servers( struct qserver **array, int size);
 void sort_players( struct qserver *server);
 int server_compare( struct qserver *one, struct qserver *two);
 int player_compare( struct player *one, struct player *two);
+int unreal_html_color( short color, char *dest, int *font_tag );
 
 int show_errors= 0;
 
@@ -272,13 +274,302 @@ static void decode_stefmaster_packet( struct qserver *server, char *pkt, int pkt
 static void decode_q3master_packet( struct qserver *server, char *pkt, int pktlen);
 static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
-
-struct rule * add_rule( struct qserver *server, char *key, char *value,
-	int flags);
+static int unreal_player_realslash( char *s, char *end);
+static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
+static int unreal_max_players( struct qserver *server );
+char * ut2003_strdup( const char *string, const char *end, char **next );
+struct rule * add_rule( struct qserver *server, char *key, char *value,	int flags);
+int html_entity( const char c, char *dest );
 #define NO_FLAGS 0
 #define NO_VALUE_COPY 1
 #define CHECK_DUPLICATE_RULES 2
 #define NO_KEY_COPY 4
+
+static char * unreal_colors[] = {
+	"AliceBlue",
+	"AntiqueWhite",
+	"Aqua",
+	"Aquamarine",
+	"Azure",
+	"Beige",
+	"Bisque",
+	"Black",
+	"BlanchedAlmond",
+	"Blue",
+	"BlueViolet",
+	"Brown",
+	"BurlyWood",
+	"CadetBlue",
+	"Chartreuse",
+	"Chocolate",
+	"Coral",
+	"CornflowerBlue",
+	"Cornsilk",
+	"Crimson",
+	"Cyan",
+	"DarkBlue",
+	"DarkCyan",
+	"DarkGoldenrod",
+	"DarkGray",
+	"DarkGreen",
+	"DarkKhaki",
+	"DarkMagenta",
+	"DarkOliveGreen",
+	"DarkOrange",
+	"DarkOrchid",
+	"DarkRed",
+	"DarkSalmon",
+	"DarkSeaGreen",
+	"DarkSlateBlue",
+	"DarkSlateGray",
+	"DarkTurquoise",
+	"DarkViolet",
+	"DeepPink",
+	"DeepSkyBlue",
+	"DimGray",
+	"DodgerBlue",
+	"FireBrick",
+	"FloralWhite",
+	"ForestGreen",
+	"Fuchsia",
+	"Gainsboro",
+	"GhostWhite",
+	"Gold",
+	"Goldenrod",
+	"Gray",
+	"Green",
+	"GreenYellow",
+	"Honeydew",
+	"HotPink",
+	"IndianRed",
+	"Indigo",
+	"Ivory",
+	"Khaki",
+	"Lavender",
+	"LavenderBlush",
+	"LawnGreen",
+	"LemonChiffon",
+	"LightBlue",
+	"LightCoral",
+	"LightCyan",
+	"LightGoldenrodYellow",
+	"LightGreen",
+	"LightGrey",
+	"LightPink",
+	"LightSalmon",
+	"LightSeaGreen",
+	"LightSkyBlue",
+	"LightSlateGray",
+	"LightSteelBlue",
+	"LightYellow",
+	"Lime",
+	"LimeGreen",
+	"Linen",
+	"Magenta",
+	"Maroon",
+	"MediumAquamarine",
+	"MediumBlue",
+	"MediumOrchid",
+	"MediumPurple",
+	"MediumSeaGreen",
+	"MediumSlateBlue",
+	"MediumSpringGreen",
+	"MediumTurquoise",
+	"MediumVioletRed",
+	"MidnightBlue",
+	"MintCream",
+	"MistyRose",
+	"Moccasin",
+	"NavajoWhite",
+	"Navy",
+	"OldLace",
+	"Olive",
+	"OliveDrab",
+	"Orange",
+	"OrangeRed",
+	"Orchid",
+	"PaleGoldenrod",
+	"PaleGreen",
+	"PaleTurquoise",
+	"PaleVioletRed",
+	"PapayaWhip",
+	"PeachPuff",
+	"Peru",
+	"Pink",
+	"Plum",
+	"PowderBlue",
+	"Purple",
+	"Red",
+	"RosyBrown",
+	"RoyalBlue",
+	"SaddleBrown",
+	"Salmon",
+	"SandyBrown",
+	"SeaGreen",
+	"Seashell",
+	"Sienna",
+	"Silver",
+	"SkyBlue",
+	"SlateBlue",
+	"SlateGray",
+	"Snow",
+	"SpringGreen",
+	"SteelBlue",
+	"Tan",
+	"Teal",
+	"Thistle",
+	"Tomato",
+	"Turquoise",
+	"Violet",
+	"Wheat",
+	"White",
+	"WhiteSmoke",
+	"Yellow",
+	"YellowGreen",
+};
+
+static char *unreal_rgb_colors[] = {
+	"#F0F8FF",
+	"#FAEBD7",
+	"#00FFFF",
+	"#7FFFD4",
+	"#F0FFFF",
+	"#F5F5DC",
+	"#FFE4C4",
+	"#000000",
+	"#FFEBCD",
+	"#0000FF",
+	"#8A2BE2",
+	"#A52A2A",
+	"#DEB887",
+	"#5F9EA0",
+	"#7FFF00",
+	"#D2691E",
+	"#FF7F50",
+	"#6495ED",
+	"#FFF8DC",
+	"#DC143C",
+	"#00FFFF",
+	"#00008B",
+	"#008B8B",
+	"#B8860B",
+	"#A9A9A9",
+	"#006400",
+	"#BDB76B",
+	"#8B008B",
+	"#556B2F",
+	"#FF8C00",
+	"#9932CC",
+	"#8B0000",
+	"#E9967A",
+	"#8FBC8F",
+	"#483D8B",
+	"#2F4F4F",
+	"#00CED1",
+	"#9400D3",
+	"#FF1493",
+	"#00BFFF",
+	"#696969",
+	"#1E90FF",
+	"#B22222",
+	"#FFFAF0",
+	"#228B22",
+	"#FF00FF",
+	"#DCDCDC",
+	"#F8F8FF",
+	"#FFD700",
+	"#DAA520",
+	"#808080",
+	"#008000",
+	"#ADFF2F",
+	"#F0FFF0",
+	"#FF69B4",
+	"#CD5C5C",
+	"#4B0082",
+	"#FFFFF0",
+	"#F0E68C",
+	"#E6E6FA",
+	"#FFF0F5",
+	"#7CFC00",
+	"#FFFACD",
+	"#ADD8E6",
+	"#F08080",
+	"#E0FFFF",
+	"#FAFAD2",
+	"#90EE90",
+	"#D3D3D3",
+	"#FFB6C1",
+	"#FFA07A",
+	"#20B2AA",
+	"#87CEFA",
+	"#778899",
+	"#B0C4DE",
+	"#FFFFE0",
+	"#00FF00",
+	"#32CD32",
+	"#FAF0E6",
+	"#FF00FF",
+	"#800000",
+	"#66CDAA",
+	"#0000CD",
+	"#BA55D3",
+	"#9370DB",
+	"#3CB371",
+	"#7B68EE",
+	"#00FA9A",
+	"#48D1CC",
+	"#C71585",
+	"#191970",
+	"#F5FFFA",
+	"#FFE4E1",
+	"#FFE4B5",
+	"#FFDEAD",
+	"#000080",
+	"#FDF5E6",
+	"#808000",
+	"#6B8E23",
+	"#FFA500",
+	"#FF4500",
+	"#DA70D6",
+	"#EEE8AA",
+	"#98FB98",
+	"#AFEEEE",
+	"#DB7093",
+	"#FFEFD5",
+	"#FFDAB9",
+	"#CD853F",
+	"#FFC0CB",
+	"#DDA0DD",
+	"#B0E0E6",
+	"#800080",
+	"#FF0000",
+	"#BC8F8F",
+	"#4169E1",
+	"#8B4513",
+	"#FA8072",
+	"#F4A460",
+	"#2E8B57",
+	"#FFF5EE",
+	"#A0522D",
+	"#C0C0C0",
+	"#87CEEB",
+	"#6A5ACD",
+	"#708090",
+	"#FFFAFA",
+	"#00FF7F",
+	"#4682B4",
+	"#D2B48C",
+	"#008080",
+	"#D8BFD8",
+	"#FF6347",
+	"#40E0D0",
+	"#EE82EE",
+	"#F5DEB3",
+	"#FFFFFF",
+	"#F5F5F5",
+	"#FFFF00",
+	"#9ACD32",
+};
 
 void free_server( struct qserver *server);
 void free_player( struct player *player);
@@ -310,7 +601,6 @@ void
 standard_display_server( struct qserver *server)
 {
     char prefix[64];
-
     if ( display_prefix)
 	sprintf( prefix, "%-4s ", server->type->type_prefix);
     else
@@ -383,7 +673,7 @@ standard_display_server( struct qserver *server)
     else  {
 	char name[512];
 	sprintf( name, "\"%s\"", server->server_name);
-	fprintf( OF, "%-16s %10s map %s at %22s %d/%d players %d ms\n", 
+	fprintf( OF, "%-16s %10s map %s at %22s %d/%d players %d ms\n",
 	    (hostname_lookup) ? server->host_name : server->arg,
 	    name, server->map_name,
 	    server->address, server->num_players, server->max_players,
@@ -501,49 +791,63 @@ display_q2_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
 	if ( server->flags & FLAG_PLAYER_TEAMS)
-	    fprintf( OF, "\t%3d frags team#%d %8s  %s\n", 
+	    fprintf( OF, "\t%3d frags team#%d %8s  %s\n",
 		player->frags,
 		player->team,
 		ping_time(player->ping),
 		xform_name( player->name, server));
 	else
-	    fprintf( OF, "\t%3d frags %8s  %s\n", 
+	    fprintf( OF, "\t%3d frags %8s  %s\n",
 		player->frags,
 		ping_time(player->ping),
 		xform_name( player->name, server));
     }
 }
 
+
 void
 display_unreal_player_info( struct qserver *server)
 {
     struct player *player;
     static const char * fmt_team_number= "\t%3d frags team#%-3d %7s %s\n";
-    static const char * fmt_team_name= "\t%3d frags team#%s %7s %s\n";
+    static const char * fmt_team_name= "\t%3d frags %8s %7s %s\n";
     static const char * fmt_no_team= "\t%3d frags %8s  %s\n";
 
     player= server->players;
-    for ( ; player != NULL; player= player->next)  {
-	if ( server->flags & FLAG_PLAYER_TEAMS)  {
-	    if ( player->team_name)
-	    fprintf( OF, fmt_team_name,
-		player->frags,
-		player->team_name,
-		ping_time(player->ping),
-		xform_name( player->name, server));
-	    else
-	    fprintf( OF, fmt_team_number,
-		player->frags,
-		player->team,
-		ping_time(player->ping),
-		xform_name( player->name, server));
+    for ( ; player != NULL; player= player->next)
+	{
+		if ( server->flags & FLAG_PLAYER_TEAMS)
+		{
+			// we use (player->score) ? player->score : player->frags,
+			// so we get details from halo
+			if ( player->team_name)
+			{
+				fprintf( OF, fmt_team_name,
+					(player->score) ? player->score : player->frags,
+					player->team_name,
+					ping_time(player->ping),
+					xform_name( player->name, server)
+				);
+			}
+			else
+			{
+				fprintf( OF, fmt_team_number,
+					(player->score) ? player->score : player->frags,
+					player->team,
+					ping_time(player->ping),
+					xform_name( player->name, server)
+				);
+			}
+		}
+		else
+		{
+			fprintf( OF, fmt_no_team,
+				player->frags,
+				ping_time(player->ping),
+				xform_name( player->name, server)
+			);
+		}
 	}
-	else
-	    fprintf( OF, fmt_no_team,
-		player->frags,
-		ping_time(player->ping),
-		xform_name( player->name, server));
-    }
 }
 
 void
@@ -553,7 +857,7 @@ display_shogo_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\t%3d frags %8s %s\n", 
+	fprintf( OF, "\t%3d frags %8s %s\n",
 		player->frags,
 		ping_time(player->ping),
 		xform_name( player->name, server));
@@ -567,7 +871,7 @@ display_halflife_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\t%3d frags %8s %s\n", 
+	fprintf( OF, "\t%3d frags %8s %s\n",
 		player->frags,
 		play_time( player->connect_time,1),
 		xform_name( player->name, server));
@@ -581,7 +885,7 @@ display_tribes_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\t%4d score team#%d %8s %s\n", 
+	fprintf( OF, "\t%4d score team#%d %8s %s\n",
 		player->frags,
 		player->team,
 		ping_time( player->ping),
@@ -596,7 +900,7 @@ display_tribes2_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\tscore %4d %14s %s\n", 
+	fprintf( OF, "\tscore %4d %14s %s\n",
 		player->frags,
 		player->team_name ? player->team_name : (player->number == TRIBES_TEAM ? "TEAM" : "?"),
 		xform_name( player->name, server));
@@ -628,7 +932,7 @@ display_descent3_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\t%3d frags %3d deaths team#%-3d %7s %s\n", 
+	fprintf( OF, "\t%3d frags %3d deaths team#%-3d %7s %s\n",
 		player->frags,
 		player->deaths,
 		player->team,
@@ -644,7 +948,7 @@ display_ghostrecon_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	fprintf( OF, "\tdead=%3d team#%-3d %s\n", 
+	fprintf( OF, "\tdead=%3d team#%-3d %s\n",
 		player->deaths,
 		player->team,
 		xform_name( player->name, server));
@@ -658,19 +962,47 @@ display_eye_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
 	if ( player->team_name)
-	    fprintf( OF, "\tscore %4d %6s team %12s %s\n", 
+	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
 		player->score,
 		ping_time(player->ping),
 		player->team_name,
 		xform_name( player->name, server));
 	else
-	    fprintf( OF, "\tscore %4d %6s team#%d %s\n", 
+	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
 		player->score,
 		ping_time(player->ping),
 		player->team,
 		xform_name( player->name, server));
     }
 }
+
+void
+display_ravenshield_player_info( struct qserver *server)
+{
+    struct player *player = server->players;
+    for ( ; player != NULL; player = player->next )
+	{
+		fprintf( OF, "\t%3d frags %8s %s\n",
+			player->frags,
+			play_time( player->connect_time,1),
+			xform_name( player->name, server));
+    }
+}
+
+
+void
+display_savage_player_info( struct qserver *server)
+{
+    struct player *player = server->players;
+    for ( ; player != NULL; player = player->next )
+	{
+		fprintf( OF, "\t%3d frags %8s %s\n",
+			player->frags,
+			play_time( player->connect_time,1),
+			xform_name( player->name, server));
+    }
+}
+
 
 char *
 get_qw_game( struct qserver *server)
@@ -1101,6 +1433,39 @@ raw_display_eye_player_info( struct qserver *server)
     }
 }
 
+void
+raw_display_ravenshield_player_info( struct qserver *server)
+{
+    static char fmt[24]= "%s" "%s%d" "%s%s";
+    struct player *player = server->players;
+    for ( ; player != NULL; player= player->next )
+	{
+		fprintf( OF, fmt,
+			xform_name( player->name, server),
+			RD, player->frags,
+			RD, play_time( player->connect_time,1)
+		);
+		fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_savage_player_info( struct qserver *server)
+{
+    static char fmt[24]= "%s" "%s%d" "%s%s";
+    struct player *player = server->players;
+    for ( ; player != NULL; player= player->next )
+	{
+		fprintf( OF, fmt,
+			xform_name( player->name, server),
+			RD, player->frags,
+			RD, play_time( player->connect_time,1)
+		);
+		fputs( "\n", OF);
+    }
+}
+
+
 /* XML output
  * Contributed by <sgarner@gameplanet.co.nz> :-)
  */
@@ -1173,7 +1538,7 @@ xml_display_server( struct qserver *server)
 			server->num_players);
 		fprintf( OF, "\t\t<maxplayers>%d</maxplayers>\n",
 			server->max_players);
-		
+
 		if ( !(server->type->flags & TF_RAW_STYLE_TRIBES))
 		{
 			fprintf( OF, "\t\t<ping>%d</ping>\n",
@@ -1181,7 +1546,7 @@ xml_display_server( struct qserver *server)
 			fprintf( OF, "\t\t<retries>%d</retries>\n",
 				server->n_retries);
 		}
-		
+
 		if ( server->type->flags & TF_RAW_STYLE_QUAKE)
 		{
 			fprintf( OF, "\t\t<address>%s</address>\n",
@@ -1220,7 +1585,7 @@ xml_display_server_rules( struct qserver *server)
 {
 	struct rule *rule;
 	rule= server->rules;
-	
+
 	fprintf( OF, "\t\t<rules>\n");
 	for ( ; rule != NULL; rule= rule->next)
 	{
@@ -1234,7 +1599,7 @@ void
 xml_display_q_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
 
 	player= server->players;
@@ -1242,7 +1607,7 @@ xml_display_q_player_info( struct qserver *server)
 	{
 		fprintf( OF, "\t\t\t<player number=\"%d\">\n",
 			player->number);
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<address>%s</address>\n",
@@ -1251,7 +1616,7 @@ xml_display_q_player_info( struct qserver *server)
 			player->frags);
 		fprintf( OF, "\t\t\t\t<time>%s</time>\n",
 			xml_escape(play_time(player->connect_time,1)));
-		
+
 		if ( color_names)
 		{
 			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n",
@@ -1266,10 +1631,10 @@ xml_display_q_player_info( struct qserver *server)
 			fprintf( OF, "\t\t\t\t<color for=\"pants\">%d</color>\n",
 				quake_color(player->pants_color));
 		}
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1277,7 +1642,7 @@ void
 xml_display_qw_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
 
 	player= server->players;
@@ -1285,14 +1650,14 @@ xml_display_qw_player_info( struct qserver *server)
 	{
 		fprintf( OF, "\t\t\t<player number=\"%d\">\n",
 			player->number);
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
 			player->frags);
 		fprintf( OF, "\t\t\t\t<time>%s</time>\n",
 			xml_escape(play_time(player->connect_time,1)));
-		
+
 		if ( color_names)
 		{
 			fprintf( OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n",
@@ -1307,15 +1672,15 @@ xml_display_qw_player_info( struct qserver *server)
 			fprintf( OF, "\t\t\t\t<color for=\"pants\">%d</color>\n",
 				quake_color(player->pants_color));
 		}
-		
+
 		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
 			player->ping);
 		fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
 			player->skin ? xml_escape(player->skin) : "");
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1330,7 +1695,7 @@ xml_display_q2_player_info( struct qserver *server)
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n", player->frags);
@@ -1338,10 +1703,10 @@ xml_display_q2_player_info( struct qserver *server)
 			fprintf( OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
 			player->ping);
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1349,14 +1714,14 @@ void
 xml_display_unreal_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
 
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -1375,10 +1740,10 @@ xml_display_unreal_player_info( struct qserver *server)
 			player->mesh ? xml_escape(player->mesh) : "");
 		fprintf( OF, "\t\t\t\t<face>%s</face>\n",
 			player->face ? xml_escape(player->face) : "");
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1393,17 +1758,17 @@ xml_display_halflife_player_info( struct qserver *server)
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
 			player->frags);
 		fprintf( OF, "\t\t\t\t<time>%s</time>\n",
 			xml_escape(play_time( player->connect_time,1)));
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1418,7 +1783,7 @@ xml_display_tribes_player_info( struct qserver *server)
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -1429,10 +1794,10 @@ xml_display_tribes_player_info( struct qserver *server)
 			player->ping);
 		fprintf( OF, "\t\t\t\t<packetloss>%d</packetloss>\n",
 			player->packet_loss);
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1442,9 +1807,9 @@ xml_display_tribes2_player_info( struct qserver *server)
 	static char fmt[]= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
 	struct player *player;
 	char *type;
-	
+
 	fprintf( OF, "\t\t<players>\n");
-	
+
 	player= server->players;
 	for ( ; player != NULL; player= player->next)
 	{
@@ -1462,9 +1827,9 @@ xml_display_tribes2_player_info( struct qserver *server)
 					type= "";
 					break;
 			}
-			
+
 			fprintf( OF, "\t\t\t<player>\n");
-			
+
 			fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 				xml_escape(xform_name( player->name, server)));
 			fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -1475,11 +1840,11 @@ xml_display_tribes2_player_info( struct qserver *server)
 				xml_escape(type));
 			fprintf( OF, "\t\t\t\t<clan>%s</clan>\n",
 				player->tribe_tag ? xml_escape(xform_name(player->tribe_tag,server)) : "");
-			
+
 			fprintf( OF, "\t\t\t</player>\n");
 		}
     }
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1487,15 +1852,15 @@ void
 xml_display_bfris_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
-	
+
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player number=\"%d\">\n",
 			player->number);
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score type=\"score\">%d</score>\n",
@@ -1508,10 +1873,10 @@ xml_display_bfris_player_info( struct qserver *server)
 			player->ping);
 		fprintf( OF, "\t\t\t\t<ship>%d</ship>\n",
 			player->ship);
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1519,14 +1884,14 @@ void
 xml_display_descent3_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
 
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -1537,10 +1902,35 @@ xml_display_descent3_player_info( struct qserver *server)
 			player->ping);
 		fprintf( OF, "\t\t\t\t<team>%d</team>\n",
 			player->team);
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
+	fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_ravenshield_player_info( struct qserver *server)
+{
+	struct player *player;
+
+	fprintf( OF, "\t\t<players>\n");
+
+	player= server->players;
+    for ( ; player != NULL; player= player->next)
+	{
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->frags);
+		fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+	}
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1549,24 +1939,24 @@ void
 xml_display_ghostrecon_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	fprintf( OF, "\t\t<players>\n");
 
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<deaths>%d</deaths>\n",
 			player->deaths);
 		fprintf( OF, "\t\t\t\t<team>%d</team>\n",
 			player->team);
-		
+
 		fprintf( OF, "\t\t\t</player>\n");
 	}
-	
+
 	fprintf( OF, "\t\t</players>\n");
 }
 
@@ -1580,7 +1970,7 @@ xml_display_eye_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
 		fprintf( OF, "\t\t\t<player>\n");
-		
+
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -1604,6 +1994,32 @@ xml_display_eye_player_info( struct qserver *server)
     }
 
     fprintf( OF, "\t\t</players>\n");
+}
+
+
+void
+xml_display_savage_player_info( struct qserver *server)
+{
+	struct player *player;
+
+	fprintf( OF, "\t\t<players>\n");
+
+	player= server->players;
+    for ( ; player != NULL; player= player->next)
+	{
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->frags);
+		fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+	}
+
+	fprintf( OF, "\t\t</players>\n");
 }
 
 
@@ -1663,7 +2079,7 @@ unsigned short swap_short( void *);
 unsigned int swap_long_from_little( void *l);
 float swap_float_from_little( void *f);
 unsigned short swap_short_from_little( void *l);
-char * strndup( char *string, int len);
+char * strndup( const char *string, size_t len);
 #define FORCE 1
 
 /* Print an error message and the program usage notes
@@ -1678,7 +2094,7 @@ usage( char *msg, char **argv, char *a1)
 	fprintf( stderr, msg, a1);
 
     printf( "Usage: %s [options ...]\n", argv[0]);
-    printf( "\t[-default server-type] [-f file] [host[:port]] ...\n");
+    printf( "\t[-default server-type] [-cfg file] [-f file] [host[:port]] ...\n");
     printf( "Where host is an IP address or host name\n");
     type= &types[0];
     for ( ; type->id != Q_UNKNOWN_TYPE; type++)
@@ -1689,6 +2105,8 @@ usage( char *msg, char **argv, char *a1)
     for ( ; type->id != Q_UNKNOWN_TYPE; type++)
 	printf( " %s", type->type_string);
     puts("");
+	printf( "-nocfg\t\tIgnore qstat configuration loaded from any default location. Must be the first option on the command-line.\n" );
+    printf( "-cfg\t\tread the extended types from given file not the default one\n");
     printf( "-f\t\tread hosts from file\n");
     printf( "-R\t\tfetch and display server rules\n");
     printf( "-P\t\tfetch and display player info\n");
@@ -1696,6 +2114,7 @@ usage( char *msg, char **argv, char *a1)
     printf( "-u\t\tonly display servers that are up\n");
     printf( "-nf\t\tdo not display full servers\n");
     printf( "-ne\t\tdo not display empty servers\n");
+	printf( "-nh\t\tdo not display header line.\n" );
     printf( "-cn\t\tdisplay color names instead of numbers\n");
     printf( "-ncn\t\tdisplay color numbers instead of names\n");
     printf( "-hc\t\tdisplay colors in #rrggbb format\n");
@@ -1717,17 +2136,31 @@ usage( char *msg, char **argv, char *a1)
     printf( "-maxsim\t\tset maximum simultaneous queries\n");
     printf( "-errors\t\tdisplay errors\n");
     printf( "-of\t\toutput file\n");
+	printf( "-af\t\tLike -of, but append to the file\n" );
     printf( "-raw <delim>\toutput in raw format using <delim> as delimiter\n");
     printf( "-xml\t\toutput status data as an XML document\n");
-    printf( "-Th,-Ts,-Tp,-Tr,-Tt\toutput templates: header, server, player, rule, and trailer\n");
+    printf( "-Th,-Ts,-Tpt\toutput templates: header, server and player\n");
+	printf( "-Tr,-Tt\t\toutput templates: rule, and trailer\n");
     printf( "-srcport <range>\tSend packets from these network ports\n");
     printf( "-srcip <IP>\tSend packets using this IP address\n");
     printf( "-H\t\tresolve host names\n");
     printf( "-Hcache\t\thost name cache file\n");
+	printf( "-carets\t\tDisplay carets in Quake 3 player names\n" );
+	printf( "-d\t\tEnable debug options. By default, enables printing of all received packets to stderr.\n" );
+	printf( "-htmlmode\tConvert <, >, and & to the equivalent HTML entities\n" );
+	printf( "-htmlnames\tColorize Quake 3 and Tribes 2 player names using html font tags\n" );
+	printf( "-nohtmlnames\tDo not colorize Quake 3 and Tribes 2 player names even if $HTML is used in an output template.\n" );
+	printf( "-showgameport\tAlways display the game port in QStat output.\n" );
+	printf( "-noportoffset\tDont use builtin status port offsets ( assume query port was specified ).\n" );
+	printf( "-raw-arg\tWhen used with -raw, always display the server address as it appeared in a file or on the command-line.\n" );
+	printf( "-utf8\t\tUse the UTF-8 character encoding for XML output.\n" );
+#ifdef _WIN32
+	printf( "-noconsole\t\tFree the console\n" );
+#endif
     printf( "\n");
     printf( "Sort keys:\n");
     printf( "  servers: p=by-ping, g=by-game, i=by-IP-address, h=by-hostname, n=by-#-players, l=by-list-order\n");
-    printf( "  players: P=by-ping, F=by-frags, T=by-team\n");
+    printf( "  players: P=by-ping, F=by-frags, T=by-team, N=by-name\n");
     printf( "\nqstat version %s\n", VERSION);
     exit(0);
 }
@@ -1988,7 +2421,7 @@ main( int argc, char *argv[])
     int show_recv_packets= 0;
     int bind_retry= 0;
     int default_server_type_id;
- 
+
 #ifdef _WIN32
     WORD version= MAKEWORD(1,1);
     WSADATA wsa_data;
@@ -2415,7 +2848,7 @@ main( int argc, char *argv[])
 	if ( progress)
 	    display_progress();
 	get_next_timeout( &timeout);
-	
+
 	rc= wait_for_file_descriptors( &timeout);
 
 	if ( rc == 0)  {
@@ -2645,7 +3078,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     char *colon= NULL, *arg_copy, *hostname= NULL;
     unsigned int ipaddr;
     unsigned short port;
- 
+
     if ( run_timeout && time(0)-start_time >= run_timeout)  {
 	finish_output();
 	exit(0);
@@ -3055,7 +3488,7 @@ bind_qserver( struct qserver *server)
 	if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
 	    addr.sin_port= htons(server->port);
 	else
-	    addr.sin_port= htons(server->port + server->type->port_offset);
+	    addr.sin_port= htons( (unsigned short)( server->port + server->type->port_offset ) );
 	addr.sin_addr.s_addr= server->ipaddr;
 	memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero) );
 
@@ -3165,7 +3598,7 @@ send_packets()
 	    interval= retry_interval;
 	prev_n_sent= n_sent;
 	if ( server->server_name == NULL ||
-		!(server->type->flags & TF_SINGLE_QUERY) )  { 
+		!(server->type->flags & TF_SINGLE_QUERY) )  {
 	    if ( server->retry1 != n_retries &&
 		    time_delta( &now, &server->packet_time1) <
 			(interval*(n_retries-server->retry1+1)))
@@ -3210,7 +3643,7 @@ send_packets()
 	    n_sent++;
 	}
 	if ( prev_n_sent == n_sent)  {
-	    if ( ! server->retry1 && time_delta( &now, &server->packet_time1) > 
+	    if ( ! server->retry1 && time_delta( &now, &server->packet_time1) >
 			(interval*(n_retries+1)))
 		cleanup_qserver( server, 1);
 	}
@@ -3225,7 +3658,7 @@ send_broadcast( struct qserver *server, char *pkt, int pktlen)
     if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
         addr.sin_port= htons(server->port);
     else
-        addr.sin_port= htons(server->port + server->type->port_offset);
+        addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
     addr.sin_addr.s_addr= server->ipaddr;
     memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
     return sendto( server->fd, (const char*) pkt, pktlen, 0,
@@ -3332,7 +3765,7 @@ send_unreal_request_packet( struct qserver *server)
     if ( server->flags & FLAG_BROADCAST)
 	rc= send_broadcast( server, server->type->status_packet,
 		server->type->status_len);
-    else   
+    else
 	rc= send( server->fd, server->type->status_packet,
 		server->type->status_len, 0);
 
@@ -3348,28 +3781,35 @@ send_unreal_request_packet( struct qserver *server)
     server->n_packets++;
 }
 
-/* First packet for an Unreal Tournament 2003 server
- */
+// First packet for an Unreal Tournament 2003 server
 void
 send_ut2003_request_packet( struct qserver *server)
 {
     int rc;
 
     if ( server->flags & FLAG_BROADCAST)
-	rc= send_broadcast( server, server->type->status_packet,
-		server->type->status_len);
-    else   
-	rc= send( server->fd, server->type->status_packet,
-		server->type->status_len, 0);
+    {
+		rc= send_broadcast( server, server->type->status_packet, server->type->status_len);
+	}
+    else
+    {
+		rc= send( server->fd, server->type->status_packet, server->type->status_len, 0);
+	}
 
     if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
+    {
+		perror( "send");
+	}
+
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
+    {
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
     }
     else
-	server->n_retries++;
+    {
+		server->n_retries++;
+	}
     server->retry1--;
     server->n_packets++;
 }
@@ -3463,7 +3903,7 @@ send_qwmaster_request_packet( struct qserver *server)
 	if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
 	    addr.sin_port= htons(server->port);
 	else
-	    addr.sin_port= htons(server->port + server->type->port_offset);
+	    addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
 	addr.sin_addr.s_addr= server->ipaddr;
 	memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
 	rc= sendto( server->fd, server->type->master_packet,
@@ -3590,7 +4030,7 @@ send_eye_request_packet( struct qserver *server)
     if ( server->flags & FLAG_BROADCAST)
 	rc= send_broadcast( server, server->type->status_packet,
 		server->type->status_len);
-    else   
+    else
 	rc= send( server->fd, server->type->status_packet,
 		server->type->status_len, 0);
 
@@ -3602,6 +4042,66 @@ send_eye_request_packet( struct qserver *server)
     }
     else
 	server->n_retries++;
+    server->retry1--;
+    server->n_packets++;
+}
+
+void
+send_ravenshield_request_packet( struct qserver *server)
+{
+    int rc = send( server->fd, server->type->status_packet,
+	server->type->status_len, 0);
+
+    if ( rc == SOCKET_ERROR)
+	{
+		perror( "send");
+	}
+
+    if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+    }
+    else
+	{
+		server->n_retries++;
+	}
+    server->retry1--;
+    server->n_packets++;
+}
+
+void
+send_savage_request_packet( struct qserver *server)
+{
+	int len, rc;
+	unsigned char* pkt;
+
+	if ( get_player_info )
+	{
+		pkt = server->type->player_packet;
+		len = server->type->player_len;
+	}
+	else
+	{
+		pkt = server->type->status_packet;
+		len = server->type->status_len;
+	}
+    rc = send( server->fd, pkt, len, 0);
+
+    if ( rc == SOCKET_ERROR)
+	{
+		perror( "send");
+	}
+
+    if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+    }
+    else
+	{
+		server->n_retries++;
+	}
     server->retry1--;
     server->n_packets++;
 }
@@ -4559,7 +5059,7 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 		    free( server->map_name);
 		server->map_name= value;
 	    }
-	    else if  ( strcmp( key, "maxclients") == 0 || 
+	    else if  ( strcmp( key, "maxclients") == 0 ||
 	    		strcmp( key, "sv_maxclients") == 0 ||
 			strcmp( key, "max") == 0)  {
 		if ( server->max_players == -1)
@@ -4727,10 +5227,10 @@ deal_with_descent3master_packet( struct qserver *server, char *rawpkt, int pktle
     ack_descent3master_packet( server, rawpkt+0x1a);
 
     server->n_servers= server->master_pkt_len / 6;
-    
+
     server->next_player_info= -1;
     server->retry1= 0;
-    
+
     if (lastpacket) {
 	cleanup_qserver( server, 0);
     }
@@ -5241,13 +5741,18 @@ rule_info_packet( struct qserver *server, struct q_packet *pkt, int datalen)
 }
 
 struct rule *
-add_rule( struct qserver *server, char *key, char *value, int flags) 
+add_rule( struct qserver *server, char *key, char *value, int flags)
 {
     struct rule *rule;
-    if ( flags & CHECK_DUPLICATE_RULES)  {
-	for ( rule= server->rules; rule; rule= rule->next)
-	    if ( strcmp( rule->name, key) == 0)
-	        return NULL;
+    if ( flags & CHECK_DUPLICATE_RULES)
+	{
+		for ( rule= server->rules; rule; rule= rule->next)
+		{
+			if ( strcmp( rule->name, key) == 0 && strcmp( rule->value, value) == 0 )
+			{
+				return NULL;
+			}
+		}
     }
 
     rule= (struct rule *) malloc( sizeof( struct rule));
@@ -5267,7 +5772,7 @@ add_rule( struct qserver *server, char *key, char *value, int flags)
 }
 
 void
-add_nrule( struct qserver *server, char *key, char *value, int len) 
+add_nrule( struct qserver *server, char *key, char *value, int len)
 {
     struct rule *rule;
     for ( rule= server->rules; rule; rule= rule->next)
@@ -5288,8 +5793,12 @@ add_player( struct qserver *server, int player_number)
 {
     struct player *player;
     for ( player= server->players; player; player= player->next)
-	if ( player->number == player_number)
-	    return NULL;
+    {
+		if ( player->number == player_number)
+		{
+		    return NULL;
+		}
+	}
 
     player= (struct player *) calloc( 1, sizeof( struct player));
     player->number= player_number;
@@ -5344,7 +5853,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
     struct player *player= NULL;
     int id_major, id_minor, final=0;
 
-server->n_servers++;
+	server->n_servers++;
     if ( server->server_name == NULL)
 	server->ping_total+= time_delta( &packet_recv_time,
 		&server->packet_time1);
@@ -5355,158 +5864,332 @@ server->n_servers++;
     end= &rawpkt[pktlen];
 
     s= rawpkt;
-    while ( *s)  {
-	while ( *s == '\\') s++;
-	if ( !*s) break;
-	key= s;
-	while ( *s && *s != '\\') s++;
-	if ( !*s) break;
-	*s++= '\0';
+    while ( *s)
+	{
+		// find the '\'
+		while ( *s && *s == '\\')
+		{
+			s++;
+		}
 
-/*
-	while ( *s == '\\') s++;
-	if ( !*s)
-	    value= NULL;
-	else
-	    value= s;
-*/
-	value= s;
-	while ( *s && *s != '\\') s++;
-	if ( s[1] && !isalpha(s[1]))  {
-	    s++;
-	    while ( *s && *s != '\\') s++;
-	}
-	else if ( s[1] && isalpha(s[1]) &&
-		strncmp( key, "player_", 7) == 0)  {
-	    if ( ! unreal_player_info_key( s+1, end))  {
-		s++;
-		while ( *s && *s != '\\') s++;
-	    }
-	}
-	if ( *s)
-	    *s++= '\0';
-	if ( *value == '\0')  {
-	    if ( strcmp( key, "final") == 0)  {
-		final= 1;
-		continue;
-	    }
-	}
+		if ( !*s )
+		{
+			// out of packet
+			break;
+		}
+		// Start of key
+		key = s;
 
-	if ( player == NULL && unreal_player_info_key( key, end)) {
-	    char *underbar= strchr( key, '_');
-	    if ( underbar)  {
-	        int player_number= atoi( underbar+1);
-	        player= get_player_by_number( server, player_number);
-	        if ( player == NULL)
-		    player= add_player( server, player_number);
-	    }
-	}
+		// while we still have data and its not a '\'
+		while ( *s && *s != '\\')
+		{
+			s++;
+		}
 
-	if ( strcmp( key, "mapname") == 0 && !server->map_name)
-	    server->map_name= strdup( value);
-	else if ( strcmp( key, "hostname") == 0 && !server->server_name)
-	    server->server_name= strdup( value);
-	else if ( strcmp( key, "hostport") == 0)  {
-	    unsigned short port= atoi( value);
-	    /* Probably a response from a broadcast query, change port */
-	    if ( port > 0 && port != server->port &&
-			(show_game_port || server->flags & TF_SHOW_GAME_PORT)) {
-		change_server_port( server, port);
-	    }
-	    add_rule( server, key, value, NO_FLAGS);
-	}
-	else if ( strcmp( key, "maxplayers") == 0)
-	    server->max_players= atoi( value);
-	else if ( strcmp( key, "numplayers") == 0)
-	    server->num_players= atoi( value);
-	else if ( strcmp( key, server->type->game_rule) == 0 && !server->game) {
-	    server->game= strdup( value);
-	    add_rule( server, key, value, NO_FLAGS);
-	}
-	else if ( strcmp( key, "queryid") == 0)
-	    sscanf( value, "%d.%d", &id_major, &id_minor);
-	else if ( strcmp( key, "final") == 0)  {
-	    final= 1;
-	    continue;
-	}
-	else if ( strncmp( key, "player_", 7) == 0)  {
-	    if ( player && player->number == atoi(key+7))  {
-		player->name= strdup( value);
-		player= NULL;
-	    }
-	    else  {
-		player= add_player( server, atoi(key+7));
-		if ( player) 
-		    player->name= strdup( value);
-	    }
-	}
-	else if ( player && strncmp( key, "frags_", 6) == 0)
-	    player->frags= atoi( value);
-	else if ( player && strncmp( key, "team_", 5) == 0)  {
-	    if ( ! isdigit( *value))
-		player->team_name= strdup(value);
-	    else
-		player->team= atoi( value);
-	    server->flags|= FLAG_PLAYER_TEAMS;
-	}
-	else if ( player && strncmp( key, "skin_", 5) == 0)
-	    player->skin= strdup( value);
-	else if ( player && strncmp( key, "mesh_", 5) == 0)
-	    player->mesh= strdup( value);
-	else if ( player && strncmp( key, "ping_", 5) == 0)
-	    player->ping= atoi( value);
-	else if ( player && strncmp( key, "face_", 5) == 0)
-	    player->face= strdup( value);
-	else if ( player && strncmp( key, "deaths_", 7) == 0)
-	    player->deaths= atoi( value);
-	else if ( player && strncmp( key, "score_", 6) == 0)
-	    player->score= atoi( value);
-	else if ( player && strncmp( key, "playertype", 10) == 0)
-	    player->team_name= strdup(value);
-	else if ( player && strncmp( key, "charactername", 13) == 0)
-	    player->face= strdup(value);
-	else if ( player && strncmp( key, "characterlevel", 14) == 0)
-	    player->ship= atoi( value);
-	else  {
-	    player= NULL;
-	    add_rule( server, key, value, NO_FLAGS);
-	}
+		if ( !*s )
+		{
+			// out of packet
+			break;
+		}
+		// Terminate the key
+		*s++= '\0';
+
+		// Now for the value
+		value = s;
+
+		// while we still have data and its not a '\'
+		while ( *s && *s != '\\')
+		{
+			s++;
+		}
+		//fprintf( stderr, "%s = %s\n", key, value );
+		if ( s[1] && !isalpha(s[1]))
+		{
+			// escape char?
+			s++;
+			// while we still have data and its not a '\'
+			while ( *s && *s != '\\')
+			{
+				s++;
+			}
+		}
+		else if ( s[1] && isalpha(s[1]) &&
+			0 == strncmp( key, "player_", 7) &&
+			0 != strcmp( key, "player_flags" )
+		)
+		{
+			// possible '\' in player name
+			if ( ! unreal_player_info_key( s+1, end))
+			{
+				// yep is was an escape in a player name
+				s++;
+				// while we still have data and its not a '\'
+				while ( *s && *s != '\\')
+				{
+					s++;
+				}
+			}
+		}
+
+		if ( *s)
+		{
+			*s++= '\0';
+		}
+		//fprintf( stderr, "%s = %s\n", key, value );
+		if ( *value == '\0')
+		{
+			if ( strcmp( key, "final") == 0)
+			{
+				final= 1;
+				continue;
+			}
+		}
+
+		if ( player == NULL && unreal_player_info_key( key, end))
+		{
+			int len = unreal_player_info_key( key, end);
+			if ( len )
+			{
+				// We have player info
+				int player_number = atoi( key + 1 );
+				player = get_player_by_number( server, player_number);
+
+				// && unreal_max_players( server ) due to bf1942 issue
+				if ( player == NULL && unreal_max_players( server ) )
+				{
+					player= add_player( server, player_number);
+				}
+			}
+		}
+
+		if ( strcmp( key, "mapname") == 0 && !server->map_name)
+			server->map_name= strdup( value);
+		else if ( strcmp( key, "hostname") == 0 && !server->server_name)
+			server->server_name= strdup( value);
+		else if ( strcmp( key, "hostport") == 0)
+		{
+			unsigned short port= atoi( value);
+			/* Probably a response from a broadcast query, change port */
+			if ( port > 0 && port != server->port &&
+				(show_game_port || server->flags & TF_SHOW_GAME_PORT))
+			{
+				change_server_port( server, port);
+			}
+			add_rule( server, key, value, NO_FLAGS);
+		}
+		else if ( strcmp( key, "maxplayers") == 0)
+			server->max_players= atoi( value);
+		else if ( strcmp( key, "numplayers") == 0)
+			server->num_players= atoi( value);
+		else if ( strcmp( key, server->type->game_rule) == 0 && !server->game)
+		{
+			server->game= strdup( value);
+			add_rule( server, key, value, NO_FLAGS);
+		}
+		else if ( strcmp( key, "queryid") == 0)
+			sscanf( value, "%d.%d", &id_major, &id_minor);
+		else if ( strcmp( key, "final") == 0)
+		{
+			final= 1;
+			continue;
+		}
+		// && unreal_max_players( server ) due to bf1942 issue
+		else if ( strncmp( key, "player_", 7) == 0 && unreal_max_players( server ) )
+		{
+			if ( player && player->number == atoi(key+7))
+			{
+				player->name= strdup( value);
+				player= NULL;
+			}
+			else
+			{
+				player= add_player( server, atoi(key+7));
+				if ( player)
+				{
+					player->name= strdup( value);
+				}
+			}
+		}
+		else if ( strncmp( key, "teamname_", 9) == 0)
+		{
+			// Yes plus 1 BF1942 is a silly
+            unreal_set_player_teamname( server, atoi( key+9 ) + 1, value );
+		}
+		else if ( strncmp( key, "team_t", 6) == 0)
+		{
+            unreal_set_player_teamname( server, atoi( key+6 ), value );
+		}
+		else if ( strncmp( key, "frags_", 6) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+6 ) );
+			if ( NULL != player )
+			{
+				player->frags= atoi( value);
+			}
+		}
+		else if ( player && strncmp( key, "team_", 5) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+5 ) );
+			if ( NULL != player )
+			{
+				if ( ! isdigit( *value))
+				{
+					player->team_name= strdup(value);
+				}
+				else
+				{
+					player->team= atoi( value);
+				}
+				server->flags|= FLAG_PLAYER_TEAMS;
+			}
+		}
+		else if ( strncmp( key, "skin_", 5) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+5 ) );
+			if ( NULL != player )
+			{
+				player->skin= strdup( value);
+			}
+		}
+		else if ( strncmp( key, "mesh_", 5) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+5 ) );
+			if ( NULL != player )
+			{
+				player->mesh= strdup( value);
+			}
+		}
+		else if ( strncmp( key, "ping_", 5) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+5 ) );
+			if ( NULL != player )
+			{
+				player->ping= atoi( value);
+			}
+		}
+		else if ( strncmp( key, "face_", 5) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+5 ) );
+			if ( NULL != player )
+			{
+				player->face= strdup( value);
+			}
+		}
+		else if ( strncmp( key, "deaths_", 7) == 0)
+		{
+			player = get_player_by_number( server, atoi( key+7 ) );
+			if ( NULL != player )
+			{
+				player->deaths= atoi( value);
+			}
+		}
+		// isnum( key[6] ) as halo uses score_tX for team scores
+		else if ( strncmp( key, "score_", 6) == 0 && isdigit( key[6] ) )
+		{
+			player = get_player_by_number( server, atoi( key+6 ) );
+			if ( NULL != player )
+			{
+				player->score= atoi( value);
+			}
+		}
+		else if ( player && strncmp( key, "playertype", 10) == 0)
+		{
+			player->team_name= strdup(value);
+		}
+		else if ( player && strncmp( key, "charactername", 13) == 0)
+		{
+			player->face= strdup(value);
+		}
+		else if ( player && strncmp( key, "characterlevel", 14) == 0)
+		{
+			player->ship= atoi( value);
+		}
+		else
+		{
+			player= NULL;
+			add_rule( server, key, value, NO_FLAGS);
+		}
     }
 
-    if ( final)
-	cleanup_qserver( server, 1);
+    if ( final )
+	{
+		cleanup_qserver( server, 1);
+	}
     if ( server->num_players < 0 && id_minor >= 3)
-	cleanup_qserver( server, 1);
+	{
+		cleanup_qserver( server, 1);
+	}
 }
 
 STATIC int
 unreal_player_info_key( char *s, char *end)
 {
-    static char *keys[] = {"frags_", "team_", "ping_", "species_",
-	"race_", "deaths_", "score_", "teamname_", "enemy_",
-	"playertype", "queryid"};
+    static char *keys[] = {
+		"frags_", "team_", "ping_", "species_",
+		"race_", "deaths_", "score_", "enemy_",
+		"player_", "keyhash_", "teamname_"
+	};
     int i;
 
-    for  ( i= 0; i < sizeof(keys)/sizeof(char*); i++)  {
-	int len= strlen(keys[i]);
-	if ( s+len < end && strncmp( s, keys[i], len) == 0)
-	    return 1;
-    }
+    for  ( i= 0; i < sizeof(keys)/sizeof(char*); i++)
+	{
+		int len= strlen(keys[i]);
+		if ( s+len < end && strncmp( s, keys[i], len) == 0)
+		{
+			return 1;
+		}
+	}
     return 0;
 }
 
-STATIC char *
-dup_nstring( char *pkt, char *end, char **next)
+STATIC void
+unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname )
 {
-    int len= ((unsigned char*)pkt)[0];
-    pkt++;
-    if ( *pkt == '\1')
-	len++;
-    if ( pkt + len > end)
-	return NULL;
+	struct player *player;
+	for ( player= server->players; player; player= player->next)
+	{
+		if ( player->team == teamid )
+		{
+			player->team_name = strdup( teamname );
+		}
+	}
+}
 
-    *next= pkt+len;
-    return strndup( pkt, len);
+STATIC int
+unreal_max_players( struct qserver *server )
+{
+	struct player *player;
+	int no_players = 0;
+	if ( 0 == server->num_players )
+	{
+		return 0;
+	}
+
+	for ( player= server->players; player; player= player->next)
+	{
+		no_players++;
+	}
+
+	return ( no_players < server->num_players ) ? 1 : 0;
+}
+
+STATIC char *
+dup_nstring( const char *pkt, const char *end, char **next)
+{
+	char *pt = (char*)pkt;
+    int len= ((unsigned char*)pkt)[0];
+    pt++;
+    if ( *pt == '\1')
+    {
+		len++;
+	}
+    if ( pt + len > end)
+    {
+		return NULL;
+	}
+
+    *next = pt+len;
+    return strndup( pt, len );
 }
 
 STATIC char *
@@ -5527,40 +6210,61 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
     char *next;
     char *string;
     unsigned short port= swap_short_from_little( &rawpkt[6]);
-    if ( port != server->port)  {
-	if ( show_game_port || server->flags & TF_SHOW_GAME_PORT)
-	    change_server_port( server, port);
-	else  {
-	    char str[12];
-	    sprintf( str, "%hu", port);
-	    add_rule( server, "hostport", str, NO_FLAGS);
+    if ( port != server->port)
+    {
+		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT)
+		{
+			change_server_port( server, port);
+		}
+		else
+		{
+			char str[12];
+			sprintf( str, "%hu", port);
+			add_rule( server, "hostport", str, NO_FLAGS);
+		}
+    }
+    if ( NULL == ( string = ut2003_strdup( &rawpkt[14], end, &next) ) )
+    {
+		return -1;
 	}
-    }
-    string= dup_nstring( &rawpkt[14], end, &next);
-    if ( string == NULL)
-	return -1;
+
     if ( server->server_name == NULL)
-	server->server_name= string;
+    {
+		server->server_name = string;
+	}
     else
-	free(string);
+    {
+		free(string);
+	}
 
-    string= dup_nstring( next, end, &next);
-    if ( string == NULL)
-	return -1;
+    if ( NULL == ( string = ut2003_strdup( next, end, &next) ) )
+    {
+    	return -1;
+	}
+
     if ( server->map_name == NULL)
-	server->map_name= string;
+    {
+		server->map_name= string;
+	}
     else
-	free(string);
+    {
+		free(string);
+	}
 
-    string= dup_nstring( next, end, &next);
-    if ( string == NULL)
-	return -1;
-    if ( server->game == NULL)  {
-	server->game= string;
-	add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
+    if ( NULL == ( string= ut2003_strdup( next, end, &next) ) )
+    {
+		return -1;
+	}
+
+    if ( server->game == NULL)
+    {
+		server->game= string;
+		add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
     }
     else
-	free(string);
+    {
+		free(string);
+	}
 
     server->num_players= swap_long_from_little( next);
     next+= 4;
@@ -5569,51 +6273,222 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 }
 
 STATIC int
-ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end)
+ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 {
     char *key, *value;
-    int chkdup= 0, result= 0;
-    if ( server->rules)
-	chkdup= CHECK_DUPLICATE_RULES;
-    rawpkt++;
-    while ( rawpkt < end)  {
-	key= dup_nstring( rawpkt, end, &rawpkt);
-	if ( key == NULL)
-	    break;
-	value= dup_nstring( rawpkt, end, &rawpkt);
-	if ( value == NULL)
-	    break;
-	if ( strcmp( key, "minplayers") == 0)
-	    result= atoi(value);
-	if ( add_rule( server, key, value,
-			NO_KEY_COPY | NO_VALUE_COPY | chkdup) == NULL)  {
-	    free(value);      /* duplicate, so free key and value */
-	    free(key);
+    int chkdup = 0, result= 0;
+
+    if ( server->rules )
+    {
+		chkdup = CHECK_DUPLICATE_RULES;
 	}
+
+	// Packet Type
+    rawpkt++;
+
+	// we get size encoded key = value pairs
+    while ( rawpkt < end )
+    {
+		if ( NULL == ( key = ut2003_strdup( rawpkt, end, &rawpkt) ) )
+		{
+			break;
+		}
+		if ( NULL == ( value = ut2003_strdup( rawpkt, end, &rawpkt) ) )
+		{
+			break;
+		}
+		if ( strcmp( key, "minplayers") == 0)
+		{
+			result = atoi(value);
+		}
+
+		if ( NULL == add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | chkdup ) )
+		{
+			/* duplicate, so free key and value */
+			free(value);
+			free(key);
+		}
     }
+
     return result;
+}
+
+char *
+ut2003_strdup( const char *string, const char *end, char **next )
+{
+	unsigned char len = string[0];
+	char *result = NULL;
+
+	if ( len < 128 )
+	{
+		// type 1 string
+		//fprintf( stderr, "Type 1:" );
+		result = dup_nstring( string, end, next );
+	}
+	else
+	{
+		// type 2 string
+		//fprintf( stderr, "Type 2:\n" );
+		const char *last;
+		char *resp, *pos;
+		// minus indicator
+		len -= 128;
+		// double byte chars so * 2
+		len = len * 2;
+		last = string + len;
+		if ( last > end )
+		{
+			fprintf( stderr, "Type 2 string format error ( too short )\n" );
+			return NULL;
+		}
+
+		if ( NULL == ( result = (char*)calloc( last - string, sizeof(char) ) ) )
+		{
+			fprintf( stderr, "Failed to malloc string memory\n" );
+			return NULL;
+		}
+		resp = result;
+		pos = (char*)string + 1;
+		while ( pos <= last )
+		{
+			// check for a color code
+			if ( pos + 6 <= last && 0 == memcmp( pos, "^\0#\0", 4 ) )
+			{
+				// we have a color code
+				//fprintf( stderr, "color:%02hhx%02hhx\n", pos[4], pos[5] );
+				// indicator transformed to ^\1
+				*resp = *pos;
+				resp++;
+				pos++;
+				*resp = '\1';
+				resp++;
+				pos+=3;
+				// color byte
+				*resp = *pos;
+				resp++;
+				pos+=2;
+				//pos += 6;
+			}
+
+			// standard char
+			//fprintf( stderr, "char: %02hhx\n", *pos );
+			*resp = *pos;
+			resp++;
+			pos += 2;
+		}
+		*next = pos;
+	}
+
+	//fprintf( stderr, "'%s'\n", result );
+
+	return result;
 }
 
 STATIC int
 ut2003_player_packet( struct qserver *server, char *rawpkt, char *end)
 {
+	// Type
     rawpkt++;
+	switch ( server->protocol_version )
+	{
+	case 0x7e:
+		// XMP packet
+		//fprintf( stderr, "XMP packet\n" );
+		while ( rawpkt < end )
+		{
+			struct player *player;
+			char *var, *val;
+			unsigned char no_props;
+			if ( rawpkt + 24 > end )
+			{
+				fprintf( stderr, "Short player info\n" );
+				rawpkt = end;
+				break;
+			}
 
-    while ( rawpkt < end)  {
-        struct player *player;
-        player= add_player( server, swap_long_from_little(rawpkt));
-	if ( player == NULL)
-	    return 0;
-        player->name= dup_nstring( rawpkt+4, end, &rawpkt);
-        player->ping= swap_long_from_little(rawpkt);
-	rawpkt+= 4;
-        player->frags= swap_long_from_little(rawpkt);
-	rawpkt+= 4;
-        player->ship= swap_long_from_little(rawpkt);
-	rawpkt+= 4;
-    }
+			// Player Number never set
+			rawpkt += 4;
+
+			// Player ID never set
+			rawpkt += 4;
+
+			if ( NULL == ( player = add_player( server, server->n_player_info ) ) )
+			{
+				return 0;
+			}
+
+			// Name ( min 3 bytes )
+			player->name = ut2003_strdup( rawpkt, end, &rawpkt );
+
+			// Ping
+			player->ping = swap_long_from_little( rawpkt );
+			rawpkt += 4;
+
+			// Frags
+			player->frags = swap_long_from_little( rawpkt );
+			rawpkt += 4;
+
+			// Stat ID never set
+			rawpkt += 4;
+
+			// Player properties
+			no_props = rawpkt[0];
+			//fprintf( stderr, "noprops %d\n", no_props );
+			rawpkt++;
+			while( rawpkt < end && no_props > 0 )
+			{
+				if ( NULL == ( var = ut2003_strdup( rawpkt, end, &rawpkt ) ) )
+				{
+					break;
+				}
+				if ( NULL == ( val = ut2003_strdup( rawpkt, end, &rawpkt ) ) )
+				{
+					break;
+				}
+				//fprintf( stderr, "attrib: %s = %s\n", var, val );
+
+				// Things we can use
+				if ( 0 == strcmp( var, "team" ) )
+				{
+					player->team_name = val;
+				}
+				else if ( 0 == strcmp( var, "class" ) )
+				{
+					player->skin = val;
+				}
+				else
+				{
+					free( val );
+				}
+
+				free( var );
+				no_props--;
+			}
+		}
+		break;
+	default:
+		while ( rawpkt < end )
+		{
+			struct player *player;
+
+			if ( NULL == ( player = add_player( server, swap_long_from_little(rawpkt) ) ) )
+			{
+				return 0;
+			}
+
+			player->name = ut2003_strdup( rawpkt+4, end, &rawpkt );
+			player->ping = swap_long_from_little(rawpkt);
+			rawpkt+= 4;
+			player->frags = swap_long_from_little(rawpkt);
+			rawpkt+= 4;
+			player->ship = swap_long_from_little(rawpkt);
+			rawpkt+= 4;
+		}
+	}
+
     return 0;
 }
+
 
 char *
 get_rule( struct qserver *server, char *name)
@@ -5630,89 +6505,127 @@ get_rule( struct qserver *server, char *name)
 void
 deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-    char *end, *next;
-    int error= 0, minplayers= -1;
-    unsigned int packet_header;
 
-    if ( server->server_name == NULL)
-	server->ping_total+= time_delta( &packet_recv_time,
-		&server->packet_time1);
-    else
-	gettimeofday( &server->packet_time1, NULL);
+	// For protocol spec see:
+	// http://unreal.student.utwente.nl/UT2003-queryspec.html
 
-    rawpkt[pktlen]= '\0';
-    end= &rawpkt[pktlen];
+	char *end, *next, *str;
+	int error= 0, minplayers= -1, before;
+	unsigned int packet_header;
 
-    packet_header= swap_long_from_little( &rawpkt[0]);
-    if ( packet_header != 0x78 && packet_header != 0x79)  {
-	unsigned int ipaddr= ntohl(server->ipaddr);
-	fprintf( stderr,
-		"Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
-		(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-		(ipaddr>>8)&0xff, ipaddr&0xff, server->port);
-    }
-    rawpkt+= 4;
+	if ( server->server_name == NULL )
+	{
+		server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
+	}
+	else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
 
-    if ( rawpkt[0] == '\0')  {
-	error= ut2003_basic_packet( server, rawpkt, end);
-	if ( ! error)  {
-	    if ( get_player_info && server->num_players && get_server_rules) {
-		/* Hack; packet to get both player and rule info is stored
-		 * in the master packet field.  But we want to send it as
-		 * if it were the player packet, so swap the fields
-		 * temporarily */
-		char *pkt_temp= server->type->player_packet;
-		int len_temp= server->type->player_len;
-		server->type->player_packet= server->type->master_packet;
-		server->type->player_len= server->type->master_len;
-		send_player_request_packet( server);
-		server->type->player_packet= pkt_temp;
-		server->type->player_len= len_temp;
-	    }
-	    else if ( get_player_info && server->num_players) {
-		send_player_request_packet( server);
-	    }
-	    else if ( get_server_rules)  {
-		server->next_rule= "";
-		server->retry1= n_retries;
-		send_rule_request_packet( server);
-	    }
-	    else
+	rawpkt[pktlen]= '\0';
+	end = &rawpkt[pktlen];
+
+	packet_header = swap_long_from_little( &rawpkt[0] );
+	rawpkt += 4;
+
+	// 0x78 = UT2003 Demo
+	// 0x79 = UT2003 Retail
+	// 0x7e = Unreal2 XMP
+	server->protocol_version = packet_header;
+	if ( packet_header != 0x78 && packet_header != 0x79 && packet_header != 0x7e )
+	{
+		unsigned int ipaddr = ntohl(server->ipaddr);
+		fprintf( stderr,
+			"Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
+			(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
+			(ipaddr>>8)&0xff, ipaddr&0xff, server->port
+		);
+	}
+
+
+	switch( rawpkt[0] )
+	{
+	case 0x00:
+		// Server info
+		error = ut2003_basic_packet( server, rawpkt, end );
+		if ( ! error )
+		{
+			if ( get_player_info && server->num_players && get_server_rules )
+			{
+				/* Hack; packet to get both player and rule info is stored
+				 * in the master packet field.  But we want to send it as
+				 * if it were the player packet, so swap the fields
+				 * temporarily */
+				char *pkt_temp = server->type->player_packet;
+				int len_temp = server->type->player_len;
+				server->type->player_packet = server->type->master_packet;
+				server->type->player_len = server->type->master_len;
+				send_player_request_packet( server );
+				server->type->player_packet = pkt_temp;
+				server->type->player_len = len_temp;
+			}
+			else if ( get_player_info && server->num_players )
+			{
+				send_player_request_packet( server );
+			}
+			else if ( get_server_rules )
+			{
+				server->next_rule = "";
+				server->retry1 = n_retries;
+				send_rule_request_packet( server );
+			}
+			else
+			{
+				error = 1;
+			}
+		}
+		break;
+
+    case 0x01:
+    	// Game info
+		minplayers = ut2003_rule_packet( server, rawpkt, end );
+		server->next_rule = NULL;
+		break;
+
+	case 0x02:
+		// Player info
+		before = server->n_player_info;
+		error = ut2003_player_packet( server, rawpkt, end);
+		if ( server->n_player_info >= server->num_players || before == server->n_player_info )
+		{
+			error = 1;
+		}
+
+		if ( ! server->next_rule )
+		{
+			str = get_rule( server, "minplayers" );
+			if ( str )
+			{
+				minplayers = atoi(str);
+			}
+		}
+		break;
+
+    default:
+    	printf( "Unknown packet type %d\n", (int)rawpkt[0]);
+    	break;
+	}
+
+    if ( minplayers != -1 && server->players && server->n_player_info < minplayers)
+	{
+		server->num_players= server->n_player_info;
 		error= 1;
-	}
-    }
-    else if ( rawpkt[0] == '\1')  {
-	minplayers= ut2003_rule_packet( server, rawpkt, end);
-	server->next_rule= NULL;
-    }
-    else if ( rawpkt[0] == '\2')  {
-	char *str;
-	int before= server->n_player_info;
-	error= ut2003_player_packet( server, rawpkt, end);
-	if ( ! error && ( server->n_player_info >= server->num_players ||
-		before == server->n_player_info))
-	    error= 1;
-	if ( ! server->next_rule)  {
-	    str= get_rule( server, "minplayers");
-	    if ( str) minplayers= atoi(str);
-	}
-    }
-    else
-	printf( "Unknown packet type %d\n", (int)rawpkt[0]);
-
-    if ( minplayers != -1 && server->players &&
-		server->n_player_info < minplayers)  {
-	server->num_players= server->n_player_info;
-	error= 1;
-    }
-    if ( error)  {
-	if ( server->n_player_info > server->num_players)
-	    server->num_players= server->n_player_info;
-	if ( server->n_player_info > server->max_players)
-	    server->max_players= server->n_player_info;
     }
 
-    cleanup_qserver( server, error);
+    if ( error )
+    {
+		if ( server->n_player_info > server->num_players)
+		{
+			server->num_players = server->n_player_info;
+		}
+    }
+
+    cleanup_qserver( server, error );
 }
 
 int
@@ -5723,7 +6636,7 @@ deal_with_unrealmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 	return 0;
     }
     print_packet( server, rawpkt, pktlen);
-puts( "--");
+	puts( "--");
     return 0;
 }
 
@@ -6228,7 +7141,7 @@ deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen)
     struct player **teams= NULL, *player;
     struct player **last_player= & server->players;
     int query_version;
- 
+
     pkt[pktlen]= '\0';
 
     if ( server->server_name == NULL)
@@ -6447,7 +7360,7 @@ static const char PacketStart='\x42';
 static char Dat2Reply1_2_10[]={'\xf4','\x03','\x14','\x02','\x0a','\x41','\x02','\x0a','\x41','\x00','\x00','\x78','\x30','\x63'};
 static char Dat2Reply1_3[]   ={'\xf4','\x03','\x14','\x03','\x05','\x41','\x03','\x05','\x41','\x00','\x00','\x78','\x30','\x63'};
 static char Dat2Reply1_4[]   ={'\xf4','\x03','\x14','\x04','\x00','\x41','\x04','\x00','\x41','\x00','\x00','\x78','\x30','\x63'};
-static char HDat2[]={'\xea','\x03','\x02','\x00','\x14'}; 
+static char HDat2[]={'\xea','\x03','\x02','\x00','\x14'};
 
 #define SHORT_GR_LEN	75
 #define LONG_GR_LEN	500
@@ -6469,59 +7382,59 @@ deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen)
     struct player **teams= NULL, *player, *nextplayer;
     struct player **last_player= & server->players;
     int iLen, iTemp;
-	short sLen;	
+	short sLen;
 	int iSecsPlayed;
 	long iSpawnType;
 	int ServerVersion=UNKNOWN_VERSION;
 	float flStartTimerSetPoint;
-	
+
 	start = pkt;
 	end=&pkt[pktlen];
     pkt[pktlen]= '\0';
-	
+
 /*
 	This function walks a packet that is recieved from a ghost recon server - default from port 2348.  It does quite a few
-	sanity checks along the way as the structure is not documented.  The packet is mostly binary in nature with many string 
-	fields being variable in length,  ie the length is listed foloowed by that many bytes.  There are two structure arrays 
-	that have an array size followed by structure size * number of elements (player name and player data).  This routine 
+	sanity checks along the way as the structure is not documented.  The packet is mostly binary in nature with many string
+	fields being variable in length,  ie the length is listed foloowed by that many bytes.  There are two structure arrays
+	that have an array size followed by structure size * number of elements (player name and player data).  This routine
 	walks this packet and increments a pointer "pkt" to extract the info.
 */
-	
+
 
     if ( server->server_name == NULL)
 	server->ping_total+= time_delta( &packet_recv_time,
 		&server->packet_time1);
-	
+
 	/* sanity check against packet */
-	if (memcmp(pkt,GrPacketHead,sizeof(GrPacketHead))!=0) 
+	if (memcmp(pkt,GrPacketHead,sizeof(GrPacketHead))!=0)
 	{
 		server->server_name= strdup( "Unknown Packet Header");
 		cleanup_qserver( server, 1);
 		return;
-	}; 
-	
+	};
+
 	pkt += sizeof(GrPacketHead);
 	StartFlag=pkt[0];
 	pkt += 1;
-	if (StartFlag != 0x42) 
+	if (StartFlag != 0x42)
 	{
 		server->server_name= strdup( "Unknown Start Flag");
 		cleanup_qserver( server, 1);
 		return;
-	}; 
-	
+	};
+
 	/* compare packet length recieved to included size - header info */
 	sLen = swap_short_from_little(pkt);
 	pkt += 2;
 	GrPayloadLen = pktlen - sizeof(GrPacketHead) -3; // 3 = size slen + size start flag
-	
+
 	if (sLen != GrPayloadLen)
 	{
 		server->server_name= strdup( "Packet Size Mismatch");
 		cleanup_qserver( server, 1);
 		return;
-	}; 
-    
+	};
+
 /*
 Will likely need to verify and add to this "if" construct with every patch / add-on.
 */
@@ -6535,33 +7448,33 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		cleanup_qserver( server, 1);
 		return;
     };
-	
-	switch (ServerVersion) 
+
+	switch (ServerVersion)
 	{
-	case VERSION_1_2_10: 
+	case VERSION_1_2_10:
 		{
-			strcpy(str,"1.2.10"); 
+			strcpy(str,"1.2.10");
 			pkt+=sizeof(Dat2Reply1_2_10);
 			break;
 		};
-	case VERSION_1_3: 
+	case VERSION_1_3:
 		{
 			strcpy(str,"1.3");
 			pkt+=sizeof(Dat2Reply1_3);
 			break;
 		};
-	case VERSION_1_4: 
+	case VERSION_1_4:
 		{
 			strcpy(str,"1.4");
 			pkt+=sizeof(Dat2Reply1_4);
 			break;
 		};
-		
+
 	};
 	add_rule(server, "patch", str, NO_FLAGS);
-	
+
 	/* have player packet */
-	
+
 	// Ghost recon has one of the player slots filled up with the server program itself.  By default we will
 	// drop the first player listed.  This causes a bit of a mess here and below but makes for the best display
 	// a user can specify -grs,ignoreserverplayer=no to override this behaviour.
@@ -6570,110 +7483,110 @@ Will likely need to verify and add to this "if" construct with every patch / add
 	for (i=0; i<4; i++) str[i]=tolower(lpszIgnoreServerPlayer[i]);
 	if (strcmp(str,"yes")==0)iIgnoreServerPlayer=1;
 	else iIgnoreServerPlayer=0;
-	
+
 	pkt+=4; /* unknown */
-	
+
 
 	// this is the first of many variable strings.  get the length,
-	// increment pointer over length, check for sanity, 
+	// increment pointer over length, check for sanity,
 	// get the string, increment the pointer over string (using length)
 
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >SHORT_GR_LEN))
+	{
 		server->server_name= strdup( "Server Name too Long");
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	server->server_name = strndup( pkt, iLen);
 	pkt += iLen;
-	
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >SHORT_GR_LEN))
+	{
 		add_rule(server, "error", "Map Name too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	server->map_name = strndup( pkt, iLen);
 	pkt += iLen;
-	
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >SHORT_GR_LEN))
+	{
 		add_rule(server, "error",  "Mission Name too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	/* mission does not make sense unless a coop game type.  Since
-	   we dont know that now, we will save the mission and set 
+	   we dont know that now, we will save the mission and set
 	   the rule and free memory below when we know game type */
-	lpszMission = strndup( pkt, iLen); 
+	lpszMission = strndup( pkt, iLen);
 	pkt += iLen;
 
 
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >SHORT_GR_LEN))
+	{
 		add_rule(server, "error",  "Mission Type too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	add_nrule( server, "missiontype", pkt, iLen);
 	pkt += iLen;
-	
+
 	if ( pkt[1])
 	{
 		add_rule( server, "password", "Yes", NO_FLAGS);
-	} else 
+	} else
 	{
 		add_rule( server, "password", "No", NO_FLAGS);
 	};
 	pkt += 2;
-	
+
 	server->max_players= swap_long_from_little(pkt);
 	pkt += 4;
 	if (server->max_players > 36)
 	{
 		add_rule(server, "error",  "Max players more then 36", NO_FLAGS);
-		cleanup_qserver(server, 1); 
+		cleanup_qserver(server, 1);
 		return;
 	};
-	
+
 	server->num_players= swap_long_from_little(pkt);
 	pkt += 4;
 	if (server->num_players > server->max_players)
 	{
 		add_rule(server, "error", "More then MAX Players", NO_FLAGS);
-		cleanup_qserver(server, 1); 
+		cleanup_qserver(server, 1);
 		return;
 	};
-	
+
 	if (iIgnoreServerPlayer) // skip past first player
-	{  
+	{
 		server->num_players--;
 		server->max_players--;
 		iLen = swap_long_from_little(pkt);
 		pkt += 4;
 		pkt += iLen;
 	};
-	
+
 	for (i=0;i<server->num_players;i++) // read each player name
 	{
 		iLen = swap_long_from_little(pkt);
 		pkt += 4;
-		
+
 		player= (struct player*) calloc( 1, sizeof(struct player));
-		
-		if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-		{ 
-			add_rule(server, "error", "Player Name too Long", NO_FLAGS);	
-			cleanup_qserver(server, 1); 
-			return; 
+
+		if ((iLen<1) || (iLen >SHORT_GR_LEN))
+		{
+			add_rule(server, "error", "Player Name too Long", NO_FLAGS);
+			cleanup_qserver(server, 1);
+			return;
 		};
 		player->name= strndup( pkt, iLen);
 		pkt += iLen;  /* player name */
@@ -6681,35 +7594,35 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		player->team_name= "Unassigned";
 		player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
 		player->frags=0;
-		
+
 		player->next= server->players;
 		server->players= player;
 	};
-	
+
 	pkt += 17;
-	
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >SHORT_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >SHORT_GR_LEN))
+	{
 		add_rule(server, "error",  "Version too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	strncpy(str,pkt,iLen);
 	add_rule( server, "version", str, NO_FLAGS);
 	pkt += iLen;  /* version */
-	
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >LONG_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >LONG_GR_LEN))
+	{
 		add_rule(server, "error",  "Mods too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	server->game= strndup( pkt, iLen);
-	
+
 	for (i=0;i<(int)strlen(server->game)-5;i++)  // clean the "/mods/" part from every entry
 	{
 		if (memcmp(&server->game[i],"\\mods\\",6)==0)
@@ -6719,23 +7632,23 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		};
 	};
 	add_rule(server, "game",  server->game, NO_FLAGS);
-	
+
 	pkt += iLen;  /* mods */
-	
+
 	iDedicatedServer=pkt[0];
 	if ( iDedicatedServer)
 		add_rule( server, "dedicated", "Yes", NO_FLAGS);
 	else
 		add_rule( server, "dedicated", "No", NO_FLAGS);
-	
+
 	pkt += 1;  /* unknown */
-	
+
 	iSecsPlayed = swap_float_from_little(pkt);
-	
+
 	add_rule(server, "timeplayed", play_time(iSecsPlayed,2), NO_FLAGS);
-	
+
 	pkt += 4;  /* time played */
-	
+
 	switch (pkt[0]) {
 	case 3 : strcpy(str,"Joining"); break;
 	case 4 : strcpy(str,"Playing"); break;
@@ -6743,47 +7656,47 @@ Will likely need to verify and add to this "if" construct with every patch / add
 	default : strcpy(str,"Undefined");
 	};
 	add_rule( server, "status", str, NO_FLAGS);
-	
+
 	pkt += 1;
-	
+
 	pkt += 3;  /* unknown */
-	
-	
+
+
 	switch (pkt[0]) {
 	case 2: strcpy(str,"COOP"); break;
 	case 3: strcpy(str,"SOLO"); break;
 	case 4: strcpy(str,"TEAM"); break;
 	default: sprintf(str,"UNKOWN %u",pkt[0]); break;
 	};
-	
+
 	add_rule( server, "gamemode", str, NO_FLAGS);
-	
+
 	if (pkt[0]==2)
 		add_rule( server, "mission", lpszMission, NO_FLAGS);
 	else
 		add_rule( server, "mission", "No Mission", NO_FLAGS);
-	
+
 	free(lpszMission);
-	
+
 	pkt += 1;  /* Game Mode */
-	
+
 	pkt += 3;  /* unknown */
-	
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
-	if ((iLen<1) || (iLen >LONG_GR_LEN)) 
-	{ 
+	if ((iLen<1) || (iLen >LONG_GR_LEN))
+	{
 		add_rule(server, "error",  "MOTD too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	strncpy(str,pkt,sizeof(str));
 	str[sizeof(str)-1]=0;
 	add_rule(server, "motd", str, NO_FLAGS);
 	pkt += iLen;  /* MOTD */
-	
+
 	iSpawnType = swap_long_from_little(pkt);
-	
+
 	switch (iSpawnType) {
 	case 0: strcpy(str,"None"); break;
 	case 1: strcpy(str,"Individual"); break;
@@ -6791,47 +7704,47 @@ Will likely need to verify and add to this "if" construct with every patch / add
 	case 3: strcpy(str,"Infinite"); break;
 	default:strcpy(str,"Unknown");
 	};
-	
+
 	add_rule( server, "spawntype", str, NO_FLAGS);
 	pkt += 4;  /* spawn type */
-	
+
 	iTemp = swap_float_from_little(pkt);
 	add_rule(server, "gametime", play_time(iTemp,2), NO_FLAGS);
-	
+
 	iTemp = iTemp-iSecsPlayed;
-	
+
 	if (iTemp <= 0) iTemp=0;
 	add_rule(server, "remainingtime", play_time(iTemp,2), NO_FLAGS);
 	pkt += 4; /* Game time */
-	
-	
+
+
 	iTemp = swap_long_from_little(pkt);
-	if (iIgnoreServerPlayer) 
+	if (iIgnoreServerPlayer)
 	{
 		iTemp--;
 	};
-	if (iTemp != server->num_players) 
-	{ 
+	if (iTemp != server->num_players)
+	{
 		add_rule(server, "error",  "Number of Players Mismatch", NO_FLAGS);
 	};
-	
-	
+
+
 	pkt += 4; /* player count 2 */
-	
-	if (iIgnoreServerPlayer) 
+
+	if (iIgnoreServerPlayer)
 	{
 		pkt+=5;  // skip first player data
 	};
-	
+
 	for (i=0;i<server->num_players;i++) // for each player get binary data
 	{
 		player=server->players;			// first we must find the player - lets look for the tag
 		while (player && (player->team != i)) player=player->next; /* get to player - linked list is in reverse order */
-		
+
 		if (player)
 		{
 			player->team= pkt[2];
-			switch (player->team) 
+			switch (player->team)
 			{
 			case 1: player->team_name= "Red"; break;
 			case 2: player->team_name= "Blue"; break;
@@ -6845,45 +7758,45 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		};
 		pkt += 5; /* player data*/
 	};
-	
-	for (i=0;i<5;i++) 
+
+	for (i=0;i<5;i++)
 	{
 		pkt += 8; /* team data who knows what they have in here */
 	};
-	
-	pkt +=1; 
-	iUseStartTimer=pkt[0]; // UseStartTimer
-	
+
 	pkt +=1;
-	
+	iUseStartTimer=pkt[0]; // UseStartTimer
+
+	pkt +=1;
+
 	iTemp = flStartTimerSetPoint = swap_float_from_little(pkt);// Start Timer Set Point
 	pkt += 4;
-	
-	if (iUseStartTimer) 
+
+	if (iUseStartTimer)
 	{
 		add_rule( server, "usestarttime", "Yes", NO_FLAGS);
 		add_rule( server, "starttimeset", play_time(iTemp,2), NO_FLAGS);
-	} else 
+	} else
 	{
 		add_rule( server, "usestarttime", "No", NO_FLAGS);
 		add_rule( server, "starttimeset", play_time(0,2), NO_FLAGS);
 	};
-	
+
 	if ((ServerVersion == VERSION_1_3) ||  // stuff added in patch 1.3
 		(ServerVersion == VERSION_1_4))
 	{
 		iTemp = swap_float_from_little(pkt);// Debrief Time
 		add_rule( server, "debrieftime", play_time(iTemp,2), NO_FLAGS);
 		pkt += 4;
-		
+
 		iTemp = swap_float_from_little(pkt);// Respawn Min
 		add_rule( server, "respawnmin", play_time(iTemp,2), NO_FLAGS);
 		pkt += 4;
-		
+
 		iTemp = swap_float_from_little(pkt);// Respawn Max
 		add_rule( server, "respawnmax", play_time(iTemp,2), NO_FLAGS);
 		pkt += 4;
-		
+
 		iTemp = swap_float_from_little(pkt);// Respawn Invulnerable
 		add_rule( server, "respawnsafe", play_time(iTemp,2), NO_FLAGS);
 		pkt += 4;
@@ -6893,22 +7806,22 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		add_rule( server, "respawnmin", "Undefined", NO_FLAGS);
 		add_rule( server, "respawnmax", "Undefined", NO_FLAGS);
 		add_rule( server, "respawnsafe", "Undefined", NO_FLAGS);
-		
+
 	};
-	
-	
+
+
 	pkt+=4; // 4
-	iTemp=pkt[0]; // Spawn Count 
-	
+	iTemp=pkt[0]; // Spawn Count
+
 	if ((iSpawnType == 1) || (iSpawnType == 2))   /* Individual or team */
 		sprintf( str, "%u", iTemp);
 	else /* else not used */
 		sprintf( str, "%u", 0);
 	add_rule( server, "spawncount", str, NO_FLAGS);
 	pkt += 1; // 5
-	
+
 	pkt +=4; // 9
-	
+
 	iTemp=pkt[0];  // Allow Observers
 	if (iTemp)
 		strcpy( str, "Yes");
@@ -6916,24 +7829,24 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		strcpy( str, "No");
 	add_rule( server, "allowobservers", str, NO_FLAGS);
 	pkt +=1; // 10
-	
+
 	pkt +=3; // 13
-	
+
 	//	pkt += 13;
-	
-	if (iUseStartTimer) 
+
+	if (iUseStartTimer)
 	{
 		iTemp=swap_float_from_little(pkt);  // Start Timer Count
 		add_rule( server, "startwait", play_time(iTemp,2), NO_FLAGS);
-	} 
-	else 
+	}
+	else
 	{
 		add_rule( server, "startwait", play_time(0,2), NO_FLAGS);
 	};
 	pkt += 4;  //17
-	
+
 	iTemp = pkt[0]; //  IFF
-	switch (iTemp) 
+	switch (iTemp)
 	{
 	case 0 : strcpy(str,"None"); break;
 	case 1 : strcpy(str,"Reticule"); break;
@@ -6942,36 +7855,628 @@ Will likely need to verify and add to this "if" construct with every patch / add
 	};
 	add_rule( server, "iff", str, NO_FLAGS);
 	pkt += 1; // 18
-	
+
 	iTemp = pkt [0]; // Threat Indicator
 	if (iTemp) add_rule(server, "ti", "ON ", NO_FLAGS);
 	else add_rule(server, "ti", "OFF", NO_FLAGS);
-	
+
 	pkt += 1;  // 19
-	
+
 	pkt += 5;  // 24
-	
-	
+
+
 	iLen = swap_long_from_little(pkt);
 	pkt += 4;
 	if ((iLen<1) || (iLen >SHORT_GR_LEN) )
-	{ 
+	{
 		add_rule(server, "error",  "Restrictions too Long", NO_FLAGS);
-		cleanup_qserver(server, 1); 
-		return; 
+		cleanup_qserver(server, 1);
+		return;
 	};
 	add_rule( server, "restrict", pkt, NO_FLAGS);
 	pkt += iLen;  /* restrictions */
-	
+
 	pkt += 23;
-	
+
 	/*
 	if ( ghostrecon_debug) print_packet( pkt, GrPayloadLen);
 	*/
-	
+
 	cleanup_qserver( server, 1);
 	return;
 }
+
+char*
+find_ravenshield_game( char *gameno )
+{
+	switch( atoi( gameno ) )
+	{
+	case 8:
+		return strdup( "Team Deathmatch" );
+		break;
+	case 13:
+		return strdup( "Deathmatch" );
+		break;
+	case 14:
+		return strdup( "Team Deathmatch" );
+		break;
+	case 15:
+		return strdup( "Bomb" );
+		break;
+	case 16:
+		return strdup( "Escort Pilot" );
+		break;
+	default:
+		return strdup( "Unknown" );
+		break;
+	}
+}
+
+char*
+find_savage_game( char *gametype )
+{
+	if ( 0 == strcmp( "RTSS", gametype ) )
+	{
+		return strdup( "RTSS" );
+	}
+	else
+	{
+		return strdup( "Unknown" );
+	}
+}
+
+void
+deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+    char *s, *key, *value;
+
+	server->n_servers++;
+    if ( NULL == server->server_name )
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+	}
+    else
+	{
+		gettimeofday( &server->packet_time1, NULL );
+	}
+
+    rawpkt[pktlen]= '\0';
+
+    s = rawpkt;
+    while ( *s )
+	{
+		// Find the seperator
+		while ( *s && *s != '\xB6' )
+		{
+			s++;
+		}
+
+		if ( !*s )
+		{
+			// Hit the end no more
+			break;
+		}
+
+		// key start
+		key = ++s;
+		while ( *s && *s != ' ' )
+		{
+			s++;
+		}
+		if ( *s != ' ')
+		{
+			// malformed
+			break;
+		}
+		*s++ = '\0';
+		// key end
+		// value start
+		value = s;
+
+		while ( *s && *s != '\xB6' )
+		{
+			s++;
+		}
+
+		if ( *s == '\xB6' )
+		{
+			*(s-1) = '\0';
+		}
+
+		// Decode current key par
+		if ( 0 == strcmp( "A1", key ) )
+		{
+			// Max players
+			server->max_players = atoi( value );
+		}
+		else if ( 0 == strcmp( "A2", key ) )
+		{
+			// TeamKillerPenalty
+			add_rule( server, "TeamKillerPenalty", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "B1", key ) )
+		{
+			// Current players
+			server->num_players = atoi( value );
+		}
+		else if ( 0 == strcmp( "B2", key ) )
+		{
+			// AllowRadar
+			add_rule( server, "AllowRadar", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "D1", key ) )
+		{
+			// Version info
+			add_rule( server, "Version", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "E1", key ) )
+		{
+			// Current map
+			server->map_name = strdup( value );
+		}
+		else if ( 0 == strcmp( "E2", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "F1", key ) )
+		{
+			// Game type
+			server->game = find_ravenshield_game( value );
+			add_rule( server, server->type->game_rule, server->game, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "F2", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "G1", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "G2", key ) )
+		{
+			// Query port
+		}
+		else if ( 0 == strcmp( "H1", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "H2", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "I1", key ) )
+		{
+			// Server name
+			server->server_name = strdup( value );
+		}
+		else if ( 0 == strcmp( "I2", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "J1", key ) )
+		{
+			// Game Type Order
+			// Not pretty ignore for now
+			//add_rule( server, "Game Type Order", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "J2", key ) )
+		{
+			// Unknown
+		}
+		else if ( 0 == strcmp( "K1", key ) )
+		{
+			// Map Cycle
+			// Not pretty ignore for now
+			//add_rule( server, "Map Cycle", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "K2", key ) )
+		{
+			// RotateMap
+			add_rule( server, "RotateMap", value, NO_FLAGS);
+		}
+		else if ( 0 == strcmp( "L1", key ) )
+		{
+			// Players names
+			int player_number = 0;
+			char *n = value;
+
+			if ( *n == '/' )
+			{
+				// atleast 1 player
+				n++;
+				while( *n && *n != '\xB6' )
+				{
+					char *player_name = n;
+					while ( *n && *n != '/' && *n != '\xB6' )
+					{
+						n++;
+					}
+
+					if ( *n == '/' )
+					{
+						*n++ = '\0';
+					}
+					else if ( *n == '\xB6' )
+					{
+						*(n-1) = '\0';
+					}
+
+					if ( 0 != strlen( player_name ) )
+					{
+						struct player *player = add_player( server, player_number );
+						if ( NULL != player )
+						{
+							player->name = strdup( player_name );
+						}
+						player_number++;
+					}
+				}
+			}
+		}
+		else if ( 0 == strcmp( "M1", key ) )
+		{
+			// Players times
+			int player_number = 0;
+			char *n = value;
+			if ( *n == '/' )
+			{
+				// atleast 1 player
+				n++;
+				while( *n && *n != '\xB6' )
+				{
+					char *time = n;
+					while ( *n && *n != '/' && *n != '\xB6' )
+					{
+						n++;
+					}
+
+					if ( *n == '/' )
+					{
+						*n++ = '\0';
+					}
+					else if ( *n == '\xB6' )
+					{
+						*(n-1) = '\0';
+					}
+
+					if ( 0 != strlen( time ) )
+					{
+						int mins, seconds;
+						if ( 2 == sscanf( time, "%d:%d", &mins, &seconds ) )
+						{
+							struct player *player = get_player_by_number( server, player_number );
+							if ( NULL != player )
+							{
+								player->connect_time = mins * 60 + seconds;
+							}
+						}
+						player_number++;
+					}
+				}
+			}
+		}
+		else if ( 0 == strcmp( "N1", key ) )
+		{
+			// Players ping
+			int player_number = 0;
+			char *n = value;
+			if ( *n == '/' )
+			{
+				// atleast 1 player
+				n++;
+				while( *n && *n != '\xB6' )
+				{
+					char *ping = n;
+					while ( *n && *n != '/' && *n != '\xB6' )
+					{
+						n++;
+					}
+
+					if ( *n == '/' )
+					{
+						*n++ = '\0';
+					}
+					else if ( *n == '\xB6' )
+					{
+						*(n-1) = '\0';
+					}
+
+					if ( 0 != strlen( ping ) )
+					{
+						struct player *player = get_player_by_number( server, player_number );
+						if ( NULL != player )
+						{
+							player->ping = atoi( ping );
+						}
+						player_number++;
+					}
+				}
+			}
+		}
+		else if ( 0 == strcmp( "O1", key ) )
+		{
+			// Players fags
+			int player_number = 0;
+			char *n = value;
+			if ( *n == '/' )
+			{
+				// atleast 1 player
+				n++;
+				while( *n && *n != '\xB6' )
+				{
+					char *frags = n;
+					while ( *n && *n != '/' && *n != '\xB6' )
+					{
+						n++;
+					}
+
+					if ( *n == '/' )
+					{
+						*n++ = '\0';
+					}
+					else if ( *n == '\xB6' )
+					{
+						*(n-1) = '\0';
+					}
+
+					if ( 0 != strlen( frags ) )
+					{
+						struct player *player = get_player_by_number( server, player_number );
+						if ( NULL != player )
+						{
+							player->frags = atoi( frags );
+						}
+						player_number++;
+					}
+				}
+			}
+		}
+		else if ( 0 == strcmp( "P1", key ) )
+		{
+			// Game port
+			// Not pretty ignore for now
+			/*
+			unsigned short port = atoi( value );
+			// Probably a response from a broadcast query, change port
+			if ( port > 0 && port != server->port && ( show_game_port || server->flags & TF_SHOW_GAME_PORT ) )
+			{
+				change_server_port( server, port );
+			}
+			add_rule( server, "port", value, NO_FLAGS);
+			*/
+		}
+		else if ( 0 == strcmp( "Q1", key ) )
+		{
+			// RoundsPerMatch
+			add_rule( server, "RoundsPerMatch", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "R1", key ) )
+		{
+			// RoundTime
+			add_rule( server, "RoundTime", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "S1", key ) )
+		{
+			// BetweenRoundTime
+			add_rule( server, "BetweenRoundTime", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "T1", key ) )
+		{
+			// BombTime
+			add_rule( server, "BombTime", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "W1", key ) )
+		{
+			// ShowNames
+			add_rule( server, "ShowNames", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "X1", key ) )
+		{
+			// InternetServer
+			add_rule( server, "InternetServer", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "Y1", key ) )
+		{
+			// FriendlyFire
+			add_rule( server, "FriendlyFire", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "Z1", key ) )
+		{
+			// Autobalance
+			add_rule( server, "Autobalance", value, NO_FLAGS );
+		}
+	}
+
+	cleanup_qserver( server, 1 );
+	return;
+}
+
+void
+deal_with_savage_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+    char *s, *key, *value, *end;
+
+	server->n_servers++;
+    if ( NULL == server->server_name )
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+	}
+    else
+	{
+		gettimeofday( &server->packet_time1, NULL );
+	}
+
+    rawpkt[pktlen]= '\0';
+
+    end = s = rawpkt;
+	end += pktlen;
+    while ( *s )
+	{
+		// Find the seperator
+		while ( s <= end && *s != '\xFF' )
+		{
+			s++;
+		}
+
+		if ( s >= end )
+		{
+			// Hit the end no more
+			break;
+		}
+
+		// key start
+		key = ++s;
+		while ( s < end && *s != '\xFE' )
+		{
+			s++;
+		}
+		if ( *s != '\xFE')
+		{
+			// malformed
+			break;
+		}
+		*s++ = '\0';
+		// key end
+		// value start
+		value = s;
+
+		while ( s < end && *s != '\xFF' )
+		{
+			s++;
+		}
+
+		if ( *s == '\xFF' )
+		{
+			*s = '\0';
+		}
+		//fprintf( stderr, "'%s' = '%s'\n", key, value );
+
+		// Decode current key par
+		if ( 0 == strcmp( "cmax", key ) )
+		{
+			// Max players
+			server->max_players = atoi( value );
+		}
+		else if ( 0 == strcmp( "cnum", key ) )
+		{
+			// Current players
+			server->num_players = atoi( value );
+		}
+		else if ( 0 == strcmp( "bal", key ) )
+		{
+			// Balance
+			add_rule( server, "Balance", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "world", key ) )
+		{
+			// Current map
+			server->map_name = strdup( value );
+		}
+		else if ( 0 == strcmp( "gametype", key ) )
+		{
+			// Game type
+			server->game = find_savage_game( value );
+			add_rule( server, server->type->game_rule, server->game, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "pure", key ) )
+		{
+			// Pure
+			add_rule( server, "Pure", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "time", key ) )
+		{
+			// Current game time
+			add_rule( server, "Time", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "notes", key ) )
+		{
+			// Notes
+			add_rule( server, "Notes", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "needcmdr", key ) )
+		{
+			// Need Commander
+			add_rule( server, "Need Commander", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "name", key ) )
+		{
+			// Server name
+			server->server_name = strdup( value );
+		}
+		else if ( 0 == strcmp( "fw", key ) )
+		{
+			// Firewalled
+			add_rule( server, "Firewalled", value, NO_FLAGS );
+		}
+		else if ( 0 == strcmp( "players", key ) )
+		{
+
+			// Players names
+			int player_number = 0;
+			int team_number = 1;
+			char *team_name, *player_name, *n;
+			n = team_name = value;
+
+			// team name
+			n++;
+			while( *n && *n != '\x0a' )
+			{
+				n++;
+			}
+
+			if ( *n != '\x0a' )
+			{
+				// Broken data
+				break;
+			}
+			*n = '\0';
+
+			player_name = ++n;
+			while( *n )
+			{
+				while( *n && *n != '\x0a' )
+				{
+					n++;
+				}
+
+				if ( *n != '\x0a' )
+				{
+					// Broken data
+					break;
+				}
+				*n = '\0';
+				n++;
+
+				if ( 0 == strncmp( "Team ", player_name, 5 ) )
+				{
+					team_name = player_name;
+					team_number++;
+				}
+				else
+				{
+					if ( 0 != strlen( player_name ) )
+					{
+						struct player *player = add_player( server, player_number );
+						if ( NULL != player )
+						{
+							player->name = strdup( player_name );
+							player->team = team_number;
+							player->team_name = strdup( team_name );
+						}
+						player_number++;
+					}
+				}
+				player_name = n;
+			}
+		}
+
+		*s = '\xFF';
+	}
+
+	cleanup_qserver( server, 1 );
+	return;
+}
+
 
 
 /* postions of map name, player name (in player substring), zero-based */
@@ -7103,7 +8608,7 @@ deal_with_bfris_packet( struct qserver *server, char *rawpkt, int pktlen)
       struct player *player;
       player= add_player( server, saved_data[player_data_pos]);
 
-      player->ship = saved_data[player_data_pos + 1]; 
+      player->ship = saved_data[player_data_pos + 1];
       player->ping = saved_data[player_data_pos + 2];
       player->frags = saved_data[player_data_pos + 3];
       player->team = saved_data[player_data_pos + 4];
@@ -7147,7 +8652,7 @@ deal_with_bfris_packet( struct qserver *server, char *rawpkt, int pktlen)
 }
 
 struct rule *
-add_uchar_rule( struct qserver *server, char *key, unsigned char value) 
+add_uchar_rule( struct qserver *server, char *key, unsigned char value)
 {
     char buf[24];
     sprintf( buf, "%u", (unsigned)value);
@@ -7159,7 +8664,7 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *pkt;
     char buf[24];
-  
+
     if ( server->server_name == NULL)
 	server->ping_total += time_delta( &packet_recv_time,
 				    &server->packet_time1);
@@ -7178,8 +8683,8 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    cleanup_qserver( server, 1);
 	    return;
 	}
-	    
-	
+
+
 	pkt= &rawpkt[0x15];
 	server->server_name= strdup( pkt);
 	pkt+= strlen(pkt)+2;
@@ -7218,25 +8723,25 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 	sprintf( buf, "%hhu", pkt[9]);
 	add_rule( server, "difficulty", buf, NO_FLAGS);
-	
+
 	/* unknown/undecoded fields after known flags removed */
 	add_uchar_rule( server, "x4", pkt[4] & ~(1+16));
 	add_uchar_rule( server, "x5", pkt[5] & ~(4+16));
 	add_uchar_rule( server, "x6", pkt[6] & ~1);
-	
+
 	if ( get_player_info && server->num_players)  {
 	    server->next_player_info= 0;
 	    send_player_request_packet( server);
 	    cleanup_qserver( server, 0);
 	    return;
 	}
-	
+
     }
     /* MP_PLAYERLIST_DATA */
     else if ( rawpkt[1] == 0x73)  {
 	struct player *player;
 	struct player **last_player= & server->players;
-	
+
 	if ( server->players != NULL)
 	{
 	    cleanup_qserver( server, 1);
@@ -7345,6 +8850,7 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
     if ( value == NULL)
 	goto eye_protocol_error;
     server->game= value;
+	add_rule( server, server->type->game_rule, value, NO_FLAGS);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
@@ -7537,7 +9043,7 @@ deal_with_gamespy_master_response( struct qserver *server, char *rawpkt, int pkt
  */
 
 char *
-strndup( char *string, int len)
+strndup( const char *string, size_t len)
 {
     char *result;
     result= (char*) malloc( len+1);
@@ -7572,7 +9078,7 @@ swap_long_from_little( void *l)
     return result;
 }
 
-float 
+float
 swap_float_from_little( void *f)
 {
 	union {
@@ -7605,7 +9111,7 @@ xml_escape( char *string)
     static int _buf_index= 0;
     char *result, *b, *end;
     unsigned char c;
-    
+
     if ( string == NULL)
 	return "";
 
@@ -7679,171 +9185,256 @@ xform_name( char *string, struct qserver *server)
     static char *_q= &_buf1[0];
     unsigned char *s= (unsigned char*) string;
     char *q;
-    int is_server_name= (string == server->server_name);
+    int is_server_name = (string == server->server_name);
     int font_tag= 0;
 
     _q= _q == _buf1 ? _buf2 : _buf1;
     q= _q;
 
-    if ( s == NULL)  {
-	q[0]= '?';
-	q[1]= '\0';
-	return _q;
+    if ( s == NULL)
+    {
+		q[0]= '?';
+		q[1]= '\0';
+		return _q;
     }
 
-    if ( (hex_player_names && !is_server_name) ||
-		(hex_server_names && is_server_name))  {
-	for ( ; *s; s++, q+= 2)
-	    sprintf( q, "%02x", *s);
-	*q= '\0';
-	return _q;
+    if ( (hex_player_names && !is_server_name) || (hex_server_names && is_server_name))
+	{
+		for ( ; *s; s++, q+= 2)
+		{
+		    sprintf( q, "%02x", *s);
+		}
+		*q= '\0';
+		return _q;
     }
 
-    if ( server->type->flags & TF_QUAKE3_NAMES)  {
-	for ( ; *s; s++)  {
-	    if ( *s == '^' && *(s+1) != '^')  {
-		if ( *(s+1) == '\0') break;
-		if ( html_names == 1) {
-		    q+= sprintf( q, "%s<font color=\"%s\">",
-			font_tag?"</font>":"",
-			quake3_escape_colors[ *(s+1) & 0x7]);
-		    s++;
-		    font_tag= 1;
+    if ( server->type->flags & TF_QUAKE3_NAMES)
+    {
+		for ( ; *s; s++)
+		{
+			if ( *s == '^' && *(s+1) != '^')
+			{
+				if ( *(s+1) == '\0')
+				{
+					break;
+				}
+				if ( html_names == 1)
+				{
+					q+= sprintf( q, "%s<font color=\"%s\">",
+					font_tag?"</font>":"",
+					quake3_escape_colors[ *(s+1) & 0x7]);
+					s++;
+					font_tag= 1;
+				}
+				else if ( strip_carets)
+				{
+					s++;
+				}
+				else
+				{
+					*q++= *s;
+				}
+			}
+			else
+			{
+				int inc = html_entity( *s, q );
+				if ( 0 != inc )
+				{
+					q += inc;
+				}
+				else if ( isprint(*s))
+				{
+					*q++= *s;
+				}
+				else if ( *s == '\033')
+				{
+				}
+				else if ( *s == 0x80)
+				{
+					*q++= '(';
+				}
+				else if ( *s == 0x81)
+				{
+					*q++= '=';
+				}
+				else if ( *s == 0x82)
+				{
+					*q++= ')';
+				}
+				else if ( *s == 0x10 || *s == 0x90)
+				{
+					*q++= '[';
+				}
+				else if ( *s == 0x11 || *s == 0x91)
+				{
+					*q++= ']';
+				}
+				else if ( *s >= 0x92 && *s <= 0x9a)
+				{
+					*q++= *s - 98;
+				}
+				else if ( *s >= 0xa0 && *s <= 0xe0)
+				{
+					*q++= *s - 128;
+				}
+				else if ( *s >= 0xe1 && *s <= 0xfa)
+				{
+					*q++= *s - 160;
+				}
+				else if ( *s >= 0xfb && *s <= 0xfe)
+				{
+					*q++= *s - 128;
+				}
+			}
 		}
-		else if ( strip_carets)
-		    s++;
-		else
-		    *q++= *s;
-	    }
-	    else if ( html_mode && *s == '<')  {
-		strcpy( q, "&lt;");
-		q+= 4;
-	    }
-	    else if ( html_mode && *s == '>')  {
-		strcpy( q, "&gt;");
-		q+= 4;
-	    }
-	    else if ( html_mode && *s == '&')  {
-		strcpy( q, "&amp;");
-		q+= 5;
-	    }
-	    else if ( isprint(*s))
-		*q++= *s;
-	    else if ( *s == '\033')
-		;
-	    else if ( *s == 0x80)
-		*q++= '(';
-	    else if ( *s == 0x81)
-		*q++= '=';
-	    else if ( *s == 0x82)
-		*q++= ')';
-	    else if ( *s == 0x10 || *s == 0x90)
-		*q++= '[';
-	    else if ( *s == 0x11 || *s == 0x91)
-		*q++= ']';
-	    else if ( *s >= 0x92 && *s <= 0x9a) 
-		*q++= *s - 98;
-	    else if ( *s >= 0xa0 && *s <= 0xe0)
-		*q++= *s - 128;
-	    else if ( *s >= 0xe1 && *s <= 0xfa)
-		*q++= *s - 160;
-	    else if ( *s >= 0xfb && *s <= 0xfe)
-		*q++= *s - 128;
+		*q= '\0';
 	}
-        *q= '\0';
-    }
-    else if ( !is_server_name && (server->type->flags & TF_TRIBES2_NAMES))  {
-	for ( ; *s; s++)  {
-	    if ( html_mode && *s == '<')  {
-		strcpy( q, "&lt;");
-		q+= 4;
-		continue;
-	    }
-	    else if ( html_mode && *s == '>')  {
-		strcpy( q, "&gt;");
-		q+= 4;
-		continue;
-	    }
-	    else if ( html_mode && *s == '&')  {
-		strcpy( q, "&amp;");
-		q+= 5;
-		continue;
-	    }
-	    else if ( isprint(*s))  {
-		*q++= *s;
-		continue;
-	    }
-	    if ( html_names == 1 && s[1] != '\0')  {
-		char *font_color;
-		switch( *s)  {
-		case 0x8: font_color= "white"; break;	/* normal */
-		case 0xb: font_color= "yellow"; break;	/* tribe tag */
-		case 0xc: font_color= "blue"; break;	/* alias */
-		case 0xe: font_color= "green"; break;	/* bot */
-		default: font_color= NULL;
+    else if ( !is_server_name && (server->type->flags & TF_TRIBES2_NAMES))
+    {
+		for ( ; *s; s++)
+		{
+			int inc = html_entity( *s, q );
+			if ( 0 != inc )
+			{
+				q += inc;
+				continue;
+			}
+			else if ( isprint(*s))
+			{
+				*q++= *s;
+				continue;
+			}
+			if ( html_names == 1 && s[1] != '\0')
+			{
+				char *font_color;
+				switch( *s)
+				{
+				case 0x8: font_color= "white"; break;	/* normal */
+				case 0xb: font_color= "yellow"; break;	/* tribe tag */
+				case 0xc: font_color= "blue"; break;	/* alias */
+				case 0xe: font_color= "green"; break;	/* bot */
+				default: font_color= NULL;
+				}
+				if ( font_color)
+				{
+					q+= sprintf( q, "%s<font color=\"%s\">",
+					font_tag?"</font>":"",
+					font_color);
+					font_tag= 1;
+				}
+			}
 		}
-		if ( font_color)  {
-		    q+= sprintf( q, "%s<font color=\"%s\">",
-			font_tag?"</font>":"",
-			font_color);
-		    font_tag= 1;
-		}
-	    }
-	}
-	*q= '\0';
+		*q= '\0';
     }
-    else if ( !is_server_name || (server->type->flags & TF_SOF_NAMES))  {
-	for ( ; *s; s++)  {
-	    if ( html_mode && *s == '<')  {
-		strcpy( q, "&lt;");
-		q+= 4;
-		continue;
-	    }
-	    else if ( html_mode && *s == '>')  {
-		strcpy( q, "&gt;");
-		q+= 4;
-		continue;
-	    }
-	    else if ( html_mode && *s == '&')  {
-		strcpy( q, "&amp;");
-		q+= 5;
-		continue;
-	    }
+    else if ( server->type->flags & TF_SOF_NAMES )
+    {
+		for ( ; *s; s++)
+		{
+			int inc = html_entity( *s, q );
+			if ( 0 != inc )
+			{
+				q += inc;
+				continue;
+			}
 
-	    if ( *s < ' ' )  {
-	    	if ( html_names == 1) {
-		        q+= sprintf( q, "%s<font color=\"#%s\">",
-			    font_tag?"</font>":"",
-			    sof_colors[ *(s) ]);
-		        font_tag= 1;
-		    }
-	    }
-	    else if ( isprint(*s))
-		*q++= *s;
-/* ## more fixes below; double check against real sof servers */
-	    else if ( *s >= 0xa0)
-		*q++= *s & 0x7f;
-	    else if ( *s >= 0x92 && *s < 0x9c)
-		*q++= '0' + (*s - 0x92);
-	    else if ( *s >= 0x12 && *s < 0x1c)
-		*q++= '0' + (*s - 0x12);
-	    else if ( *s == 0x90 || *s == 0x10)
-		*q++= '[';
-	    else if ( *s == 0x91 || *s == 0x11)
-		*q++= ']';
-	    else if ( *s == 0xa || *s == 0xc || *s == 0xd)
-		*q++= ']';
-	}
-	*q= '\0';
+			if ( *s < ' ' )
+			{
+				if ( html_names == 1)
+				{
+					q+= sprintf( q, "%s<font color=\"#%s\">",
+					font_tag?"</font>":"",
+					sof_colors[ *(s) ]);
+					font_tag= 1;
+				}
+			}
+			else if ( isprint(*s))
+			{
+				*q++= *s;
+			}
+			// ## more fixes below; double check against real sof servers
+			else if ( *s >= 0xa0)
+			{
+				*q++= *s & 0x7f;
+			}
+			else if ( *s >= 0x92 && *s < 0x9c)
+			{
+				*q++= '0' + (*s - 0x92);
+			}
+			else if ( *s >= 0x12 && *s < 0x1c)
+			{
+				*q++= '0' + (*s - 0x12);
+			}
+			else if ( *s == 0x90 || *s == 0x10)
+			{
+				*q++= '[';
+			}
+			else if ( *s == 0x91 || *s == 0x11)
+			{
+				*q++= ']';
+			}
+			else if ( *s == 0xa || *s == 0xc || *s == 0xd)
+			{
+				*q++= ']';
+			}
+		}
+		*q= '\0';
     }
+    else if ( server->type->flags & TF_U2_NAMES )
+	{
+		for ( ; *s; s++)
+		{
+			int inc;
+			if ( 0 == memcmp( s, "^\1", 2 ) )
+			{
+				// Color follows
+				s += 2;
+				q += unreal_html_color( (unsigned char)*s, q, &font_tag );
+			}
+			else
+			{
+				int inc = html_entity( *s, q );
+				if ( 0 != inc )
+				{
+					q += inc;
+				}
+				else if ( isprint(*s))
+				{
+					*q++= *s;
+				}
+				else if ( 0xa0 == *s )
+				{
+					*q++= ' ';
+				}
+			}
+		}
+		*q = '\0';
+	}
     else
-	strcpy( _q, string);
+    {
+		strcpy( _q, string);
+	}
 
-    if ( font_tag)
-	q+= sprintf( q, "</font>");
+    if ( font_tag )
+    {
+		q+= sprintf( q, "</font>");
+	}
 
     return _q;
 
+}
+
+int unreal_html_color( short color, char *dest, int *font_tag )
+{
+	if ( 1 == html_names )
+	{
+		int len = sprintf( dest, "%s<font color=\"%s\">",
+			*font_tag ? "</font>" : "", unreal_rgb_colors[ color - 1 ]
+		);
+		*font_tag = 1;
+
+		return len;
+	}
+	return 0;
 }
 
 int
@@ -7864,6 +9455,29 @@ is_default_rule( struct rule *rule)
     if ( strcmp( rule->name, "fraglimit") == 0)
 	return strcmp( rule->value, Q_DEFAULT_FRAGLIMIT) == 0;
     return 0;
+}
+
+int html_entity( const char c, char *dest )
+{
+	if ( html_mode )
+	{
+		switch( c )
+		{
+		case '<':
+			strcpy( dest, "&lt;" );
+			return 4;
+		case '>':
+			strcpy( dest, "&gt;" );
+			return 4;
+		case '&':
+			strcpy( dest, "&amp;" );
+			return 5;
+		default:
+			break;
+		}
+	}
+
+	return 0;
 }
 
 char *
@@ -7993,13 +9607,37 @@ quake_color( int color)
 	"#0000ff"	/* 15 */
     };
 
-    if ( color_names)  {
-        if ( color_names == 1)
-	    return colors[color&0xf];
-	else
-	    return rgb_colors[color&0xf];
-    }
-    else
+	if ( color_names )
+	{
+		if ( color_names == 1)
+		{
+			return colors[color&0xf];
+		}
+		else
+		{
+			return rgb_colors[color&0xf];
+		}
+	}
+
+	return (char*)color;
+}
+
+
+char *
+unreal_color( int color )
+{
+	if ( color_names )
+	{
+		if ( color_names == 1)
+		{
+			return unreal_colors[color&0xf];
+		}
+		else
+		{
+			return unreal_rgb_colors[color&0xf];
+		}
+	}
+
 	return (char*)color;
 }
 
@@ -8113,7 +9751,7 @@ sort_players( struct qserver *server)
 	return;
 
     array= (struct player **) malloc( sizeof(struct player *) *
-	server->num_players);
+		server->num_players);
     for ( np= 0; player != NULL && np < server->num_players; np++)  {
 	array[np]= player;
 	player= player->next;
@@ -8207,7 +9845,16 @@ player_compare( struct player *one, struct player *two)
 	    rc= one->team - two->team;
 	    if ( rc)
 		return rc;
+		rc = strcmp_withnull( one->team_name, two->team_name );
+	    if ( rc )
+		return rc;
 	    break;
+	case 'N':
+		rc= strcmp_withnull( one->name, two->name );
+		if ( rc )
+		return rc;
+		return one->number - two->number;
+		break;
 	}
     }
     return 0;
@@ -8217,7 +9864,7 @@ void
 quicksort( void **array, int i, int j, int (*compare)(void*,void*))
 {
     int q= 0;
-  
+
     if ( i < j) {
 	q = qpartition(array,i,j, compare);
 	quicksort(array,i,q, compare);
