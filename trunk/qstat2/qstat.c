@@ -7364,11 +7364,16 @@ dup_nstring( const char *pkt, const char *end, char **next)
 }
 
 STATIC char *
-dup_n1string( char *pkt, char *end, char **next)
+dup_n1string( unsigned char *pkt, char *end, char **next)
 {
-    int len= ((unsigned char*)pkt)[0]-1;
+    unsigned len;
+
+    if(!pkt || pkt >= (unsigned char*)end)
+	return NULL;
+	    
+    len = pkt[0]-1;
     pkt++;
-    if ( pkt + len > end)
+    if ( pkt + len >= (unsigned char*)end)
 	return NULL;
 
     *next= pkt+len;
@@ -10108,7 +10113,7 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *next, *end, *value, *key;
     struct player **last_player;
-    int pkt_index, pkt_max;
+    unsigned char pkt_index, pkt_max;
     unsigned int pkt_id;
 
     if ( pktlen < 4)  {
@@ -10234,9 +10239,9 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
     /* [mask1]<name1><team1><skin1><score1><ping1><time1>[mask2]... */
 
     last_player= & server->players;
-    while ( next < end)  {
+    while ( next && next < end)  {
 	struct player *player;
-	int mask= *((unsigned char*)next);
+	unsigned mask= *((unsigned char*)next);
 	next++;
 	if ( next >= end) break;
 	if ( mask == 0) break;
