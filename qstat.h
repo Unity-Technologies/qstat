@@ -7,13 +7,17 @@
  * Copyright 1996,1997,1998,1999,2000,2001,2002 by Steve Jankowski
  */
 
+#ifndef __H_QSTAT
+#define __H_QSTAT
+
+#ifdef HAVE_CONFIG_H
+#include "gnuconfig.h"
+#endif
+
 #ifdef _WIN32
 #else
 #define _ISUNIX
 #endif
-
-#ifndef __H_QSTAT
-#define __H_QSTAT
 
 #ifdef __EMX__
 #include <sys/select.h>

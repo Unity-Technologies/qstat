@@ -17,7 +17,10 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#define VERSION "2.6"
+#ifdef HAVE_CONFIG_H
+#include "gnuconfig.h"
+#endif
+
 char *qstat_version= VERSION;
 
 /* OS/2 defines */

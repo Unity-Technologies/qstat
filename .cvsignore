@@ -1,0 +1,7 @@
+Makefile.in
+configure
+gnuconfig.h
+gnuconfig.h.in
+INSTALL
+aclocal.m4
+install-sh
