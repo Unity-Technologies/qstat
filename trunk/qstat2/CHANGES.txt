@@ -1,3 +1,31 @@
+QStat version 2.7
+
+** UPDATED for 2.7 **
+Dec 22, 2004
+
+Summary of New Features
+-----------------------
+new protocols:
+   UT2004 master [-ut2004m]
+
+update steam master protocol to new version
+add additional output to the player xml of -gps
+add option -progress,n to print out progress every n packets
+add doom3 protocol and osmask as server rule
+use autoconf+automake, a simple Makefile is provided as fallback
+add "flags" to qstat.cfg
+
+Fixes
+-----
+fix hanging qstat when receiving UDP packets with incorrect checksum
+fix colored names in America's Army (use -ams instead of -gps)
+
+--
+Steve Jankowski
+Steven Hartland
+Ludwig Nussel
+
+
 QStat version 2.6
 
 ** UPDATED for 2.6 **
