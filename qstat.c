@@ -6004,6 +6004,8 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 				player = get_player_by_number( server, player_number);
 
 				// && unreal_max_players( server ) due to bf1942 issue
+				// where the actual no players is correct but more player
+				// details are returned
 				if ( player == NULL && unreal_max_players( server ) )
 				{
 					player= add_player( server, player_number);
@@ -6042,15 +6044,17 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			final= 1;
 			continue;
 		}
-		// && unreal_max_players( server ) due to bf1942 issue
-		else if ( strncmp( key, "player_", 7) == 0 && unreal_max_players( server ) )
+		else if ( strncmp( key, "player_", 7) == 0 )
 		{
 			if ( player && player->number == atoi(key+7))
 			{
 				player->name= strdup( value);
 				player= NULL;
 			}
-			else
+			// unreal_max_players( server ) due to bf1942 issue
+			// where the actual no players is correct but more player
+			// details are returned
+			else if ( unreal_max_players( server ) )
 			{
 				player= add_player( server, atoi(key+7));
 				if ( player)
