@@ -1,6 +1,8 @@
 Compilation instructions for QStat
 ----------------------------------
 
+FIXME: the instructions are obsolete
+
 WINDOWS
 -------
 Windows users can find a pre-built binary in the win32/ directory
