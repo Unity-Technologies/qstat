@@ -983,7 +983,7 @@ server_type builtin_types[] = {
     0,				/* master */
     TRIBES_DEFAULT_PORT,	/* default_port */
     0,				/* port_offset */
-    TF_SINGLE_QUERY | TF_RAW_STYLE_TRIBES,		/* flags */
+    TF_SINGLE_QUERY,		/* flags */
     "game",			/* game_rule */
     "TRIBES",			/* template_var */
     (char*) &tribes_info,	/* status_packet */
