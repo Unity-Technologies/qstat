@@ -2260,9 +2260,9 @@ usage( char *msg, char **argv, char *a1)
     printf( "-old\t\told style display\n");
     printf( "-progress\tdisplay progress meter (text only)\n");
     printf( "-retry\t\tnumber of retries, default is %d\n", DEFAULT_RETRIES);
-    printf( "-interval\tinterval between retries, default is %.2lf seconds\n",
+    printf( "-interval\tinterval between retries, default is %.2f seconds\n",
 	DEFAULT_RETRY_INTERVAL / 1000.0);
-    printf( "-mi\t\tinterval between master server retries, default is %.2lf seconds\n",
+    printf( "-mi\t\tinterval between master server retries, default is %.2f seconds\n",
 	(DEFAULT_RETRY_INTERVAL*4) / 1000.0);
     printf( "-timeout\ttotal time in seconds before giving up\n");
     printf( "-maxsim\t\tset maximum simultaneous queries\n");
@@ -3651,15 +3651,14 @@ bind_qserver( struct qserver *server)
 	addr.sin_addr.s_addr= server->ipaddr;
 	memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero) );
 
-	if ( connect( server->fd, (struct sockaddr *)&addr, sizeof(addr)) ==
-		SOCKET_ERROR)  {
+	if ( connect( server->fd, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR)  {
+		char error[50];
 	    if ( server->type->id == UN_MASTER)  {
 		if ( connection_refused())  {
 		/*  server->fd= -2; */
 		/* set up for connect retry */
 		}
 	    }
-		char error[50];
 		sprintf( error, "connect:%s:%u", inet_ntoa( addr.sin_addr ), ntohs( addr.sin_port ) );
 	    perror( error );
 	    server->server_name= SYSERROR;
@@ -4002,7 +4001,7 @@ build_hlmaster_packet( struct qserver *server, int *len)
 {
 	static char packet[1600];
 	char *pkt, *r, *sep= "";
-	char *gamedir, *map, *flags, *region;
+	char *gamedir, *map, *flags;
 	int flen;
 
 	pkt= &packet[0];
@@ -5570,7 +5569,6 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			// no sequence id for steam
 			// instead we use the ip:port of the last recieved server
-			int len;
 			struct in_addr *sin_addr = (struct in_addr*)(rawpkt+pktlen-6);
 			char *ip = inet_ntoa( *sin_addr );
 			unsigned short port = htons( *((unsigned short*)(rawpkt+pktlen-2)) );
@@ -5677,7 +5675,6 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 	{
 		// should the HL_MASTER be the same as this?
 		int i;
-		int end = 0;
 		for ( i = pktlen - 6; i < pktlen && 0x00 == rawpkt[i] ; i++ )
 		{
 		}
@@ -5865,11 +5862,11 @@ display_tribes2_string_list( unsigned char *pkt)
 	pkt++;
 	if ( len > 0)  {
 	    if ( raw_display)  {
-		fprintf( OF, "%s%.*s", delim, len, pkt);
+		fprintf( OF, "%s%.*s", delim, (int)len, pkt);
 		delim= raw_delimiter;
 	    }
 	    else
-		fprintf( OF, "%.*s\n", len, pkt);
+		fprintf( OF, "%.*s\n", (int)len, pkt);
 	}
 	pkt+= len;
     }
