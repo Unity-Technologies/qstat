@@ -182,6 +182,7 @@ int raw_display= 0;
 char *raw_delimiter= "\t";
 int player_address= 0;
 int hex_player_names= 0;
+int hex_server_names= 0;
 int strip_carets= 1;
 int max_simultaneous= MAXFD_DEFAULT;
 int html_names= -1;
@@ -254,6 +255,8 @@ char *TIMEOUT= "TIMEOUT";
 char *MASTER= "MASTER";
 char *SERVERERROR= "ERROR";
 char *HOSTNOTFOUND= "HOSTNOTFOUND";
+char *BFRIS_SERVER_NAME= "BFRIS Server";
+char *GAMESPY_MASTER_NAME= "Gamespy Master";
 
 int display_prefix= 0;
 char *current_filename;
@@ -268,8 +271,6 @@ static void decode_q3master_packet( struct qserver *server, char *pkt, int pktle
 static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
 
-
-
 struct rule * add_rule( struct qserver *server, char *key, char *value,
 	int flags);
 #define NO_FLAGS 0
@@ -277,31 +278,36 @@ struct rule * add_rule( struct qserver *server, char *key, char *value,
 #define CHECK_DUPLICATE_RULES 2
 #define NO_KEY_COPY 4
 
+void free_server( struct qserver *server);
+void free_player( struct player *player);
+void free_rule( struct rule *rule);
+void standard_display_server( struct qserver *server);
+
 /* MODIFY HERE
  * Change these functions to display however you want
  */
 void
-display_server(
-    struct qserver *server
-)
+display_server( struct qserver *server)
 {
-    char name[100], prefix[64];
-
     if ( player_sort)
 	sort_players( server);
 
-    if ( raw_display)  {
+    if ( raw_display)
 	raw_display_server( server);
-	return;
-    }
-    else if ( xml_display) {
+    else if ( xml_display)
 	xml_display_server( server);
-	return;
-    }
-    if ( have_server_template())  {
+    else if ( have_server_template())
 	template_display_server( server);
-	return;
-    }
+    else
+	standard_display_server( server);
+
+    free_server( server);
+}
+
+void
+standard_display_server( struct qserver *server)
+{
+    char prefix[64];
 
     if ( display_prefix)
 	sprintf( prefix, "%-4s ", server->type->type_prefix);
@@ -373,6 +379,7 @@ display_server(
 	    server->type->display_player_func( server);
     }
     else  {
+	char name[512];
 	sprintf( name, "\"%s\"", server->server_name);
 	fprintf( OF, "%-16s %10s map %s at %22s %d/%d players %d ms\n", 
 	    (hostname_lookup) ? server->host_name : server->arg,
@@ -1601,11 +1608,30 @@ xml_display_eye_player_info( struct qserver *server)
 void
 display_progress()
 {
-    fprintf( stderr, "\r%d/%d (%d timed out, %d down)",
+    static struct timeval rate_start= {0,0};
+    char rate[32];
+    struct timeval now;
+
+    gettimeofday( &now, NULL);
+
+    if ( ! rate_start.tv_sec) {
+	rate_start= now;
+	rate[0]='\0';
+    }
+    else  {
+	int delta= time_delta( &now, &rate_start);
+	if ( delta > 1500)
+	    sprintf( rate, "  %d servers/sec  ", (num_servers_returned+num_servers_timed_out)*1000 / delta);
+	else
+	    rate[0]='\0';
+    }
+
+    fprintf( stderr, "\r%d/%d (%d timed out, %d down)%s",
 	num_servers_returned+num_servers_timed_out,
 	num_servers_total,
 	num_servers_timed_out,
-	num_servers_down);
+	num_servers_down,
+	rate);
 }
 
 /* ----- END MODIFICATION ----- Don't need to change anything below here. */
@@ -1676,6 +1702,7 @@ usage( char *msg, char **argv, char *a1)
     printf( "-ts\t\tdisplay time in seconds\n");
     printf( "-pa\t\tdisplay player address\n");
     printf( "-hpn\t\tdisplay player names in hex\n");
+    printf( "-hsn\t\tdisplay server names in hex\n");
     printf( "-nh\t\tdo not display header\n");
     printf( "-old\t\told style display\n");
     printf( "-progress\tdisplay progress meter (text only)\n");
@@ -2098,6 +2125,9 @@ main( int argc, char *argv[])
 	else if ( strcmp( argv[arg], "-hpn") == 0)  {
 	    hex_player_names= 1;
 	}
+	else if ( strcmp( argv[arg], "-hsn") == 0)  {
+	    hex_server_names= 1;
+	}
 	else if ( strncmp( argv[arg], "-maxsimultaneous", 7) == 0)  {
 	    arg++;
 	    if ( arg >= argc)
@@ -2487,35 +2517,39 @@ finish_output()
     }
 
     if ( server_sort)  {
-	struct qserver **array, *server;
+	struct qserver **array, *server, *next_server;
 	if ( strchr( sort_keys, 'l') &&
 		strpbrk( sort_keys, SUPPORTED_SERVER_SORT) == NULL)  {
 	    server= servers;
-	    for ( ; server; server= server->next)
+	    for ( ; server; server= next_server)  {
+		next_server= server->next;
 		display_server( server);
+	    }
 	}
 	else  {
-	array= (struct qserver **) malloc( sizeof(struct qserver *) *
-		num_servers_total);
-	server= servers;
-	for ( i= 0; server != NULL; i++)  {
-	    array[i]= server;
-	    server= server->next;
-	}
-	sort_servers( array, num_servers_total);
-	if ( progress)
+	    array= (struct qserver **) malloc( sizeof(struct qserver *) *
+		    num_servers_total);
+	    server= servers;
+	    for ( i= 0; server != NULL; i++)  {
+		array[i]= server;
+		server= server->next;
+	    }
+	    sort_servers( array, num_servers_total);
+	    if ( progress)
 	    fprintf( stderr, "\n");
-	for ( i= 0; i < num_servers_total; i++)
-	    display_server( array[i]);
-	free( array);
+	    for ( i= 0; i < num_servers_total; i++)
+		display_server( array[i]);
+	    free( array);
 	}
     }
     else  {
-	struct qserver *server;
+	struct qserver *server, *next_server;
 	server= servers;
-	for ( ; server; server= server->next)
+	for ( ; server; server= next_server)  {
+	    next_server= server->next;
 	    if ( server->server_name == HOSTNOTFOUND)
 		display_server( server);
+	}
     }
 
     if ( xml_display)
@@ -2601,7 +2635,7 @@ parse_query_params( struct qserver *server, char *params)
 int
 add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 {
-    struct qserver *server;
+    struct qserver *server, *prev_server;
     int flags= 0;
     char *colon= NULL, *arg_copy, *hostname= NULL;
     unsigned int ipaddr;
@@ -2657,6 +2691,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 	server->error= strdup( strherror(h_errno));
 	server->port= port;
 	server->type= type;
+	server->prev= *last_server;
 	*last_server= server;
 	last_server= & server->next;
 	if ( one_server_type_id == ~MASTER_SERVER)
@@ -2694,6 +2729,8 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     if ( num_servers_total % 10 == 0)
 	hcache_update_file();
 
+    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+    server->prev= prev_server;
     *last_server= server;
     last_server= & server->next;
 
@@ -2712,7 +2749,7 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
 	server_type* type, int *new_server)
 {
     char arg[36];
-    struct qserver *server;
+    struct qserver *server, *prev_server;
     char *hostname= NULL;
 
     if ( run_timeout && time(0)-start_time >= run_timeout)  {
@@ -2754,6 +2791,8 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
     if ( num_servers_total % 10 == 0)
 	hcache_update_file();
 
+    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+    server->prev= prev_server;
     *last_server= server;
     last_server= & server->next;
 
@@ -2886,7 +2925,7 @@ init_qserver( struct qserver *server)
 struct qserver *
 find_server_by_address( unsigned int ipaddr, unsigned short port)
 {
-    struct qserver **server;
+    struct qserver **hashed;
     unsigned int hash, i;
     hash= (ipaddr + port) % ADDRESS_HASH_LENGTH;
 
@@ -2896,10 +2935,10 @@ find_server_by_address( unsigned int ipaddr, unsigned short port)
 	return NULL;
     }
 
-    server= server_hash[hash];
-    for ( i= server_hash_len[hash]; i; i--, server++)
-	if ( (*server)->ipaddr == ipaddr && (*server)->port == port)
-	    return *server;
+    hashed= server_hash[hash];
+    for ( i= server_hash_len[hash]; i; i--, hashed++)
+	if ( *hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)
+	    return *hashed;
     return NULL;
 }
 
@@ -2918,6 +2957,25 @@ add_server_to_hash( struct qserver *server)
     server_hash[hash][server_hash_len[hash]]= server;
     server_hash_len[hash]++;
 }
+
+void
+remove_server_from_hash( struct qserver *server)
+{
+    struct qserver **hashed;
+    unsigned int hash, i, ipaddr;
+    unsigned short port;
+    hash= (server->ipaddr + server->port) % ADDRESS_HASH_LENGTH;
+
+    ipaddr= server->ipaddr;
+    port= server->port;
+    hashed= server_hash[hash];
+    for ( i= server_hash_len[hash]; i; i--, hashed++)
+	if ( *hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)  {
+	    *hashed= NULL;
+	    break;
+	}
+}
+
 
 /* Functions for binding sockets to Quake servers
  */
@@ -4046,6 +4104,94 @@ wait_for_timeout( unsigned int ms)
 #endif /* USE_POLL */
 
 
+void
+free_server( struct qserver *server)
+{
+    struct player *player, *next_player;
+    struct rule *rule, *next_rule;
+
+    /* remove from servers list */
+    if ( server == servers)
+	servers= server->next;
+    if ( server == *last_server)  {
+	if ( server->prev)
+	    last_server= & server->prev->next;
+	else
+	    last_server= & servers;
+    }
+    if ( server == last_server_bind)
+	last_server_bind= server->next;
+
+    if ( server->prev)
+	server->prev->next= server->next;
+    if ( server->next)
+	server->next->prev= server->prev;
+
+    /* remove from server hash table */
+    remove_server_from_hash( server);
+
+    /* free all the data */
+    for ( player= server->players; player; player= next_player)  {
+	next_player= player->next;
+	free_player( player);
+    }
+
+    for ( rule= server->rules; rule; rule= next_rule)  {
+	next_rule= rule->next;
+	free_rule( rule);
+    }
+
+    if ( server->arg) free( server->arg);
+    if ( server->host_name) free( server->host_name);
+    if ( server->error) free( server->error);
+    if ( server->address) free( server->address);
+    if ( server->map_name) free( server->map_name);
+    if ( !(server->flags&FLAG_DO_NOT_FREE_GAME) && server->game)
+	free(server->game);
+    if ( server->master_pkt) free( server->master_pkt);
+
+    /* These fields are never malloc'd: outfilename, query_arg
+    */
+
+    if ( server->server_name != NULL &&
+	    server->server_name != DOWN &&
+	    server->server_name != HOSTNOTFOUND &&
+	    server->server_name != SYSERROR &&
+	    server->server_name != MASTER &&
+	    server->server_name != SERVERERROR &&
+	    server->server_name != GAMESPY_MASTER_NAME &&
+	    server->server_name != BFRIS_SERVER_NAME)  {
+	free( server->server_name);
+    }
+/*
+params ...
+saved_data ...
+*/
+
+    free( server);
+}
+
+void
+free_player( struct player *player)
+{
+    if ( player->name) free( player->name);
+    if ( ! (player->flags&PLAYER_FLAG_DO_NOT_FREE_TEAM) && player->team_name)
+	free( player->team_name);
+    if ( player->address) free( player->address);
+    if ( player->tribe_tag) free( player->tribe_tag);
+    if ( player->skin) free( player->skin);
+    if ( player->mesh) free( player->mesh);
+    if ( player->face) free( player->face);
+    free( player);
+}
+
+void
+free_rule( struct rule *rule)
+{
+    if ( rule->name) free( rule->name);
+    if ( rule->value) free( rule->value);
+    free( rule);
+}
 
 /* Functions for handling response packets
  */
@@ -4247,8 +4393,10 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    }
 	    else if ( get_server_rules || strncmp( key, "*game", 5) == 0)  {
 		add_rule( server, key, value, NO_VALUE_COPY);
-		if ( strcmp( key, "*gamedir") == 0)
+		if ( strcmp( key, "*gamedir") == 0)  {
 		    server->game= value;
+		    server->flags |= FLAG_DO_NOT_FREE_GAME;
+		}
 	    }
 	}
 	else if ( *pkt == '\n')  {
@@ -4404,8 +4552,10 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 	    else if ( get_server_rules || strncmp( key, "game", 4) == 0)  {
 		add_rule( server, key, value,
 			NO_VALUE_COPY|check_duplicate_rules);
-		if ( strcmp( key, server->type->game_rule) == 0)
+		if ( strcmp( key, server->type->game_rule) == 0)  {
 		    server->game= value;
+		    server->flags |= FLAG_DO_NOT_FREE_GAME;
+		}
 	    }
 	}
 	else if ( *pkt == '\n')  {
@@ -5561,8 +5711,10 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
 
 	if ( *pkt)
 	    add_rule( server, "gamedir", pkt, NO_FLAGS);
-	if ( *pkt && strcmp( pkt, "valve") != 0)
+	if ( *pkt && strcmp( pkt, "valve") != 0)  {
 	    server->game= add_rule( server, "game", pkt, NO_FLAGS)->value;
+	    server->flags |= FLAG_DO_NOT_FREE_GAME;
+	}
 	pkt+= strlen(pkt)+1;
 	if ( *pkt)
 	    add_rule( server, "gamename", pkt, NO_FLAGS);
@@ -5919,6 +6071,7 @@ if ( tribes_debug) printf( "player#%d, team #%d\n", pnum, (int)*pkt);
 	    player->team_name= teams[player->team]->name;
 	else if ( player->team == 255 && n_teams)
 	    player->team_name= "Unknown";
+	player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
 	player->ping= ping;
 	player->packet_loss= packet_loss;
 	player->name= strndup( (char*)pkt+1, len);
@@ -6175,6 +6328,7 @@ deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen)
 	    player->team= t;
 	    player->team_name= teams[t]->name;
 	}
+	player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
 	pkt= term+1;
 	for ( s= 0; *pkt != 0xa && pkt-start < len; pkt++)
 	    str[s++]= *pkt;
@@ -6436,6 +6590,7 @@ Will likely need to verify and add to this "if" construct with every patch / add
 		pkt += iLen;  /* player name */
 		player->team= i; // tag so we can find this record when we have player dat.
 		player->team_name= "Unassigned";
+		player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
 		player->frags=0;
 		
 		player->next= server->players;
@@ -6596,6 +6751,7 @@ Will likely need to verify and add to this "if" construct with every patch / add
 			case 5: player->team_name= "Unassigned"; break;
 			default: player->team_name= "Not Known"; break;
 			};
+			player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
 			player->deaths=pkt[1];
 		};
 		pkt += 5; /* player data*/
@@ -6794,6 +6950,7 @@ deal_with_bfris_packet( struct qserver *server, char *rawpkt, int pktlen)
     default:
       server->game = "unknown"; break;
     }
+    server->flags |= FLAG_DO_NOT_FREE_GAME;
     add_rule(server,server->type->game_rule,server->game, NO_FLAGS);
 
     if (get_server_rules) {
@@ -6872,6 +7029,7 @@ deal_with_bfris_packet( struct qserver *server, char *rawpkt, int pktlen)
       default:
 	player->team_name = "unknown"; break;
       }
+      player->flags |= PLAYER_FLAG_DO_NOT_FREE_TEAM;
       player->room = saved_data[player_data_pos + 5];
 
       /* score is little-endian integer */
@@ -6894,7 +7052,7 @@ deal_with_bfris_packet( struct qserver *server, char *rawpkt, int pktlen)
 
   }
 
-  server->server_name = "BFRIS Server";
+  server->server_name = BFRIS_SERVER_NAME;
   cleanup_qserver(server, 1);
   return;
 }
@@ -7223,7 +7381,7 @@ deal_with_gamespy_master_response( struct qserver *server, char *rawpkt, int pkt
 	unsigned short port;
 	int master_pkt_max;
 
-	server->server_name= "Gamespy Master";
+	server->server_name= GAMESPY_MASTER_NAME;
 
 	master_pkt_max= (len / 20) * 6;
 	server->master_pkt= (char*) malloc( master_pkt_max);
@@ -7444,7 +7602,8 @@ xform_name( char *string, struct qserver *server)
 	return _q;
     }
 
-    if ( hex_player_names && !is_server_name)  {
+    if ( (hex_player_names && !is_server_name) ||
+		(hex_server_names && is_server_name))  {
 	for ( ; *s; s++, q+= 2)
 	    sprintf( q, "%02x", *s);
 	*q= '\0';
