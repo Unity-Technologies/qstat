@@ -6261,6 +6261,13 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 		{
 			player->ship= atoi( value);
 		}
+		else if (
+			strncmp( key, "keyhash_", 8) == 0 ||
+			strncmp( key, "kills_", 6) == 0
+		)
+		{
+			// Ensure these dont make it into the rules
+		}
 		else
 		{
 			player= NULL;
@@ -6284,7 +6291,8 @@ unreal_player_info_key( char *s, char *end)
     static char *keys[] = {
 		"frags_", "team_", "ping_", "species_",
 		"race_", "deaths_", "score_", "enemy_",
-		"player_", "keyhash_", "teamname_"
+		"player_", "keyhash_", "teamname_",
+		"playername_", "keyhash_", "kills_"
 	};
     int i;
 
