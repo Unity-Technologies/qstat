@@ -23,3 +23,19 @@ the first Mutator will be output.
 
 UT2003 servers frequently do not return information for all of the
 players.  I don't know why.
+
+UT2003 master server lists are available from Epic Games.  Here's the
+description from the Unreal Technology page:
+---------------------
+We have made server lists available via HTTP for both demo and full version
+UT2003 servers so that 3rd party server query tools can add UT2003 support.
+
+http://ut2003master.epicgames.com/serverlist/full-all.txt
+http://ut2003master.epicgames.com/serverlist/demo-all.txt
+
+These URLs contain a tab-separated list of server IP, game port and
+query port for all servers in our master server. The query port is the
+port number the server is listening on for UDP queries. The query format
+and response is exactly the same as UT 1.  The source code to the game
+server's query responder is in the UdpGameSpyQuery UnrealScript class.
+---------------------

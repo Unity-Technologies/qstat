@@ -58,7 +58,7 @@ If it doesn't compile for you, try tweaking the library settings
 in the Makefile.  If your version of Unix is not listed, try freebsd.
 On most Unixes, this should be enough to compile qstat:
 
-cc -o qstat qstat.c hcache.c template.c
+cc -o qstat qstat.c hcache.c template.c config.c
 
 As a last resort, send me email and I'll try to help.
 steve@qstat.org
