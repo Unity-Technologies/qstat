@@ -1,3 +1,24 @@
+QStat version 2.8
+
+** UPDATED for 2.8 **
+Feb XX, 2005
+
+Summary of New Features
+-----------------------
+
+add derived type STMHL2 for steam master returning hl2s instead of hls
+change timing for sending packets to improve ping times with of ping servers
+
+Fixes
+-----
+fix ut2004 master server support
+
+--
+Steve Jankowski
+Steven Hartland
+Ludwig Nussel
+
+
 QStat version 2.7
 
 ** UPDATED for 2.7 **
