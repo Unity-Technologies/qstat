@@ -626,7 +626,10 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 	    break;
     }
 
-    server->next_player_info= -1; // would clean up otherwise
+#if 0 // would cause extremely short timeout
+    server->next_player_info= -1; // would clean up otherwise <- not true?
+#endif
+
 
     debug(2, "%d servers total", server->n_servers/6);
 
