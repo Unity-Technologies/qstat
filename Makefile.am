@@ -18,7 +18,7 @@ dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
 
 EXTRA_DIST = CHANGES.txt COMPILE.txt LICENSE.txt \
-	Makefile.w32 \
+	Makefile.noauto \
 	ChangeLog \
 	qstatdoc.html \
 	contrib.cfg
