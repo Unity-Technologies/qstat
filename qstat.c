@@ -2207,28 +2207,42 @@ xml_display_gs2_player_info( struct qserver *server)
     fprintf( OF, "\t\t<players>\n");
 
     player= server->players;
-    for ( ; player != NULL; player= player->next)  {
+    for ( ; player != NULL; player= player->next)
+	{
+		struct info *info = player->info;
 		fprintf( OF, "\t\t\t<player>\n");
 
-		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
-			xml_escape(xform_name( player->name, server)));
-		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
-			player->score);
-		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
-			player->ping);
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 		if ( player->team_name)
-		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
-			xml_escape(player->team_name));
+		{
+		    fprintf( OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+		}
 		else
-		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
-			player->team);
-		if ( player->skin)
-		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
-			xml_escape(player->skin));
-		if ( player->connect_time)
-		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
-			xml_escape(play_time( player->connect_time,1)));
+		{
+		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",player->team);
+		}
 
+		if ( player->skin)
+		{
+		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
+		}
+
+		if ( player->connect_time)
+		{
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
+		}
+
+		for ( ; NULL != info; info = info->next )
+		{
+			if ( info->name )
+			{
+				char *name = xml_escape( info->name );
+				char *value = xml_escape( info->value );
+				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
+			}
+		}
 		fprintf( OF, "\t\t\t</player>\n");
     }
 
@@ -10787,6 +10801,7 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 			int i;
 			for ( i = 0; i < no_headers; i++ )
 			{
+				char *header = headers[i];
 				char *val;
 				int val_len;
 
@@ -10801,29 +10816,38 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 				ptr += val_len + 1;
 
 				// lets see what we got
-				if ( 0 == strcmp( headers[i], "player_" ) )
+				if ( 0 == strcmp( header, "player_" ) )
 				{
 					player->name = strdup( val );
 				}
-				else if ( 0 == strcmp( headers[i], "score_" ) )
+				else if ( 0 == strcmp( header, "score_" ) )
 				{
 					player->score = atoi( val );
 				}
-				else if ( 0 == strcmp( headers[i], "deaths_" ) )
+				else if ( 0 == strcmp( header, "deaths_" ) )
 				{
 					player->deaths = atoi( val );
 				}
-				else if ( 0 == strcmp( headers[i], "ping_" ) )
+				else if ( 0 == strcmp( header, "ping_" ) )
 				{
 					player->ping = atoi( val );
 				}
-				else if ( 0 == strcmp( headers[i], "kills_" ) )
+				else if ( 0 == strcmp( header, "kills_" ) )
 				{
 					player->frags = atoi( val );
 				}
-				else if ( 0 == strcmp( headers[i], "team_" ) )
+				else if ( 0 == strcmp( header, "team_" ) )
 				{
 					player->team = atoi( val );
+				}
+				else
+				{
+					int len = strlen( header );
+					if ( '_' == header[len-1] )
+					{
+						header[len-1] = '\0';
+					}
+					player_add_info( player, header, val, NO_FLAGS );
 				}
 
 				//fprintf( stderr, "Player[%d][%s]=%s\n", total_players, headers[i], val );
