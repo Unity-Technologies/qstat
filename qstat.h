@@ -213,7 +213,7 @@ void deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen,
 	int check_duplicate_rules);
 void deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
-void deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
+int deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_unreal_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
@@ -864,7 +864,7 @@ server_type builtin_types[] = {
     send_qwserver_request_packet,/* status_query_func */
     send_rule_request_packet,	/* rule_query_func */
     send_player_request_packet,	/* player_query_func */
-    deal_with_halflife_packet,	/* packet_func */
+    (void (*)())deal_with_halflife_packet,	/* packet_func */
 },
 {
     /* SIN */
@@ -1936,7 +1936,7 @@ char *get_qw_game( struct qserver *server);
 /* Query status and packet handling functions
  */
 
-void cleanup_qserver( struct qserver *server, int force);
+int cleanup_qserver( struct qserver *server, int force);
  
 int server_info_packet( struct qserver *server, struct q_packet *pkt,
         int datalen);

@@ -249,6 +249,7 @@ int waiting_for_masters;
 #define ADDRESS_HASH_LENGTH	503
 static struct qserver **server_hash[ADDRESS_HASH_LENGTH];
 static unsigned int server_hash_len[ADDRESS_HASH_LENGTH];
+static void free_server_hash();
 
 char *DOWN= "DOWN";
 char *SYSERROR= "SYSERROR";
@@ -2502,6 +2503,9 @@ main( int argc, char *argv[])
     }
 
     finish_output();
+    free_server_hash();
+    free(files);
+    free(connmap);
 
     return 0;
 }
@@ -2982,6 +2986,14 @@ remove_server_from_hash( struct qserver *server)
 	    *hashed= NULL;
 	    break;
 	}
+}
+
+void
+free_server_hash()
+{
+    int i;
+    for ( i= 0; i < ADDRESS_HASH_LENGTH; i++)
+	if ( server_hash[i]) free( server_hash[i]);
 }
 
 
@@ -3873,8 +3885,9 @@ setup_retry:
 }
 
 /* Functions for figuring timeouts and when to give up
+ * Returns 1 if the query is done (server may be freed) and 0 if not.
  */
-void
+int
 cleanup_qserver( struct qserver *server, int force)
 {
     int close_it= force, i;
@@ -3942,7 +3955,9 @@ cleanup_qserver( struct qserver *server, int force)
 	}
 	if ( ! server_sort)
 	    display_server( server);
+	return 1;
     }
+    return 0;
 }
 
 void
@@ -5510,6 +5525,7 @@ STATIC int
 ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 {
     char *next;
+    char *string;
     unsigned short port= swap_short_from_little( &rawpkt[6]);
     if ( port != server->port)  {
 	if ( show_game_port || server->flags & TF_SHOW_GAME_PORT)
@@ -5520,16 +5536,32 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 	    add_rule( server, "hostport", str, NO_FLAGS);
 	}
     }
-    server->server_name= dup_nstring( &rawpkt[14], end, &next);
+    string= dup_nstring( &rawpkt[14], end, &next);
+    if ( string == NULL)
+	return -1;
     if ( server->server_name == NULL)
+	server->server_name= string;
+    else
+	free(string);
+
+    string= dup_nstring( next, end, &next);
+    if ( string == NULL)
 	return -1;
-    server->map_name= dup_nstring( next, end, &next);
     if ( server->map_name == NULL)
+	server->map_name= string;
+    else
+	free(string);
+
+    string= dup_nstring( next, end, &next);
+    if ( string == NULL)
 	return -1;
-    server->game= dup_nstring( next, end, &next);
-    if ( server->game == NULL)
-	return -1;
-    add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
+    if ( server->game == NULL)  {
+	server->game= string;
+	add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
+    }
+    else
+	free(string);
+
     server->num_players= swap_long_from_little( next);
     next+= 4;
     server->max_players= swap_long_from_little( next);
@@ -5551,13 +5583,13 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end)
 	value= dup_nstring( rawpkt, end, &rawpkt);
 	if ( value == NULL)
 	    break;
+	if ( strcmp( key, "minplayers") == 0)
+	    result= atoi(value);
 	if ( add_rule( server, key, value,
 			NO_KEY_COPY | NO_VALUE_COPY | chkdup) == NULL)  {
 	    free(value);      /* duplicate, so free key and value */
 	    free(key);
 	}
-	if ( strcmp( key, "minplayers") == 0)
-	    result= atoi(value);
     }
     return result;
 }
@@ -5695,7 +5727,9 @@ puts( "--");
     return 0;
 }
 
-void
+/* Returns 1 if the query is done (server may be freed) and 0 if not.
+ */
+int
 deal_with_halflife_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     char *pkt;
@@ -5708,10 +5742,8 @@ deal_with_halflife_packet( struct qserver *server, char *rawpkt, int pktlen)
 	server->ping_total+= time_delta( &packet_recv_time,
 		&server->packet_time1);
 
-    if ( pktlen < 5)  {
-	cleanup_qserver( server, 1);
-	return;
-    }
+    if ( pktlen < 5)
+	return cleanup_qserver( server, 1);
 
     if ( ((rawpkt[0] != '\377' && rawpkt[0] != '\376') || rawpkt[1] != '\377' ||
 	    rawpkt[2] != '\377' || rawpkt[3] != '\377') && show_errors)  {
@@ -5745,8 +5777,7 @@ deal_with_halflife_packet( struct qserver *server, char *rawpkt, int pktlen)
 	memcpy( sdata->data, &rawpkt[9], pktlen-9);
 
 	/* combine_packets will call us recursively */
-	combine_packets( server);
-	return;
+	return combine_packets( server);
 
 /*
 fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
@@ -5758,7 +5789,7 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
     /* 'info' response */
     if ( rawpkt[4] == 'C' || rawpkt[4] == 'm')  {
 	if ( server->server_name != NULL)
-	    return;
+	    return 0;
 	pkt= &rawpkt[5];
 	server->address= strdup( pkt);
 	pkt+= strlen(pkt)+1;
@@ -5914,7 +5945,7 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
 	print_packet( server, rawpkt, pktlen);
     }
 
-    cleanup_qserver( server, 0);
+    return cleanup_qserver( server, 0);
 }
 
 
@@ -5927,7 +5958,7 @@ combine_packets( struct qserver *server)
     int lengths[8];
     SavedData * segments[8][16];
     SavedData *sdata= & server->saved_data;
-    int n_ids= 0, i, p;
+    int n_ids= 0, i, p, done= 0;
 
     memset( &segments[0][0], 0, sizeof(segments));
     memset( &counts[0], 0, sizeof(counts));
@@ -5977,12 +6008,12 @@ combine_packets( struct qserver *server)
 	for ( p= 0; p < counts[i]; p++)
 	    segments[i][p]->pkt_max= 0;
 
-	server->type->packet_func( server, combined, datalen);
+	done= ( (int (*)()) server->type->packet_func)( server, combined, datalen);
 	free( combined);
-	if ( server->saved_data.data == NULL)
+	if ( done || server->saved_data.data == NULL)
 	    break;
     }
-    return 0;
+    return done;
 }
 
 static int tribes_debug= 0;
