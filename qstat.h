@@ -106,8 +106,9 @@
 #define STEF_MASTER	(33|MASTER_SERVER)
 #define UT2003_SERVER	34
 #define GHOSTRECON_SERVER 35
+#define ALLSEEINGEYE_PROTOCOL_SERVER 36
 
-#define LAST_BUILTIN_SERVER  35
+#define LAST_BUILTIN_SERVER  36
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -153,6 +154,7 @@ void display_tribes2_player_info( struct qserver *server);
 void display_bfris_player_info( struct qserver *server);
 void display_descent3_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
+void display_eye_player_info( struct qserver *server);
  
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -167,6 +169,7 @@ void raw_display_tribes2_player_info( struct qserver *server);
 void raw_display_bfris_player_info( struct qserver *server);
 void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
+void raw_display_eye_player_info( struct qserver *server);
  
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -183,6 +186,7 @@ void xml_display_tribes2_player_info( struct qserver *server);
 void xml_display_bfris_player_info( struct qserver *server);
 void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
+void xml_display_eye_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -200,6 +204,7 @@ void send_gamespy_master_request( struct qserver *server);
 void send_tribes2_request_packet( struct qserver *server);
 void send_tribes2master_request_packet( struct qserver *server);
 void send_ghostrecon_request_packet( struct qserver *server);
+void send_eye_request_packet( struct qserver *server);
 
 void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
@@ -220,6 +225,7 @@ void deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktl
 void deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
 
 typedef struct _server_type  {
     int id;
@@ -373,7 +379,7 @@ char q3_master_default_protocol[] = "67";
 char q3_master_default_query[] = "empty full demo\n";
 
 /* RETURN TO CASTLE WOLFENSTEIN */
-char rtcw_master_default_protocol[] = "58";
+char rtcw_master_default_protocol[] = "60";
 
 /* STAR TREK: ELITE FORCE */
 char stef_master_default_protocol[] = "24";
@@ -480,6 +486,10 @@ unsigned char ghostrecon_playerquery[] = {
 	0x06,0x00,			/* data len */
 	0xf5,0x03,0x00,0x78,0x30,0x63 /* player request ?? may be flag 0xf5; len 0x03,0x00; data 0x78, 0x30, 0x63 */
 };
+
+/* All Seeing Eye */
+char eye_status_query[1]= "s";
+char eye_ping_query[1]= "p";
 
 server_type builtin_types[] = {
 {
@@ -1297,6 +1307,40 @@ server_type builtin_types[] = {
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
     deal_with_ghostrecon_packet,	/* packet_func */
+},
+{
+    /* ALL SEEING EYE PROTOCOL */
+    ALLSEEINGEYE_PROTOCOL_SERVER,	/* id */
+    "EYE",			/* type_prefix */
+    "eye",			/* type_string */
+    "-eye",			/* type_option */
+    "All Seeing Eye Protocol",	/* game_name */
+    0,				/* master */
+    0,				/* default_port */
+    123,			/* port_offset */
+    TF_SINGLE_QUERY,		/* flags */
+    "",				/* game_rule */
+    "EYEPROTOCOL",		/* template_var */
+    (char*) &eye_status_query,	/* status_packet */
+    sizeof( eye_status_query),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_eye_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_eye_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_eye_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_eye_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_eye_packet,	/* packet_func */
 },
 
 

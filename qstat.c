@@ -17,7 +17,7 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#define VERSION "2.5c"
+#define VERSION "2.5c+cvs"
 char *qstat_version= VERSION;
 
 /* OS/2 defines */
@@ -363,7 +363,7 @@ display_server(
 	    (hostname_lookup) ? server->host_name : server->arg,
 	    server->num_players, server->max_players,
 	    map_name_width, (server->map_name) ? server->map_name : "?",
-	    server->ping_total/server->n_requests,
+	    server->n_requests ? server->ping_total/server->n_requests : 999,
 	    server->n_retries,
 	    game_width, game,
 	    xform_name(server->server_name, server));
@@ -378,7 +378,7 @@ display_server(
 	    (hostname_lookup) ? server->host_name : server->arg,
 	    name, server->map_name,
 	    server->address, server->num_players, server->max_players,
-	    server->ping_total/server->n_requests);
+	    server->n_requests ? server->ping_total/server->n_requests : 999);
     }
 }
 
@@ -396,7 +396,7 @@ display_qwmaster( struct qserver *server)
 	fprintf( OF, "%s %-17s %d servers %6d / %1d\n", prefix,
 	    (hostname_lookup) ? server->host_name : server->arg,
 	    server->n_servers,
-	    server->ping_total/server->n_requests,
+	    server->n_requests ? server->ping_total/server->n_requests : 999,
 	    server->n_retries);
 }
 
@@ -642,6 +642,26 @@ display_ghostrecon_player_info( struct qserver *server)
     }
 }
 
+void
+display_eye_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, "\tscore %4d %6s team %12s %s\n", 
+		player->score,
+		ping_time(player->ping),
+		player->team_name,
+		xform_name( player->name, server));
+	else
+	    fprintf( OF, "\tscore %4d %6s team#%d %s\n", 
+		player->score,
+		ping_time(player->ping),
+		player->team,
+		xform_name( player->name, server));
+    }
+}
 
 char *
 get_qw_game( struct qserver *server)
@@ -679,7 +699,7 @@ raw_display_server( struct qserver *server)
     if ( server->n_requests)
 	ping_time= server->ping_total/server->n_requests;
     else
-	ping_time= 0;
+	ping_time= 999;
 
     if ( server->server_name == DOWN)  {
 	if ( ! up_servers_only)
@@ -1008,7 +1028,7 @@ raw_display_bfris_player_info( struct qserver *server)
 void
 raw_display_descent3_player_info( struct qserver *server)
 {
-    static char fmt[28]= "%s" "%s%d" "%s%d" "%s%d" "%s%d";
+    static char fmt[]= "%s" "%s%d" "%s%d" "%s%d" "%s%d";
     struct player *player;
 
     player= server->players;
@@ -1041,6 +1061,36 @@ raw_display_ghostrecon_player_info( struct qserver *server)
     }
 }
 
+void
+raw_display_eye_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+	if ( player->team_name)
+	    fprintf( OF, fmt_team_name,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team_name,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	else
+	    fprintf( OF, fmt,
+		xform_name( player->name, server),
+		RD, player->score,
+		RD, player->ping,
+		RD, player->team,
+		RD, player->skin ? player->skin : "",
+		RD, play_time( player->connect_time,1)
+	);
+	fputs( "\n", OF);
+    }
+}
 
 /* XML output
  * Contributed by <sgarner@gameplanet.co.nz> :-)
@@ -1118,7 +1168,7 @@ xml_display_server( struct qserver *server)
 		if ( !(server->type->flags & TF_RAW_STYLE_TRIBES))
 		{
 			fprintf( OF, "\t\t<ping>%d</ping>\n",
-				server->ping_total/server->n_requests);
+				server->n_requests ? server->ping_total/server->n_requests : 999);
 			fprintf( OF, "\t\t<retries>%d</retries>\n",
 				server->n_retries);
 		}
@@ -1509,6 +1559,42 @@ xml_display_ghostrecon_player_info( struct qserver *server)
 	}
 	
 	fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_eye_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)  {
+		fprintf( OF, "\t\t\t<player>\n");
+		
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
+			xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
+			player->score);
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
+			player->ping);
+		if ( player->team_name)
+		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
+			xml_escape(player->team_name));
+		else
+		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
+			player->team);
+		if ( player->skin)
+		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
+			xml_escape(player->skin));
+		if ( player->connect_time)
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
+			xml_escape(play_time( player->connect_time,1)));
+
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
 }
 
 
@@ -3417,6 +3503,30 @@ send_ghostrecon_request_packet( struct qserver *server)
 }
 
 void
+send_eye_request_packet( struct qserver *server)
+{
+    int rc;
+
+    if ( server->flags & FLAG_BROADCAST)
+	rc= send_broadcast( server, server->type->status_packet,
+		server->type->status_len);
+    else   
+	rc= send( server->fd, server->type->status_packet,
+		server->type->status_len, 0);
+
+    if ( rc == SOCKET_ERROR)
+	perror( "send");
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
+	gettimeofday( &server->packet_time1, NULL);
+	server->n_requests++;
+    }
+    else
+	server->n_retries++;
+    server->retry1--;
+    server->n_packets++;
+}
+
+void
 send_tribes2master_request_packet( struct qserver *server)
 {
     int rc;
@@ -5215,6 +5325,18 @@ dup_nstring( char *pkt, char *end, char **next)
     return strndup( pkt, len);
 }
 
+STATIC char *
+dup_n1string( char *pkt, char *end, char **next)
+{
+    int len= ((unsigned char*)pkt)[0]-1;
+    pkt++;
+    if ( pkt + len > end)
+	return NULL;
+
+    *next= pkt+len;
+    return strndup( pkt, len);
+}
+
 STATIC int
 ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 {
@@ -6892,6 +7014,203 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
     return;
 }
 
+
+#define EYE_NAME_MASK   1
+#define EYE_TEAM_MASK   2
+#define EYE_SKIN_MASK   4
+#define EYE_SCORE_MASK  8
+#define EYE_PING_MASK   16
+#define EYE_TIME_MASK   32
+
+void
+deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+    char *next, *end, *value, *key;
+    struct player **last_player;
+    int pkt_index, pkt_max;
+    unsigned int pkt_id;
+
+    if ( pktlen < 4)  {
+	cleanup_qserver( server, 1);
+	return;
+    }
+
+    if ( rawpkt[0] != 'E' || rawpkt[1] != 'Y' || rawpkt[2] != 'E')  {
+	cleanup_qserver( server, 1);
+	return;
+    }
+
+    end= rawpkt + pktlen;
+    pkt_index= rawpkt[3] - '0';
+
+    if ( pktlen == 1364 || pkt_index != 1)  {
+	/* fragmented packet */
+	SavedData *sdata;
+	/* EYE doesn't tell us how many packets to expect.  Two packets
+	 * is enough for 100+ players on a BF1942 server with standard
+	 * server rules.
+	 */
+	pkt_max= 2;
+	memcpy( &pkt_id, &rawpkt[pktlen-4], 4);
+
+	if ( server->saved_data.data == NULL)
+	    sdata= & server->saved_data;
+	else  {
+	    sdata= (SavedData*) calloc( 1, sizeof(SavedData));
+	    sdata->next= server->saved_data.next;
+	    server->saved_data.next= sdata;
+	}
+
+	sdata->pkt_index= pkt_index-1;
+	sdata->pkt_max= pkt_max;
+	sdata->pkt_id= pkt_id;
+	if ( pkt_index == 1)
+	    sdata->datalen= pktlen-4;
+	else
+	    sdata->datalen= pktlen-8;
+	sdata->data= (char*) malloc( sdata->datalen);
+	if ( pkt_index == 1)
+	    memcpy( sdata->data, &rawpkt[0], sdata->datalen);
+	else
+	    memcpy( sdata->data, &rawpkt[4], sdata->datalen);
+
+	/* combine_packets will call us recursively */
+	combine_packets( server);
+	return;
+    }
+
+    value= dup_n1string( &rawpkt[4], end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    add_rule( server, "gamename", value, NO_VALUE_COPY);
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    add_rule( server, "hostport", value, NO_VALUE_COPY);
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    server->server_name= value;
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    server->game= value;
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    server->map_name= value;
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    add_rule( server, "_version", value, NO_VALUE_COPY);
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    add_rule( server, "_password", value, NO_VALUE_COPY);
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    server->num_players= atoi(value);
+    free(value);
+
+    value= dup_n1string( next, end, &next);
+    if ( value == NULL)
+	goto eye_protocol_error;
+    server->max_players= atoi(value);
+    free(value);
+
+    /* rule1,value1,rule2,value2, ... empty string */
+
+    do  {
+	key= dup_n1string( next, end, &next);
+	if ( key == NULL)
+	    break;
+	else if ( key[0] == '\0')  {
+	    free(key);
+	    break;
+	}
+
+	value= dup_n1string( next, end, &next);
+	if ( value == NULL)  {
+	    free(key);
+	    break;
+	}
+
+	add_rule( server, key, value, NO_VALUE_COPY | NO_KEY_COPY);
+    } while ( 1);
+
+    /* [mask1]<name1><team1><skin1><score1><ping1><time1>[mask2]... */
+
+    last_player= & server->players;
+    while ( next < end)  {
+	struct player *player;
+	int mask= *((unsigned char*)next);
+	next++;
+	if ( next >= end) break;
+	if ( mask == 0) break;
+	player= (struct player*) calloc( 1, sizeof(struct player));
+	if ( player == NULL)
+	    break;
+	if ( mask & EYE_NAME_MASK)  {
+	    player->name= dup_n1string( next, end, &next);
+	    if ( player->name == NULL)
+		break;
+	}
+	if ( mask & EYE_TEAM_MASK)  {
+	    value= dup_n1string( next, end, &next);
+	    if ( value == NULL)
+		break;
+	    if ( isdigit(value[0]))  {
+		player->team= atoi(value);
+		free(value);
+	    }
+	    else
+		player->team_name= value;
+	}
+	if ( mask & EYE_SKIN_MASK)  {
+	    player->skin= dup_n1string( next, end, &next);
+	    if ( player->skin == NULL)
+		break;
+	}
+	if ( mask & EYE_SCORE_MASK)  {
+	    value= dup_n1string( next, end, &next);
+	    if ( value == NULL)
+		break;
+	    player->score= atoi(value);
+	    player->frags= player->score;
+	    free(value);
+	}
+	if ( mask & EYE_PING_MASK)  {
+	    value= dup_n1string( next, end, &next);
+	    if ( value == NULL)
+		break;
+	    player->ping= atoi(value);
+	    free(value);
+	}
+	if ( mask & EYE_TIME_MASK)  {
+	    value= dup_n1string( next, end, &next);
+	    if ( value == NULL)
+		break;
+	    player->connect_time= atoi(value);
+	    free(value);
+	}
+	*last_player= player;
+	last_player= & player->next;
+    }
+
+    cleanup_qserver( server, 1);
+    return;
+
+eye_protocol_error:
+    cleanup_qserver( server, 1);
+}
 
 void
 deal_with_gamespy_master_response( struct qserver *server, char *rawpkt, int pktlen)

@@ -1,0 +1,8 @@
+Tue Jan  7 16:24:57 PST 2003
+
+Fixed manual compile instructions in COMPILE.txt
+Updated RTCW master protocol from 58 to 60
+Added support for All-Seeing Eye protocol (-eye)
+	[still need to write documentation]
+Fixed rare divide by zero displaying ping time
+Added information about UT2003 master server lists to info/UT2003.txt
