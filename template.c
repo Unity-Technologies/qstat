@@ -598,8 +598,9 @@ display_server_var( struct qserver *server, int var)
 	break;
     case V_PING:
 	if ( server->server_name != TIMEOUT && server->server_name != DOWN &&
-		server->server_name != HOSTNOTFOUND)
-	    fprintf( OF, "%d", server->ping_total/server->n_requests);
+		server->server_name != HOSTNOTFOUND && server->server_name != SYSERROR)
+	    fprintf( OF, "%d",
+		server->n_requests ? server->ping_total/server->n_requests : 999);
 	break;
     case V_PLAYERS:
 	if ( full_data)
