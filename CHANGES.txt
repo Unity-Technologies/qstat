@@ -1,13 +1,14 @@
 QStat version 2.8
 
 ** UPDATED for 2.8 **
-Feb XX, 2005
+April 03, 2005
 
 Summary of New Features
 -----------------------
 
-add derived type STMHL2 for steam master returning hl2s instead of hls
-change timing for sending packets to improve ping times with of ping servers
+add support for new steam protocol (-a2s)
+add derived type STMHL2 for steam master returning a2s instead of hls
+change timing for sending packets to improve ping times of low-ping servers
 
 Fixes
 -----
