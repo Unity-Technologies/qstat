@@ -830,7 +830,7 @@ parse_value( char *source, int len)
     int error= 0;
 
     value= (char*)malloc( len + 1);
-    v= value;
+    end = v = value;
 
 /*
 printf( "parse_value <%.*s>\n", len, source);
