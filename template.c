@@ -23,8 +23,9 @@
 
 #if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__)
 #include <sys/types.h>
-#include <netinet/in.h>
-#else
+#endif
+
+#ifndef _WIN32
 #include <netinet/in.h>
 #endif
 
