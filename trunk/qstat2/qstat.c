@@ -3659,7 +3659,9 @@ bind_qserver( struct qserver *server)
 		/* set up for connect retry */
 		}
 	    }
-	    perror( "connect");
+		char error[50];
+		sprintf( error, "connect:%s:%u", inet_ntoa( addr.sin_addr ), ntohs( addr.sin_port ) );
+	    perror( error );
 	    server->server_name= SYSERROR;
 	    close(server->fd);
 	    server->fd= -1;
@@ -3998,45 +4000,63 @@ send_unrealmaster_request_packet( struct qserver *server)
 char *
 build_hlmaster_packet( struct qserver *server, int *len)
 {
-    static char packet[1600];
-    char *pkt, *r, *sep= "";
-    char *gamedir, *map, *flags;
-    int flen;
+	static char packet[1600];
+	char *pkt, *r, *sep= "";
+	char *gamedir, *map, *flags, *region;
+	int flen;
 
-    pkt= &packet[0];
-    memcpy( pkt, server->type->master_packet, server->type->master_len);
+	pkt= &packet[0];
+	memcpy( pkt, server->type->master_packet, *len );
 
-    pkt+= server->type->master_len;
+	if ( server->type->id == STEAM_MASTER )
+	{
+		// detault the region to 0xff
+		int region = atoi( get_param_value( server, "region", "255" ) );
+		*(pkt+1) = region;
+	}
 
-    gamedir= get_param_value( server, "game", NULL);
-    if ( gamedir)
-	pkt+= sprintf( pkt, "\\gamedir\\%s", gamedir);
-    map= get_param_value( server, "map", NULL);
-    if ( map)
-	pkt+= sprintf( pkt, "\\map\\%s", map);
+	pkt+= *len;
 
-    flags= get_param_value( server, "status", NULL);
-    r= flags;
-    while ( flags && sep)  {
-	sep= strchr( r, ':');
-	if ( sep)
-	    flen= sep-r;
-	else
-	    flen= strlen( r);
-	if ( strncmp( r, "notempty", flen) == 0)
-	    pkt+= sprintf( pkt, "\\empty\\1");
-	else if ( strncmp( r, "notfull", flen) == 0)
-	    pkt+= sprintf( pkt, "\\full\\1");
-	else if ( strncmp( r, "dedicated", flen) == 0)
-	    pkt+= sprintf( pkt, "\\dedicated\\1");
-	else if ( strncmp( r, "linux", flen) == 0)
-	    pkt+= sprintf( pkt, "\\linux\\1");
-	r= sep+1;
-    }
+	gamedir = get_param_value( server, "game", NULL);
+	if ( gamedir )
+	{
+		pkt+= sprintf( pkt, "\\gamedir\\%s", gamedir);
+	}
 
-    *len= pkt - packet;
+	map = get_param_value( server, "map", NULL);
+	if ( map )
+	{
+		pkt+= sprintf( pkt, "\\map\\%s", map);
+	}
 
-    return packet;
+	flags= get_param_value( server, "status", NULL);
+	r= flags;
+	while ( flags && sep )
+	{
+		sep= strchr( r, ':');
+		if ( sep )
+			flen= sep-r;
+		else
+			flen= strlen( r);
+
+		if ( strncmp( r, "notempty", flen) == 0)
+			pkt+= sprintf( pkt, "\\empty\\1");
+		else if ( strncmp( r, "notfull", flen) == 0)
+			pkt+= sprintf( pkt, "\\full\\1");
+		else if ( strncmp( r, "dedicated", flen) == 0)
+			pkt+= sprintf( pkt, "\\dedicated\\1");
+		else if ( strncmp( r, "linux", flen) == 0)
+			pkt+= sprintf( pkt, "\\linux\\1");
+		r= sep+1;
+	}
+
+	// always need null terminator
+	*pkt = 0x00;
+	pkt++;
+
+	*len = pkt - packet;
+
+	return packet;
 }
 
 /* First packet for a QuakeWorld master server
@@ -4044,60 +4064,118 @@ build_hlmaster_packet( struct qserver *server, int *len)
 void
 send_qwmaster_request_packet( struct qserver *server)
 {
-    int rc= 0, query_len= 0;
-    char query_buf[4096];
+	int rc= 0, query_len= 0;
+	char query_buf[4096];
 
-    if ( server->type->master_len == 0)  {
-	char *master_protocol= server->query_arg;
-	if ( master_protocol == NULL)
-	    master_protocol= server->type->master_protocol;
-	query_len= sprintf( query_buf, server->type->master_packet,
-		master_protocol?master_protocol:"",
-		server->type->master_query?server->type->master_query:"");
-    }
+	if ( server->type->master_len == 0)
+	{
+		char *master_protocol= server->query_arg;
+		if ( master_protocol == NULL)
+		{
+			master_protocol= server->type->master_protocol;
+		}
+		query_len= sprintf( query_buf, server->type->master_packet,
+			master_protocol?master_protocol:"",
+			server->type->master_query?server->type->master_query:""
+		);
+	}
 
-    if ( server->type->id == Q2_MASTER)  {
-	struct sockaddr_in addr;
-	addr.sin_family= AF_INET;
-	if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
-	    addr.sin_port= htons(server->port);
+	if ( server->type->id == Q2_MASTER)
+	{
+		struct sockaddr_in addr;
+		addr.sin_family= AF_INET;
+		if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
+		{
+			addr.sin_port= htons(server->port);
+		}
+		else
+		{
+			addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
+		}
+		addr.sin_addr.s_addr= server->ipaddr;
+		memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
+		rc= sendto( server->fd, server->type->master_packet,
+			server->type->master_len, 0,
+			(struct sockaddr *) &addr, sizeof(addr));
+	}
 	else
-	    addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
-	addr.sin_addr.s_addr= server->ipaddr;
-	memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
-	rc= sendto( server->fd, server->type->master_packet,
-		server->type->master_len, 0,
-		(struct sockaddr *) &addr, sizeof(addr));
-    }
-    else  {
-	char *packet;
-	int packet_len;
-	if ( query_len)  {
-	    packet= query_buf;
-	    packet_len= query_len;
-	}
-	else  {
-	    packet= server->type->master_packet;
-	    packet_len= server->type->master_len;
-	}
-	if ( server->type->id == HL_MASTER)  {
-	    memcpy( server->type->master_packet+1, server->master_query_tag, 3);
-	    if ( server->query_arg)
-		packet= build_hlmaster_packet( server, &packet_len);
-	}
-	rc= send( server->fd, packet, packet_len, 0);
-    }
+	{
+		char *packet;
+		int packet_len;
+		if ( query_len)
+		{
+			packet= query_buf;
+			packet_len= query_len;
+		}
+		else
+		{
+			packet= server->type->master_packet;
+			packet_len= server->type->master_len;
+		}
 
-    if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
+		if ( server->type->id == HL_MASTER)
+		{
+			memcpy( server->type->master_packet+1, server->master_query_tag, 3);
+			if ( server->query_arg)
+			{
+				packet_len = server->type->master_len;
+				packet= build_hlmaster_packet( server, &packet_len);
+			}
+		}
+		else if ( server->type->id == STEAM_MASTER)
+		{
+			// region
+			int tag_len = strlen( server->master_query_tag );
+			if ( tag_len < 9 )
+			{
+				// initial case
+				tag_len = 9;
+				strcpy( server->master_query_tag, "0.0.0.0:0" );
+			}
+
+			// 1 byte packet id
+			// 1 byte region
+			// ip:port
+			// 1 byte null
+			packet_len = 2 + tag_len + 1;
+
+			if ( server->query_arg )
+			{
+				// build_hlmaster_packet uses server->type->master_packet
+				// as the basis so copy from server->master_query_tag
+				strcpy( server->type->master_packet+2, server->master_query_tag );
+				packet = build_hlmaster_packet( server, &packet_len );
+			}
+			else
+			{
+				// default region
+				*(packet + 1) = 0xff;
+				memcpy( packet+2, server->master_query_tag, tag_len );
+
+				// filter null
+				*(packet + packet_len ) = 0x00;
+				packet_len++;
+			}
+		}
+		rc= send( server->fd, packet, packet_len, 0);
+	}
+
+	if ( rc == SOCKET_ERROR)
+	{
+		perror( "send");
+	}
+
+	if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+	}
+	else
+	{
+		server->n_retries++;
+	}
+	server->retry1--;
+	server->n_packets++;
 }
 
 void
@@ -5458,103 +5536,173 @@ deal_with_descent3master_packet( struct qserver *server, char *rawpkt, int pktle
     }
 }
 
+
 /* Packet from QuakeWorld master server
  */
 void
 deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-    server->ping_total+= time_delta( &packet_recv_time,
+	server->ping_total+= time_delta( &packet_recv_time,
 		&server->packet_time1);
 
-    if ( rawpkt[0] == QW_NACK)  {
-	server->error= strdup( &rawpkt[2]);
-	server->server_name= SERVERERROR;
-	cleanup_qserver( server, 1);
-	return;
-    }
+	if ( rawpkt[0] == QW_NACK)
+	{
+		server->error= strdup( &rawpkt[2]);
+		server->server_name= SERVERERROR;
+		cleanup_qserver( server, 1);
+		return;
+	}
 
-    if ( *((unsigned int*)rawpkt) == 0xffffffff)  {
-	rawpkt+= 4;	/* QW 1.5 */
-	pktlen-= 4;
-    }
+	if ( *((unsigned int*)rawpkt) == 0xffffffff)
+	{
+		rawpkt+= 4;	/* QW 1.5 */
+		pktlen-= 4;
+	}
 
-    if ( rawpkt[0] == QW_SERVERS && rawpkt[1] == QW_NEWLINE)  {
-	rawpkt+= 2;
-	pktlen-= 2;
-    }
-    else if ( rawpkt[0] == HL_SERVERS && rawpkt[1] == 0x0d)  {
-	memcpy( server->master_query_tag, rawpkt+2, 3);
-	rawpkt+= 6;
-	pktlen-= 6;
-    }
-    else if ( strncmp( rawpkt, "servers", 7) == 0)  {
-	rawpkt+= 8;
-	pktlen-= 8;
-    }
-    else if ( strncmp( rawpkt, "getserversResponse", 18) == 0)  {
-	static int q3m_debug= 0;
+	if ( rawpkt[0] == QW_SERVERS && rawpkt[1] == QW_NEWLINE)
+	{
+		rawpkt+= 2;
+		pktlen-= 2;
+	}
+	else if ( rawpkt[0] == HL_SERVERS && rawpkt[1] == 0x0d)
+	{
+		if ( server->type->id == STEAM_MASTER )
+		{
+			// no sequence id for steam
+			// instead we use the ip:port of the last recieved server
+			int len;
+			struct in_addr *sin_addr = (struct in_addr*)(rawpkt+pktlen-6);
+			char *ip = inet_ntoa( *sin_addr );
+			unsigned short port = htons( *((unsigned short*)(rawpkt+pktlen-2)) );
 
-	rawpkt+= 18;
-	pktlen-= 18;
+			//fprintf( stderr, "NEXT IP=%s:%u\n", ip, port );
+			sprintf( server->master_query_tag, "%s:%u", ip, port );
 
-	for ( ; *rawpkt != '\\' && pktlen; pktlen--, rawpkt++)
-	    ;
-	if ( !pktlen)
-	    return;
-	rawpkt++;
-	pktlen--;
+			// skip over the 2 byte id
+			rawpkt+= 2;
+			pktlen-= 2;
+		}
+		else
+		{
+			// 2 byte id + 4 byte sequence
+			memcpy( server->master_query_tag, rawpkt+2, 3);
+			rawpkt+= 6;
+			pktlen-= 6;
+		}
+	}
+	else if ( strncmp( rawpkt, "servers", 7) == 0)
+	{
+		rawpkt+= 8;
+		pktlen-= 8;
+	}
+	else if ( strncmp( rawpkt, "getserversResponse", 18) == 0)
+	{
+		static int q3m_debug= 0;
 
-if ( q3m_debug) printf( "q3m pktlen %d lastchar %x\n", pktlen, (unsigned int)rawpkt[pktlen-1]);
+		rawpkt+= 18;
+		pktlen-= 18;
+
+		for ( ; *rawpkt != '\\' && pktlen; pktlen--, rawpkt++)
+		{
+		}
+
+		if ( !pktlen)
+		{
+			return;
+		}
+		rawpkt++;
+		pktlen--;
+
+		if ( q3m_debug) printf( "q3m pktlen %d lastchar %x\n", pktlen, (unsigned int)rawpkt[pktlen-1]);
+
+		server->master_pkt= (char*)realloc( server->master_pkt,
+				server->master_pkt_len + pktlen+1);
+
+		if ( server->type->id == STEF_MASTER)
+		{
+			decode_stefmaster_packet( server, rawpkt, pktlen);
+		}
+		else
+		{
+			decode_q3master_packet( server, rawpkt, pktlen);
+		}
+		if ( q3m_debug) printf( "q3m %d servers\n", server->n_servers);
+
+		return;
+	}
+	else if ( show_errors)
+	{
+		unsigned int ipaddr= ntohl(server->ipaddr);
+		fprintf( stderr,
+			"Odd packet from QW master %d.%d.%d.%d, processing ...\n",
+			(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
+			(ipaddr>>8)&0xff, ipaddr&0xff
+		);
+		print_packet( server, rawpkt, pktlen);
+	}
+
 	server->master_pkt= (char*)realloc( server->master_pkt,
-		server->master_pkt_len + pktlen+1);
-
-	if ( server->type->id == STEF_MASTER)
-	    decode_stefmaster_packet( server, rawpkt, pktlen);
-	else
-	    decode_q3master_packet( server, rawpkt, pktlen);
-if ( q3m_debug) printf( "q3m %d servers\n", server->n_servers);
-
-	return;
-    }
-    else if ( show_errors)  {
-	unsigned int ipaddr= ntohl(server->ipaddr);
-	fprintf( stderr,
-		"Odd packet from QW master %d.%d.%d.%d, processing ...\n",
-		(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-		(ipaddr>>8)&0xff, ipaddr&0xff);
-	print_packet( server, rawpkt, pktlen);
-    }
-
-    server->master_pkt= (char*)realloc( server->master_pkt,
 	server->master_pkt_len+pktlen+1);
-    rawpkt[pktlen]= '\0';
-    memcpy( server->master_pkt+server->master_pkt_len, rawpkt, pktlen+1);
-    server->master_pkt_len+= pktlen;
+	rawpkt[pktlen]= '\0';
+	memcpy( server->master_pkt+server->master_pkt_len, rawpkt, pktlen+1);
+	server->master_pkt_len+= pktlen;
 
-    server->n_servers= server->master_pkt_len / 6;
+	server->n_servers= server->master_pkt_len / 6;
 
-    if ( server->type->flags & TF_MASTER_MULTI_RESPONSE)  {
-	server->next_player_info= -1;
-	server->retry1= 0;
-    }
-    else if ( server->type->id == HL_MASTER)  {
-	if ( server->master_query_tag[0] == 0 &&
-		server->master_query_tag[1] == 0 &&
-		server->master_query_tag[2] == 0)  {
-	    server->server_name= MASTER;
-	    cleanup_qserver( server, 1);
-	    bind_sockets();
+	if ( server->type->flags & TF_MASTER_MULTI_RESPONSE)
+	{
+		server->next_player_info= -1;
+		server->retry1= 0;
 	}
-	else  {
-	    server->retry1++;
-	    send_qwmaster_request_packet( server);
+	else if ( server->type->id == HL_MASTER )
+	{
+		if ( server->master_query_tag[0] == 0 &&
+			server->master_query_tag[1] == 0 &&
+			server->master_query_tag[2] == 0
+		)
+		{
+			// all done
+			server->server_name = MASTER;
+			cleanup_qserver( server, 1);
+			bind_sockets();
+		}
+		else
+		{
+			// more to come
+			server->retry1++;
+			send_qwmaster_request_packet( server);
+		}
 	}
-    }
-    else  {
-	server->server_name= MASTER;
-	cleanup_qserver( server, 0);
-	bind_sockets();
-    }
+	else if ( server->type->id == STEAM_MASTER )
+	{
+		// should the HL_MASTER be the same as this?
+		int i;
+		int end = 0;
+		for ( i = pktlen - 6; i < pktlen && 0x00 == rawpkt[i] ; i++ )
+		{
+		}
+
+		if ( i == pktlen )
+		{
+			// last 6 bytes where 0x00 so we have reached the last packet
+			server->master_pkt_len -= 6;
+			server->server_name = MASTER;
+			cleanup_qserver( server, 1);
+			bind_sockets();
+		}
+		else
+		{
+			// more to come
+			server->retry1++;
+			send_qwmaster_request_packet( server );
+		}
+	}
+	else
+	{
+		server->server_name = MASTER;
+		cleanup_qserver( server, 0);
+		bind_sockets();
+	}
 }
 
 void
@@ -6262,7 +6410,7 @@ deal_with_unreal_packet( struct qserver *server, char *rawpkt, int pktlen)
 			{
 				no = atoi(key+11);
 			}
-				
+
 			if ( player && player->number == no )
 			{
 				player->name= strdup( value);
@@ -9655,7 +9803,7 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 				{
 					player->team = atoi( val );
 				}
-				
+
 				//fprintf( stderr, "Player[%d][%s]=%s\n", total_players, headers[i], val );
 			}
 			total_players++;
@@ -9674,8 +9822,8 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 			if ( total_players != no_players )
 			{
 				fprintf( stderr, "Invalid packet detected (bad number of players)\n" );
-				cleanup_qserver( server, 1);    
-				return;    
+				cleanup_qserver( server, 1);
+				return;
 			}
 			type = 3;
 			ptr++;
@@ -9774,7 +9922,7 @@ deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen)
 			return;
 		}
 	}
-	
+
 	cleanup_qserver( server, 1);
 	return;
 }
