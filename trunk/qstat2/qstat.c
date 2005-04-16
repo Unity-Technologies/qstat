@@ -1,5 +1,5 @@
 /*
- * qstat 2.6
+ * qstat 2.8
  * by Steve Jankowski
  * steve@qstat.org
  * http://www.qstat.org
@@ -7380,6 +7380,74 @@ dup_n1string( unsigned char *pkt, char *end, char **next)
 }
 
 STATIC int
+pariah_basic_packet( struct qserver *server, char *rawpkt, char *end)
+{
+    char *next;
+    char *string;
+    unsigned short port= swap_short_from_little( &rawpkt[14]);
+    if ( port != server->port )
+    {
+		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
+		{
+			change_server_port( server, port);
+		}
+		else
+		{
+			char str[12];
+			sprintf( str, "%hu", port);
+			add_rule( server, "hostport", str, NO_FLAGS);
+		}
+    }
+    if ( NULL == ( string = ut2003_strdup( &rawpkt[18], end, &next) ) )
+    {
+		return -1;
+	}
+
+    if ( server->server_name == NULL)
+    {
+		server->server_name = string;
+	}
+    else
+    {
+		free(string);
+	}
+
+    if ( NULL == ( string = ut2003_strdup( next, end, &next) ) )
+    {
+    	return -1;
+	}
+
+    if ( server->map_name == NULL)
+    {
+		server->map_name = string;
+	}
+    else
+    {
+		free(string);
+	}
+
+    if ( NULL == ( string= ut2003_strdup( next, end, &next) ) )
+    {
+		return -1;
+	}
+
+    if ( server->game == NULL)
+    {
+		server->game = string;
+		add_rule( server, "gametype", server->game, NO_FLAGS | CHECK_DUPLICATE_RULES);
+    }
+    else
+    {
+		free(string);
+	}
+
+	server->num_players = (unsigned char)next[0];
+	server->max_players = (unsigned char)next[1];
+
+    return 0;
+}
+
+STATIC int
 ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 {
     char *next;
@@ -7448,13 +7516,61 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 }
 
 STATIC int
+pariah_rule_packet( struct qserver *server, char *rawpkt, char *end )
+{
+    char *key, *value;
+
+    unsigned char no_rules = (unsigned char)rawpkt[1];
+	unsigned char seen = 0;
+
+	// type + no_rules
+	rawpkt+=2;
+
+	// we get size encoded key = value pairs
+    while ( rawpkt < end && no_rules > seen )
+    {
+		// first byte is the rule count
+		seen = (unsigned char)rawpkt[0];
+		rawpkt++;
+		if ( NULL == ( key = ut2003_strdup( rawpkt, end, &rawpkt) ) )
+		{
+			break;
+		}
+
+		if ( '\0' == rawpkt[0] )
+		{
+			value = strdup( "" );
+			rawpkt++;
+		}
+		else if ( NULL == ( value = ut2003_strdup( rawpkt, end, &rawpkt) ) )
+		{
+			break;
+		}
+
+		if ( NULL == add_rule( server, key, value, NO_KEY_COPY | NO_VALUE_COPY | COMBINE_VALUES ) )
+		{
+			/* duplicate, so free key and value */
+			free(value);
+			free(key);
+		}
+	
+		seen++;
+    }
+
+	if ( no_rules == seen )
+	{
+		// all done
+		return 1;
+	}
+
+    return 0;
+}
+
+STATIC int
 ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 {
     char *key, *value;
     int result= 0;
-
-	// Packet Type
-    rawpkt++;
 
 	// we get size encoded key = value pairs
     while ( rawpkt < end )
@@ -7463,10 +7579,12 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 		{
 			break;
 		}
+
 		if ( NULL == ( value = ut2003_strdup( rawpkt, end, &rawpkt) ) )
 		{
 			break;
 		}
+
 		if ( strcmp( key, "minplayers") == 0)
 		{
 			result = atoi(value);
@@ -7553,6 +7671,56 @@ ut2003_strdup( const char *string, const char *end, char **next )
 	//fprintf( stderr, "'%s'\n", result );
 
 	return result;
+}
+
+
+STATIC int
+pariah_player_packet( struct qserver *server, char *rawpkt, char *end)
+{
+	unsigned char no_players = rawpkt[1];
+	unsigned char seen = 0;
+
+	// type + no_players + some unknown preamble
+	rawpkt += 3;
+	while ( rawpkt < end && seen < no_players )
+	{
+		struct player *player;
+
+		// Player Number
+		rawpkt += 4;
+
+		// Create a player
+		if ( NULL == ( player = add_player( server, server->n_player_info ) ) )
+		{
+			return 0;
+		}
+
+		// Name ( min 3 bytes )
+		player->name = ut2003_strdup( rawpkt, end, &rawpkt );
+
+		// Ping
+		player->ping = swap_long_from_little( rawpkt );
+		rawpkt += 4;
+
+		// Frags
+		player->frags = (unsigned char)rawpkt[0];
+		rawpkt++;
+
+		// unknown
+		rawpkt++;
+
+		seen++;
+	}
+
+	if ( no_players == seen )
+	{
+		// all done
+		return 1;
+	}
+
+	// possibly more to come
+
+	return 0;
 }
 
 STATIC int
@@ -7699,7 +7867,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	// http://unreal.student.utwente.nl/UT2003-queryspec.html
 
 	char *end;
-	int error= 0,  before;
+	int error = 0, before;
 	unsigned int packet_header;
 
 	rawpkt[pktlen]= '\0';
@@ -7709,7 +7877,9 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	rawpkt += 4;
 
 	server->protocol_version = packet_header;
-	if (   packet_header != 0x78 // UT2003 Demo
+	if (
+		packet_header != 0x77 // Pariah Demo?
+		&& packet_header != 0x78 // UT2003 Demo
 	    && packet_header != 0x79 // UT2003 Retail
 	    && packet_header != 0x7e // Unreal2 XMP
 	    && packet_header != 0x7f // UT2004 Demo
@@ -7724,7 +7894,9 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	case 0x00:
 		// Server info
 		if ( server->server_name == NULL )
+		{
 			server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
+		}
 
 		error = ut2003_basic_packet( server, rawpkt, end );
 		if ( ! error )
@@ -7760,6 +7932,46 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 		break;
 
+	case 0x10:
+		// Pariah Server info
+		if ( server->server_name == NULL )
+		{
+			server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
+		}
+
+		error = pariah_basic_packet( server, rawpkt, end );
+		if ( ! error )
+		{
+			// N.B. pariah always sends a rules and players packet
+			int requests = server->n_requests;
+			server->next_rule = "";
+			server->retry1 = n_retries;
+			server->retry2 = n_retries;
+			server->n_requests = requests; // would produce wrong ping
+		}
+		break;
+
+	case 0x11:
+		// Game info
+		server->state += pariah_rule_packet( server, rawpkt, end );
+		server->next_rule = "";
+		server->retry1 = 0; /* we received at least one rule packet so
+				       no need to retry. We'd get double
+				       entries otherwise. */
+		break;
+
+	case 0x12:
+		// Player info
+		before = server->n_player_info;
+		server->state += pariah_player_packet( server, rawpkt, end );
+		server->retry2 = 0;
+		if ( before == server->n_player_info )
+		{
+			error = 1;
+		}
+		break;
+
+
 	default:
 		malformed_packet(server, "Unknown packet type 0x%x", (unsigned)rawpkt[0]);
 		break;
@@ -7769,10 +7981,15 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	 * rule packets as we don't know how many we get
 	 * We do clean up if we don't fetch server rules so we don't
 	 * need to wait for timeout.
+	 * 2 == server->state indicates finished for pariah as both
+	 * rule and player packets state how many to expect
 	 */
-	if ( error
-	|| (!get_server_rules && !get_player_info)
-	|| (!get_server_rules && server->num_players == server->n_player_info))
+	if (
+		error ||
+		(!get_server_rules && !get_player_info) ||
+		(!get_server_rules && server->num_players == server->n_player_info) ||
+		2 == server->state 
+	)
 	{
 		cleanup_qserver( server, 1 );
 	}
