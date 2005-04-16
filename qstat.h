@@ -167,8 +167,9 @@ typedef struct _server_type server_type;
 #define HL2_MASTER (47|MASTER_SERVER)
 #define UT2004_MASTER (48|MASTER_SERVER)
 #define A2S_SERVER	49
+#define PARIAH_SERVER	50
 
-#define LAST_BUILTIN_SERVER  49
+#define LAST_BUILTIN_SERVER  50
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -458,6 +459,9 @@ char ut2003_basicstatus[] = { 0x78, 0,0,0, 0 };
 //char ut2003_ruleinfo[] = { 0x78, 0,0,0, 1 };
 //char ut2003_playerinfo[] = { 0x78, 0,0,0, 2 };
 char ut2003_allinfo[] = { 0x78, 0,0,0, 3 };
+
+/* Pariah */
+char pariah_basicstatus[] = { 0x77, 0,0,0, 0x13 };
 
 /* HALF LIFE */
 char hl_ping[9] =
@@ -2269,6 +2273,40 @@ server_type builtin_types[] = {
     send_a2s_rule_request_packet,	/* rule_query_func */
     NULL,				/* player_query_func */
     deal_with_a2s_packet,		/* packet_func */
+},
+{
+    /* PARIAH */
+    PARIAH_SERVER,	/* id */
+    "PRS",			/* type_prefix */
+    "prs",			/* type_string */
+    "-prs",			/* type_option */
+    "Pariah",		/* game_name */
+    0,				/* master */
+    UNREAL_DEFAULT_PORT,	/* default_port */
+    1,				/* port_offset */
+    TF_U2_NAMES,				/* flags */
+    "gametype",			/* game_rule */
+    "UNREALTOURNAMENT2003",	/* template_var */
+    (char*) &pariah_basicstatus,/* status_packet */
+    sizeof( pariah_basicstatus),/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    0,				/* master_query */
+    display_unreal_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_unreal_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_unreal_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_ut2003_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_ut2003_packet,	/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */

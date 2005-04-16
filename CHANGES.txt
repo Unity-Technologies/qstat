@@ -1,5 +1,22 @@
 QStat version 2.8
 
+** UPDATED for 2.8 + CVS **
+April 03, 2005
+
+Summary of New Features
+-----------------------
+added support for pariah protocol (-prs)
+
+Fixes
+-----
+N/A
+
+--
+Steve Jankowski
+Steven Hartland
+Ludwig Nussel
+
+
 ** UPDATED for 2.8 **
 April 03, 2005
 
