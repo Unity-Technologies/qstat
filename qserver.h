@@ -101,6 +101,7 @@ struct qserver {
     int max_players;
     int num_players;
     int protocol_version;
+	int state;
 
     SavedData saved_data;
 
