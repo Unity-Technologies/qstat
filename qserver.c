@@ -14,6 +14,7 @@
 #ifdef _ISUNIX
 #include <sys/socket.h>
 #endif
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -24,7 +25,10 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 
     if(data)
     {
-	ret = send( server->fd, data, len, 0);
+	if ( server->flags & FLAG_BROADCAST)
+	    ret = send_broadcast(server, data, len);
+	else
+	    ret = send( server->fd, data, len, 0);
 
 	if ( ret == SOCKET_ERROR)
 	{
@@ -32,13 +36,13 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 	}
     }
 
-    if ( server->retry1 != n_retries)
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
     {
-	server->n_retries++;
+	gettimeofday( &server->packet_time1, NULL);
     }
     else
     {
-	gettimeofday( &server->packet_time1, NULL);
+	server->n_retries++;
     }
 
     server->retry1--;
@@ -53,7 +57,10 @@ int qserver_send(struct qserver* server, const char* data, size_t len)
 
     if(data)
     {
-	ret = send( server->fd, data, len, 0);
+	if ( server->flags & FLAG_BROADCAST)
+	    ret = send_broadcast(server, data, len);
+	else
+	    ret = send( server->fd, data, len, 0);
 
 	if ( ret == SOCKET_ERROR)
 	{
@@ -68,4 +75,19 @@ int qserver_send(struct qserver* server, const char* data, size_t len)
 
     return ret;
 
+}
+
+int
+send_broadcast( struct qserver *server, const char *pkt, size_t pktlen)
+{
+    struct sockaddr_in addr;
+    addr.sin_family= AF_INET;
+    if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
+        addr.sin_port= htons(server->port);
+    else
+        addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
+    addr.sin_addr.s_addr= server->ipaddr;
+    memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
+    return sendto( server->fd, (const char*) pkt, pktlen, 0,
+		(struct sockaddr *) &addr, sizeof(addr));
 }
