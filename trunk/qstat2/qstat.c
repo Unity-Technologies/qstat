@@ -4162,21 +4162,6 @@ send_packets()
     }
 }
 
-int
-send_broadcast( struct qserver *server, char *pkt, int pktlen)
-{
-    struct sockaddr_in addr;
-    addr.sin_family= AF_INET;
-    if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
-        addr.sin_port= htons(server->port);
-    else
-        addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
-    addr.sin_addr.s_addr= server->ipaddr;
-    memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
-    return sendto( server->fd, (const char*) pkt, pktlen, 0,
-		(struct sockaddr *) &addr, sizeof(addr));
-}
-
 /* server starts sending data immediately, so we need not do anything */
 void
 send_bfris_request_packet( struct qserver *server)
@@ -7560,6 +7545,7 @@ pariah_rule_packet( struct qserver *server, char *rawpkt, char *end )
 	if ( no_rules == seen )
 	{
 		// all done
+		server->next_rule = NULL;
 		return 1;
 	}
 
@@ -7571,6 +7557,9 @@ ut2003_rule_packet( struct qserver *server, char *rawpkt, char *end )
 {
     char *key, *value;
     int result= 0;
+
+    // Packet Type
+    rawpkt++;
 
 	// we get size encoded key = value pairs
     while ( rawpkt < end )
@@ -7678,7 +7667,10 @@ STATIC int
 pariah_player_packet( struct qserver *server, char *rawpkt, char *end)
 {
 	unsigned char no_players = rawpkt[1];
-	unsigned char seen = 0;
+	unsigned char seen = 0; /* XXX: cannot work this way, it takes only
+				   this packet into consideration. What if
+				   player info is spread across multiple
+				   packets? */
 
 	// type + no_players + some unknown preamble
 	rawpkt += 3;
@@ -7715,6 +7707,7 @@ pariah_player_packet( struct qserver *server, char *rawpkt, char *end)
 	if ( no_players == seen )
 	{
 		// all done
+		server->num_players = server->n_player_info;
 		return 1;
 	}
 
@@ -7946,15 +7939,14 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 			int requests = server->n_requests;
 			server->next_rule = "";
 			server->retry1 = n_retries;
-			server->retry2 = n_retries;
+			server->retry2 = 0;
 			server->n_requests = requests; // would produce wrong ping
 		}
 		break;
 
 	case 0x11:
 		// Game info
-		server->state += pariah_rule_packet( server, rawpkt, end );
-		server->next_rule = "";
+		pariah_rule_packet( server, rawpkt, end );
 		server->retry1 = 0; /* we received at least one rule packet so
 				       no need to retry. We'd get double
 				       entries otherwise. */
@@ -7963,8 +7955,7 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	case 0x12:
 		// Player info
 		before = server->n_player_info;
-		server->state += pariah_player_packet( server, rawpkt, end );
-		server->retry2 = 0;
+		pariah_player_packet( server, rawpkt, end );
 		if ( before == server->n_player_info )
 		{
 			error = 1;
@@ -7981,15 +7972,11 @@ deal_with_ut2003_packet( struct qserver *server, char *rawpkt, int pktlen)
 	 * rule packets as we don't know how many we get
 	 * We do clean up if we don't fetch server rules so we don't
 	 * need to wait for timeout.
-	 * 2 == server->state indicates finished for pariah as both
-	 * rule and player packets state how many to expect
 	 */
-	if (
-		error ||
-		(!get_server_rules && !get_player_info) ||
-		(!get_server_rules && server->num_players == server->n_player_info) ||
-		2 == server->state 
-	)
+	if (error
+	|| (!get_server_rules && !get_player_info)
+	|| (!get_server_rules && server->num_players == server->n_player_info)
+	|| (server->next_rule == NULL && server->num_players == server->n_player_info))
 	{
 		cleanup_qserver( server, 1 );
 	}

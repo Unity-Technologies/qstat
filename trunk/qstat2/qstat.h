@@ -2436,6 +2436,7 @@ extern int show_errors;
 
 extern int get_player_info;
 extern int get_server_rules;
+extern int no_port_offset;
 
 /* Definitions for the original Quake network protocol.
  */
