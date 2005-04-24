@@ -101,7 +101,6 @@ struct qserver {
     int max_players;
     int num_players;
     int protocol_version;
-	int state;
 
     SavedData saved_data;
 
@@ -176,5 +175,7 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len);
  * @see qserver_send_initial
  */
 int qserver_send(struct qserver* server, const char* data, size_t len);
+
+int send_broadcast( struct qserver *server, const char *pkt, size_t pktlen);
 
 #endif
