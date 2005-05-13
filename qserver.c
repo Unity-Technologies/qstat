@@ -13,8 +13,8 @@
 
 #ifdef _ISUNIX
 #include <sys/socket.h>
-#endif
 #include <netinet/in.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
