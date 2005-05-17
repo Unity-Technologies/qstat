@@ -487,7 +487,7 @@ char q3_master_query_template[] = "\377\377\377\377getservers %s %s";
 char q3_master_default_protocol[] = "68";
 char q3_master_default_query[] = "empty full demo\n";
 
-char doom3_master_query[] = "\xFF\xFFgetServers\x00\x21\x00\x01\x00\x00";
+char doom3_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00";
 //                                             ^^^^^^^^^^^^^^^^ version
 
 /* RETURN TO CASTLE WOLFENSTEIN */
