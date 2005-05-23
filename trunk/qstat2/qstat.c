@@ -179,6 +179,7 @@ int hex_player_names= 0;
 int hex_server_names= 0;
 int strip_carets= 1;
 int max_simultaneous= MAXFD_DEFAULT;
+int sendinterval = 5;
 int html_names= -1;
 extern int html_mode;
 int raw_arg= 0;
@@ -2416,6 +2417,7 @@ usage( char *msg, char **argv, char *a1)
 	(DEFAULT_RETRY_INTERVAL*4) / 1000.0);
     printf( "-timeout\ttotal time in seconds before giving up\n");
     printf( "-maxsim\t\tset maximum simultaneous queries\n");
+    printf( "-sendinterval\t\tset time in ms between sending packets, default %u\n", sendinterval);
     printf( "-errors\t\tdisplay errors\n");
     printf( "-of\t\toutput file\n");
 	printf( "-af\t\tLike -of, but append to the file\n" );
@@ -3110,6 +3112,14 @@ main( int argc, char *argv[])
 		usage( "value for -maxsimultaneous must be > 0\n", argv,NULL);
 	    if ( max_simultaneous > FD_SETSIZE)
 		max_simultaneous= FD_SETSIZE;
+ 	}
+	else if ( strcmp( argv[arg], "-sendinterval") == 0)  {
+	    arg++;
+	    if ( arg >= argc)
+		usage( "missing argument for -sendinterval\n", argv,NULL);
+	    sendinterval= atoi(argv[arg]);
+	    if ( sendinterval < 0)
+		usage( "value for -sendinterval must be >= 0\n", argv,NULL);
  	}
 	else if ( strcmp( argv[arg], "-raw-arg") == 0)  {
 	    raw_arg= 1000;
@@ -4007,7 +4017,7 @@ bind_sockets()
 	int rc, retry_count= 0;;
 
 	gettimeofday(&now, NULL);
-	if(connected && time_delta(&now, &t_lastsend) < 5)
+	if(connected && sendinterval && time_delta(&now, &t_lastsend) < sendinterval)
 	{
 		server = NULL;
 	}
@@ -4083,7 +4093,7 @@ send_packets()
     if(!t_lastsend.tv_sec)
     {
     }
-    else if(connected && time_delta(&now, &t_lastsend) < 5)
+    else if(connected && sendinterval && time_delta(&now, &t_lastsend) < sendinterval)
     {
 	return;
     }
