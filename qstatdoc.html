@@ -20,7 +20,7 @@
 <br>
 		[<b>-raw</b> <i>delimiter</i>]
 		[<b>-default</b> <i>server-type</i>]
-		<i>host</i>[:<i>port</i>] ...
+		<i>host</i>[:<i>port</i>[<i>-port_max</i>]</i>] ...
 
 <H3><dt>Version 2.5c</H3>
 
@@ -211,13 +211,17 @@ the default gamespy query port.
 use one network packet to find all the game servers on a local
 network.  A broadcast returns servers of one type on one port.
 You may only broadcast to networks to which you computer is
-directly attached (ie. local networks).  <b>In this release, broadcast
-queries are only supported for: Quake II servers and Gamespy style servers.</b>
+directly attached (ie. local networks).
 <p>
 A broadcast query is specified by prefixing an address with a '<tt>+</tt>'
 (plus sign).  The address should be 255.255.255.255 or a valid
 broadcast address for your local network.  On Unixes, 'ifconfig -a' will
 display the broadcast address for all attached networks.
+
+<H4>Port Ranges</H4>
+Broadcast Queries can scan a range of ports to find game servers that don't run
+on the default port. Specify the minimum and maximum port of a range separated
+by a dash.
 
 <H4>Query Arguments</H4>
 Some game types support customized server queries.  For example,

@@ -2527,8 +2527,8 @@ parse_server_type_option( char* option, int *outfile, char **query_arg)
 	*comma++= '\0';
     }
 
-    *query_arg= comma;
-    arg= *query_arg;
+    *query_arg= strdup(comma);
+    arg= comma;
     do  {
 	comma= strchr( arg, ',');
 	if (comma)
@@ -3535,7 +3535,9 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     int flags= 0;
     char *colon= NULL, *arg_copy, *hostname= NULL;
     unsigned int ipaddr;
-    unsigned short port;
+    unsigned short port, port_max;
+    int portrange = 0;
+    unsigned colonpos = 0;
 
     if ( run_timeout && time(0)-start_time >= run_timeout)  {
 	finish_output();
@@ -3559,8 +3561,12 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 
     colon= strchr( arg, ':');
     if ( colon != NULL)  {
-	sscanf( colon+1, "%hd", &port);
+	if(sscanf( colon+1, "%hd-%hd", &port, &port_max) == 2)
+	    portrange = 1;
+	else
+	    port_max = port;
 	*colon= '\0';
+	colonpos = colon-arg;
     }
 
     if ( *arg == '+')  {
@@ -3581,67 +3587,82 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 	print_file_location();
 	fprintf( stderr, "%s: %s\n", arg, strherror(h_errno));
 	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
-	init_qserver( server, type);
-	server->arg= arg_copy;
-	server->server_name= HOSTNOTFOUND;
-	server->error= strdup( strherror(h_errno));
+	for(;port <= port_max; ++port)
+	{
+	    init_qserver( server, type);
+	    if(portrange)
+	    server->arg= port==port_max?arg_copy:strdup(arg_copy);
+	    if(portrange)
+		sprintf(server->arg+colonpos+1, "%hu", port);
+	    server->server_name= HOSTNOTFOUND;
+	    server->error= strdup( strherror(h_errno));
+	    server->port= port;
+	    if ( last_server != &servers)  {
+		prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+		server->prev= prev_server;
+	    }
+	    *last_server= server;
+	    last_server= & server->next;
+	    if ( one_server_type_id == ~MASTER_SERVER)
+		one_server_type_id= type->id;
+	    else if ( one_server_type_id != type->id)
+		one_server_type_id= 0;
+	}
+        return -1;
+    }
+
+    for(;port <= port_max; ++port)
+    {
+	if ( find_server_by_address( ipaddr, port) != NULL)
+	    return 0;
+
+	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
+	server->arg= port==port_max?arg_copy:strdup(arg_copy);
+	if(portrange)
+	    sprintf(server->arg+colonpos+1, "%hu", port);
+	if ( hostname && colon)  {
+	    server->host_name= (char*)malloc( strlen(hostname) + 5 +2);
+	    sprintf( server->host_name, "%s:%hu", hostname, port);
+	}
+	else
+	    server->host_name= strdup((hostname)?hostname:arg);
+
+	server->ipaddr= ipaddr;
 	server->port= port;
+	server->type= type;
+	server->outfilename= outfilename;
+	server->flags= flags;
+	if (query_arg)
+	{
+	    server->query_arg= port==port_max?query_arg:strdup(query_arg);
+	    parse_query_params( server, server->query_arg);
+	}
+	else
+	    server->query_arg = NULL;
+	init_qserver( server, type);
+
+	if ( server->type->master)
+	    waiting_for_masters++;
+
+	if ( num_servers_total % 10 == 0)
+	    hcache_update_file();
+
 	if ( last_server != &servers)  {
 	    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
 	    server->prev= prev_server;
 	}
 	*last_server= server;
 	last_server= & server->next;
+
+	add_server_to_hash( server);
+
 	if ( one_server_type_id == ~MASTER_SERVER)
 	    one_server_type_id= type->id;
 	else if ( one_server_type_id != type->id)
 	    one_server_type_id= 0;
-        return -1;
+
+	++num_servers;
     }
-
-    if ( find_server_by_address( ipaddr, port) != NULL)
-	return 0;
-
-    server= (struct qserver *) calloc( 1, sizeof( struct qserver));
-    server->arg= arg_copy;
-    if ( hostname && colon)  {
-	server->host_name= (char*)malloc( strlen(hostname) + strlen(colon+1)+2);
-	sprintf( server->host_name, "%s:%s", hostname, colon+1);
-    }
-    else
-	server->host_name= strdup((hostname)?hostname:arg);
-
-    server->ipaddr= ipaddr;
-    server->port= port;
-    server->type= type;
-    server->outfilename= outfilename;
-    server->query_arg= query_arg;
-    server->flags= flags;
-    if ( query_arg)
-	parse_query_params( server, query_arg);
-    init_qserver( server, type);
-
-    if ( server->type->master)
-	waiting_for_masters++;
-
-    if ( num_servers_total % 10 == 0)
-	hcache_update_file();
-
-    if ( last_server != &servers)  {
-	prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-	server->prev= prev_server;
-    }
-    *last_server= server;
-    last_server= & server->next;
-
-    add_server_to_hash( server);
-
-    if ( one_server_type_id == ~MASTER_SERVER)
-	one_server_type_id= type->id;
-    else if ( one_server_type_id != type->id)
-	one_server_type_id= 0;
-
-    ++num_servers;
     return 0;
 }
 
@@ -5512,7 +5533,9 @@ free_server( struct qserver *server)
 	free(server->game);
     if ( server->master_pkt) free( server->master_pkt);
 
-    /* These fields are never malloc'd: outfilename, query_arg
+    free(server->query_arg);
+
+    /* These fields are never malloc'd: outfilename
     */
 
     if ( server->server_name != NULL &&
