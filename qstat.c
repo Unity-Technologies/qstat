@@ -7390,7 +7390,7 @@ dup_n1string( unsigned char *pkt, char *end, char **next)
 	    
     len = pkt[0]-1;
     pkt++;
-    if ( pkt + len >= (unsigned char*)end)
+    if ( pkt + len > (unsigned char*)end)
 	return NULL;
 
     *next= pkt+len;
@@ -10353,183 +10353,252 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
     unsigned char pkt_index, pkt_max;
     unsigned int pkt_id;
 
-    if ( pktlen < 4)  {
-	cleanup_qserver( server, 1);
-	return;
+    if ( pktlen < 4)
+	{
+		cleanup_qserver( server, 1);
+		return;
     }
 
-    if ( rawpkt[0] != 'E' || rawpkt[1] != 'Y' || rawpkt[2] != 'E')  {
-	cleanup_qserver( server, 1);
-	return;
+    if ( rawpkt[0] != 'E' || rawpkt[1] != 'Y' || rawpkt[2] != 'E')
+	{
+		cleanup_qserver( server, 1);
+		return;
     }
 
-    server->ping_total += time_delta( &packet_recv_time,
-				    &server->packet_time1);
+    server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
 
     end= rawpkt + pktlen;
     pkt_index= rawpkt[3] - '0';
 
-    if ( pktlen == 1364 || pkt_index != 1)  {
-	/* fragmented packet */
-	SavedData *sdata;
-	/* EYE doesn't tell us how many packets to expect.  Two packets
-	 * is enough for 100+ players on a BF1942 server with standard
-	 * server rules.
-	 */
-	pkt_max= 2;
-	memcpy( &pkt_id, &rawpkt[pktlen-4], 4);
+    if ( pktlen == 1364 || pkt_index != 1)
+	{
+		/* fragmented packet */
+		SavedData *sdata;
+		/* EYE doesn't tell us how many packets to expect.  Two packets
+		 * is enough for 100+ players on a BF1942 server with standard
+		 * server rules.
+		 */
+		pkt_max= 2;
+		memcpy( &pkt_id, &rawpkt[pktlen-4], 4);
 
-	if ( server->saved_data.data == NULL)
-	    sdata= & server->saved_data;
-	else  {
-	    sdata= (SavedData*) calloc( 1, sizeof(SavedData));
-	    sdata->next= server->saved_data.next;
-	    server->saved_data.next= sdata;
-	}
+		if ( server->saved_data.data == NULL)
+		{
+			sdata= & server->saved_data;
+		}
+		else
+		{
+			sdata= (SavedData*) calloc( 1, sizeof(SavedData));
+			sdata->next= server->saved_data.next;
+			server->saved_data.next= sdata;
+		}
 
-	sdata->pkt_index= pkt_index-1;
-	sdata->pkt_max= pkt_max;
-	sdata->pkt_id= pkt_id;
-	if ( pkt_index == 1)
-	    sdata->datalen= pktlen-4;
-	else
-	    sdata->datalen= pktlen-8;
-	sdata->data= (char*) malloc( sdata->datalen);
-	if ( pkt_index == 1)
-	    memcpy( sdata->data, &rawpkt[0], sdata->datalen);
-	else
-	    memcpy( sdata->data, &rawpkt[4], sdata->datalen);
+		sdata->pkt_index= pkt_index-1;
+		sdata->pkt_max= pkt_max;
+		sdata->pkt_id= pkt_id;
+		if ( pkt_index == 1)
+		{
+			sdata->datalen= pktlen-4;
+		}
+		else
+		{
+			sdata->datalen= pktlen-8;
+		}
+		sdata->data= (char*) malloc( sdata->datalen);
 
-	/* combine_packets will call us recursively */
-	combine_packets( server);
-	return;
+		if ( pkt_index == 1)
+		{
+			memcpy( sdata->data, &rawpkt[0], sdata->datalen);
+		}
+		else
+		{
+			memcpy( sdata->data, &rawpkt[4], sdata->datalen);
+		}
+
+		/* combine_packets will call us recursively */
+		combine_packets( server);
+		return;
     }
 
     value= dup_n1string( &rawpkt[4], end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     add_rule( server, "gamename", value, NO_VALUE_COPY);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     add_rule( server, "hostport", value, NO_VALUE_COPY);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     server->server_name= value;
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     server->game= value;
 	add_rule( server, server->type->game_rule, value, NO_FLAGS);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     server->map_name= value;
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     add_rule( server, "_version", value, NO_VALUE_COPY);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     add_rule( server, "_password", value, NO_VALUE_COPY);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     server->num_players= atoi(value);
     free(value);
 
     value= dup_n1string( next, end, &next);
     if ( value == NULL)
-	goto eye_protocol_error;
+	{
+		goto eye_protocol_error;
+	}
     server->max_players= atoi(value);
     free(value);
 
     /* rule1,value1,rule2,value2, ... empty string */
 
-    do  {
-	key= dup_n1string( next, end, &next);
-	if ( key == NULL)
-	    break;
-	else if ( key[0] == '\0')  {
-	    free(key);
-	    break;
-	}
+    do
+	{
+		key= dup_n1string( next, end, &next);
+		if ( key == NULL)
+		{
+			break;
+		}
+		else if ( key[0] == '\0')
+		{
+			free(key);
+			break;
+		}
 
-	value= dup_n1string( next, end, &next);
-	if ( value == NULL)  {
-	    free(key);
-	    break;
-	}
+		value= dup_n1string( next, end, &next);
+		if ( value == NULL)
+		{
+			free(key);
+			break;
+		}
 
-	add_rule( server, key, value, NO_VALUE_COPY | NO_KEY_COPY);
+		add_rule( server, key, value, NO_VALUE_COPY | NO_KEY_COPY);
     } while ( 1);
 
     /* [mask1]<name1><team1><skin1><score1><ping1><time1>[mask2]... */
 
     last_player= & server->players;
-    while ( next && next < end)  {
-	struct player *player;
-	unsigned mask= *((unsigned char*)next);
-	next++;
-	if ( next >= end) break;
-	if ( mask == 0) break;
-	player= (struct player*) calloc( 1, sizeof(struct player));
-	if ( player == NULL)
-	    break;
-	if ( mask & EYE_NAME_MASK)  {
-	    player->name= dup_n1string( next, end, &next);
-	    if ( player->name == NULL)
-		break;
-	}
-	if ( mask & EYE_TEAM_MASK)  {
-	    value= dup_n1string( next, end, &next);
-	    if ( value == NULL)
-		break;
-	    if ( isdigit(value[0]))  {
-		player->team= atoi(value);
-		free(value);
-	    }
-	    else
-		player->team_name= value;
-	}
-	if ( mask & EYE_SKIN_MASK)  {
-	    player->skin= dup_n1string( next, end, &next);
-	    if ( player->skin == NULL)
-		break;
-	}
-	if ( mask & EYE_SCORE_MASK)  {
-	    value= dup_n1string( next, end, &next);
-	    if ( value == NULL)
-		break;
-	    player->score= atoi(value);
-	    player->frags= player->score;
-	    free(value);
-	}
-	if ( mask & EYE_PING_MASK)  {
-	    value= dup_n1string( next, end, &next);
-	    if ( value == NULL)
-		break;
-	    player->ping= atoi(value);
-	    free(value);
-	}
-	if ( mask & EYE_TIME_MASK)  {
-	    value= dup_n1string( next, end, &next);
-	    if ( value == NULL)
-		break;
-	    player->connect_time= atoi(value);
-	    free(value);
-	}
-	*last_player= player;
-	last_player= & player->next;
+    while ( next && next < end )
+	{
+		struct player *player;
+		unsigned mask= *((unsigned char*)next);
+		next++;
+		if ( next >= end)
+		{
+			break;
+		}
+		if ( mask == 0)
+		{
+			break;
+		}
+		player= (struct player*) calloc( 1, sizeof(struct player));
+		if ( player == NULL)
+		{
+			break;
+		}
+		if ( mask & EYE_NAME_MASK)
+		{
+			player->name= dup_n1string( next, end, &next);
+			//fprintf( stderr, "Player '%s'\n", player->name );
+			if ( player->name == NULL)
+			{
+				break;
+			}
+		}
+		if ( mask & EYE_TEAM_MASK)
+		{
+			value= dup_n1string( next, end, &next);
+			if ( value == NULL)
+			{
+				break;
+			}
+			if ( isdigit(value[0]))
+			{
+				player->team= atoi(value);
+				free(value);
+			}
+			else
+			{
+				player->team_name= value;
+			}
+		}
+		if ( mask & EYE_SKIN_MASK)
+		{
+			player->skin= dup_n1string( next, end, &next);
+			if ( player->skin == NULL)
+			{
+				break;
+			}
+		}
+		if ( mask & EYE_SCORE_MASK)
+		{
+			value= dup_n1string( next, end, &next);
+			if ( value == NULL)
+			{
+				break;
+			}
+			player->score= atoi(value);
+			player->frags= player->score;
+			free(value);
+		}
+		if ( mask & EYE_PING_MASK)
+		{
+			value= dup_n1string( next, end, &next);
+			if ( value == NULL)
+			{
+				break;
+			}
+			player->ping= atoi(value);
+			free(value);
+		}
+		if ( mask & EYE_TIME_MASK)
+		{
+			value= dup_n1string( next, end, &next);
+			if ( value == NULL)
+			{
+				break;
+			}
+			player->connect_time= atoi(value);
+			free(value);
+		}
+		*last_player= player;
+		last_player= & player->next;
+		//fprintf( stderr, "Player '%s'\n", player->name );
     }
 
     cleanup_qserver( server, 1);
