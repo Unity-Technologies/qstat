@@ -3544,7 +3544,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 	exit(0);
     }
 
-    port= type->default_port;
+    port = port_max = type->default_port;
 
     if ( outfilename && strcmp( outfilename, "-") != 0)  {
 	FILE *outfile= fopen( outfilename, "r+");
