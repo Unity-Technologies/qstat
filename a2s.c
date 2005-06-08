@@ -22,7 +22,8 @@
 #define A2S_GETCHALLENGE      "\xFF\xFF\xFF\xFF\x57"
 #define A2S_CHALLENGERESPONSE 0x41
 #define A2S_INFO              "\xFF\xFF\xFF\xFF\x54Source Engine Query"
-#define A2S_INFORESPONSE      0x49
+#define A2S_INFORESPONSE_HL1  0x6D
+#define A2S_INFORESPONSE_HL2  0x49
 #define A2S_PLAYER            "\xFF\xFF\xFF\xFF\x55"
 #define A2S_PLAYERRESPONSE    0x44
 #define A2S_RULES             "\xFF\xFF\xFF\xFF\x56"
@@ -151,7 +152,8 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    debug(3, "challenge %x", status->challenge);
 	    break;
 
-	case A2S_INFORESPONSE:
+	case A2S_INFORESPONSE_HL1:
+	case A2S_INFORESPONSE_HL2:
 	    if(pktlen < 1) goto out_too_short;
 	    snprintf(buf, sizeof(buf), "%hhX", *pkt);
 	    add_rule(server, "protocol", buf, 0);
