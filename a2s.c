@@ -18,11 +18,13 @@
 
 #include "debug.h"
 #include "qstat.h"
+#include "packet_manip.h"
 
 #define A2S_GETCHALLENGE      "\xFF\xFF\xFF\xFF\x57"
 #define A2S_CHALLENGERESPONSE 0x41
 #define A2S_INFO              "\xFF\xFF\xFF\xFF\x54Source Engine Query"
-#define A2S_INFORESPONSE      0x49
+#define A2S_INFORESPONSE_HL1  0x6D
+#define A2S_INFORESPONSE_HL2  0x49
 #define A2S_PLAYER            "\xFF\xFF\xFF\xFF\x55"
 #define A2S_PLAYERRESPONSE    0x44
 #define A2S_RULES             "\xFF\xFF\xFF\xFF\x56"
@@ -125,7 +127,64 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
     if(pktlen < 5) goto out_too_short;
 
-    if(memcmp(pkt, "\xFF\xFF\xFF\xFF", 4))
+    // fragmented packet
+    if( 0 == memcmp(pkt, "\xFE\xFF\xFF\xFF", 4) )
+    {
+	// pkt_id is currently constant
+	// pkt_max is the total number of packets expected
+	// pkt_index is a bit mask of the packets received.
+	unsigned char pkt_index, pkt_max;
+	unsigned int pkt_id = 1;
+	SavedData *sdata;
+
+	if(pktlen < 9) goto out_too_short;
+
+	pkt += 8;
+
+	// next byte is the order byte?
+	debug(3, "fragment: %hhx", *pkt );
+	switch( *pkt )
+	{
+	    case 0x02:
+		pkt_index = 0;
+		break;
+
+	    case 0x12:
+		pkt_index = 1;
+		break;
+
+	    default:
+		malformed_packet( server, "unknown packet index %hhx", *pkt );
+		goto out_error;
+	}
+	pkt++;
+
+	pkt_max = 2;
+
+	if ( server->saved_data.data == NULL )
+	{
+	    sdata = &server->saved_data;
+	}
+	else
+	{
+	    sdata = (SavedData*) calloc( 1, sizeof(SavedData));
+	    sdata->next = server->saved_data.next;
+	    server->saved_data.next = sdata;
+	}
+
+	sdata->pkt_index = pkt_index;
+	sdata->pkt_max = pkt_max;
+	sdata->pkt_id = pkt_id;
+	sdata->datalen = pktlen - 9;
+	sdata->data= (char*) malloc( sdata->datalen);
+	memcpy( sdata->data, pkt, sdata->datalen);
+
+	// combine_packets will call us recursively
+	combine_packets( server );
+	return;
+    }
+
+    if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
     {
 	malformed_packet(server, "invalid packet header");
 	goto out_error;
@@ -145,13 +204,153 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    {
 		++server->retry1;
 		if(server->n_retries)
+		{
 		    --server->n_retries;
+		}
 	    }
 	    status->have_challenge = 1;
 	    debug(3, "challenge %x", status->challenge);
 	    break;
 
-	case A2S_INFORESPONSE:
+	case A2S_INFORESPONSE_HL1:
+	    //if(pktlen < 1) goto out_too_short;
+	    //snprintf(buf, sizeof(buf), "%hhX", *pkt);
+	    //add_rule(server, "protocol", buf, 0);
+	    //++pkt; --pktlen;
+
+	    // ip:port
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    //server->server_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+
+	    // server name
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->server_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // map
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->map_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // mod
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->game = strdup(pkt);
+	    add_rule(server, "gamedir", pkt, 0);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // description
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    add_rule(server, "gamename", pkt, 0);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    if(pktlen < 9) goto out_too_short;
+
+	    server->num_players = pkt[0];
+	    server->max_players = pkt[1];
+
+	    // version
+	    //add_rule(server, "version", atoi( pkt[2] ) );
+
+	    // dedicated
+	    add_rule(server, "dedicated", pkt[3] == 'd' ? "1" : "0", 0);
+
+	    // os
+	    if(pkt[4] == 'l')
+	    {
+		add_rule(server, "sv_os", "linux", 0);
+	    }
+	    else if(pkt[4] == 'w')
+	    {
+		add_rule(server, "sv_os", "windows", 0);
+	    }
+	    else
+	    {
+		buf[0] = pkt[4];
+		buf[1] = '\0';
+		add_rule(server, "sv_os", buf, 0);
+	    }
+
+	    // password
+	    add_rule(server, "password", pkt[5] ? "1" : "0" , 0);
+
+	    pkt += 6;
+	    pktlen -= 6;
+
+	    // mod info
+	    if ( pkt[0] )
+	    {
+		pkt++;
+		pktlen--;
+		// mod URL
+		str = memchr(pkt, '\0', pktlen);
+		if(!str) goto out_too_short;
+		add_rule(server, "mod_url", strdup( pkt ), 0);
+		pktlen -= str-pkt+1;
+		pkt += str-pkt+1;
+
+		// mod DL
+		str = memchr(pkt, '\0', pktlen);
+		if(!str) goto out_too_short;
+		add_rule(server, "mod_dl", strdup( pkt ), 0);
+		pktlen -= str-pkt+1;
+		pkt += str-pkt+1;
+
+		// mod Empty
+		str = memchr(pkt, '\0', pktlen);
+		pktlen -= str-pkt+1;
+		pkt += str-pkt+1;
+
+		// mod version
+		pkt += 4;
+		pktlen -= 4;
+
+		// mod size
+		pkt += 4;
+		pktlen -= 4;
+
+		// svonly
+		pkt += 1;
+		pktlen -= 1;
+
+		// cldll
+		pkt += 1;
+		pktlen -= 1;
+	    }
+
+	    // Secure
+	    add_rule(server, "secure", *pkt ? "1" : "0" , 0);
+	    pkt++;
+	    pktlen--;
+
+	    // Bots
+	    //add_rule(server, "bots", atoi( *pkt ) , 0);
+	    pkt++;
+	    pktlen--;
+
+	    // Version
+	    //add_rule(server, "bots", atoi( *pkt ) , 0);
+
+	    status->have_info = 1;
+
+	    server->retry1 = n_retries;
+
+	    server->next_player_info = server->num_players;
+
+	    break;
+
+	case A2S_INFORESPONSE_HL2:
 	    if(pktlen < 1) goto out_too_short;
 	    snprintf(buf, sizeof(buf), "%hhX", *pkt);
 	    add_rule(server, "protocol", buf, 0);
@@ -194,9 +393,13 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    // pkt[4] number of bots
 	    add_rule(server, "dedicated", pkt[5]?"1":"0", 0);
 	    if(pkt[6] == 'l')
+	    {
 		add_rule(server, "sv_os", "linux", 0);
+	    }
 	    else if(pkt[6] == 'w')
+	    {
 		add_rule(server, "sv_os", "windows", 0);
+	    }
 	    else
 	    {
 		buf[0] = pkt[6];
@@ -331,7 +534,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    break;
 
 	default:
-	    malformed_packet(server, "invalid packet id %d", *pkt);
+	    malformed_packet(server, "invalid packet id %hhx", *--pkt);
 	    goto out_error;
     }
 
