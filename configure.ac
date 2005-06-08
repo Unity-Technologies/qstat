@@ -11,8 +11,8 @@ dnl Checks for header files.
 AC_HEADER_STDC
 
 dnl check if user wants debug
-AC_ARG_ENABLE(debug,[  --enable-debug          turn on debugging ])
-if test x$enable_debug = xyes; then
+AC_ARG_ENABLE(debug,[  --disable-debug         turn off debugging code])
+if test x$enable_debug != xno; then
 	CPPFLAGS="$CPPFLAGS -DDEBUG"
 fi
 
