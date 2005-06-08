@@ -43,6 +43,7 @@ char *qstat_version= VERSION;
 
 #define QUERY_PACKETS
 #include "qstat.h"
+#include "packet_manip.h"
 #include "config.h"
 
 
@@ -269,7 +270,6 @@ static int wait_for_timeout( unsigned int ms);
 static void finish_output();
 static void decode_stefmaster_packet( struct qserver *server, char *pkt, int pktlen);
 static void decode_q3master_packet( struct qserver *server, char *pkt, int pktlen);
-static int combine_packets( struct qserver *server);
 static int unreal_player_info_key( char *s, char *end);
 static void unreal_set_player_teamname( struct qserver *server, int teamid, char *teamname );
 static int unreal_max_players( struct qserver *server );
@@ -7387,7 +7387,7 @@ dup_n1string( unsigned char *pkt, char *end, char **next)
 
     if(!pkt || pkt >= (unsigned char*)end)
 	return NULL;
-	    
+
     len = pkt[0]-1;
     pkt++;
     if ( pkt + len > (unsigned char*)end)
@@ -7571,7 +7571,7 @@ pariah_rule_packet( struct qserver *server, char *rawpkt, char *end )
 			free(value);
 			free(key);
 		}
-	
+
 		seen++;
     }
 
@@ -8249,73 +8249,6 @@ fprintf( OF, "pkt_index %d pkt_max %d\n", pkt_index, pkt_max);
     return cleanup_qserver( server, 0);
 }
 
-
-int
-combine_packets( struct qserver *server)
-{
-    unsigned int ids[8];
-    int maxes[8];
-    int counts[8];
-    int lengths[8];
-    SavedData * segments[8][16];
-    SavedData *sdata= & server->saved_data;
-    int n_ids= 0, i, p, done= 0;
-
-    memset( &segments[0][0], 0, sizeof(segments));
-    memset( &counts[0], 0, sizeof(counts));
-    memset( &lengths[0], 0, sizeof(lengths));
-
-    for ( ; sdata != NULL; sdata= sdata->next)  {
-	if ( sdata->pkt_max == 0)
-	    continue;
-	for (i= 0; i < n_ids; i++)
-	    if ( sdata->pkt_id == ids[i])
-		break;
-	if ( i >= n_ids)  {
-	    if ( n_ids >= 8)
-		continue;
-	    ids[n_ids]= sdata->pkt_id;
-	    maxes[n_ids]= sdata->pkt_max;
-	    i= n_ids++;
-	}
-	else if ( maxes[i] != sdata->pkt_max)
-	    continue;
-	if ( segments[i][sdata->pkt_index] == NULL)  {
-	    segments[i][sdata->pkt_index]= sdata;
-	    counts[i]++;
-	    lengths[i]+= sdata->datalen;
-	}
-    }
-
-    for ( i= 0; i < n_ids; i++)  {
-	char *combined;
-	int datalen= 0;
-	if ( counts[i] != maxes[i])
-	    continue;
-
-	combined= (char*)malloc( lengths[i]);
-	for ( p= 0; p < counts[i]; p++)  {
-	    if ( segments[i][p] == NULL)
-		break;
-	    memcpy( combined + datalen, segments[i][p]->data,
-		segments[i][p]->datalen);
-	    datalen+= segments[i][p]->datalen;
-	}
-	if ( p < counts[i])  {
-	    free( combined);
-	    continue;
-	}
-
-	for ( p= 0; p < counts[i]; p++)
-	    segments[i][p]->pkt_max= 0;
-
-	done= ( (int (*)()) server->type->packet_func)( server, combined, datalen);
-	free( combined);
-	if ( done || server->saved_data.data == NULL)
-	    break;
-    }
-    return done;
-}
 
 static int tribes_debug= 0;
 
