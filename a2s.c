@@ -153,6 +153,143 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    break;
 
 	case A2S_INFORESPONSE_HL1:
+	    //if(pktlen < 1) goto out_too_short;
+	    //snprintf(buf, sizeof(buf), "%hhX", *pkt);
+	    //add_rule(server, "protocol", buf, 0);
+	    //++pkt; --pktlen;
+
+	    // ip:port
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    //server->server_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+
+	    // server name
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->server_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // map
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->map_name = strdup(pkt);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // mod
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    server->game = strdup(pkt);
+	    add_rule(server, "gamedir", pkt, 0);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    // description
+	    str = memchr(pkt, '\0', pktlen);
+	    if(!str) goto out_too_short;
+	    add_rule(server, "gamename", pkt, 0);
+	    pktlen -= str-pkt+1;
+	    pkt += str-pkt+1;
+
+	    if(pktlen < 9) goto out_too_short;
+
+	    server->num_players = pkt[0];
+	    server->max_players = pkt[1];
+
+		// version
+	    //add_rule(server, "version", atoi( pkt[2] ) );
+
+		// dedicated
+	    add_rule(server, "dedicated", pkt[3] == 'd' ? "1" : "0", 0);
+
+		// os
+	    if(pkt[4] == 'l')
+		{
+			add_rule(server, "sv_os", "linux", 0);
+		}
+	    else if(pkt[4] == 'w')
+		{
+			add_rule(server, "sv_os", "windows", 0);
+		}
+	    else
+	    {
+			buf[0] = pkt[4];
+			buf[1] = '\0';
+			add_rule(server, "sv_os", buf, 0);
+	    }
+
+		// password
+		add_rule(server, "password", pkt[5] ? "1" : "0" , 0);
+
+	    pkt += 6;
+	    pktlen -= 6;
+
+		// mod info
+		if ( pkt[0] )
+		{
+			pkt++;
+			pktlen--;
+			// mod URL
+			str = memchr(pkt, '\0', pktlen);
+			if(!str) goto out_too_short;
+			add_rule(server, "mod_url", strdup( pkt ), 0);
+			pktlen -= str-pkt+1;
+			pkt += str-pkt+1;
+
+			// mod DL
+			str = memchr(pkt, '\0', pktlen);
+			if(!str) goto out_too_short;
+			add_rule(server, "mod_dl", strdup( pkt ), 0);
+			pktlen -= str-pkt+1;
+			pkt += str-pkt+1;
+
+			// mod Empty
+			str = memchr(pkt, '\0', pktlen);
+			pktlen -= str-pkt+1;
+			pkt += str-pkt+1;
+
+			// mod version
+			pkt += 4;
+			pktlen -= 4;
+
+			// mod size
+			pkt += 4;
+			pktlen -= 4;
+
+			// svonly
+			pkt += 1;
+			pktlen -= 1;
+
+			// cldll
+			pkt += 1;
+			pktlen -= 1;
+		}
+
+		// Secure
+		add_rule(server, "secure", *pkt ? "1" : "0" , 0);
+		pkt++;
+		pktlen--;
+
+		// Bots
+		//add_rule(server, "bots", atoi( *pkt ) , 0);
+		pkt++;
+		pktlen--;
+
+		// Version
+		//add_rule(server, "bots", atoi( *pkt ) , 0);
+
+	    status->have_info = 1;
+
+	    server->retry1 = n_retries;
+
+	    server->next_player_info = server->num_players;
+
+	    break;
+
 	case A2S_INFORESPONSE_HL2:
 	    if(pktlen < 1) goto out_too_short;
 	    snprintf(buf, sizeof(buf), "%hhX", *pkt);
