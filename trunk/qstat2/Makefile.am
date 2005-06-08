@@ -13,6 +13,7 @@ qstat_SOURCES = \
 	qstat.c qstat.h \
 	template.c \
 	a2s.c a2s.h \
+	packet_manip.c packet_manip.h \
 	ut2004.c ut2004.h
 
 dist_configfiles_DATA = qstat.cfg
