@@ -134,7 +134,8 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	unsigned int pkt_id = 1;
 	SavedData *sdata;
 
-	if(pktlen < 5) goto out_too_short;
+	if(pktlen < 9) goto out_too_short;
+
 	pkt += 4;
 
 	// format:
@@ -155,6 +156,8 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
 	pkt++;
 
+	pktlen -= 9;
+
 	// pkt_max is the total number of packets expected
 	// pkt_index is a bit mask of the packets received.
 
@@ -172,7 +175,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	sdata->pkt_index = pkt_index;
 	sdata->pkt_max = pkt_max;
 	sdata->pkt_id = pkt_id;
-	sdata->datalen = pktlen - 9;
+	sdata->datalen = pktlen;
 	sdata->data= (char*) malloc( sdata->datalen);
 	if ( NULL == sdata->data )
 	{
@@ -253,7 +256,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
-	    if( pktlen < 22 ) goto out_too_short;
+	    if( pktlen < 7 ) goto out_too_short;
 
 	    // num players
 	    server->num_players = pkt[0];
@@ -296,6 +299,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    {
 		pkt++;
 		pktlen--;
+
 		// mod URL
 		str = memchr(pkt, '\0', pktlen);
 		if(!str) goto out_too_short;
@@ -315,14 +319,16 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pktlen -= str-pkt+1;
 		pkt += str-pkt+1;
 
+		if( pktlen < 10 ) goto out_too_short;
+
 		// mod version
-		sprintf( buf, "%d", *pkt );
+		sprintf( buf, "%u", swap_long_from_little(pkt));
 		add_rule( server, "mod_ver", buf, 0 );
 		pkt += 4;
 		pktlen -= 4;
 
 		// mod size
-		sprintf( buf, "%d", *pkt );
+		sprintf( buf, "%u", swap_long_from_little(pkt));
 		add_rule( server, "mod_size", buf, 0 );
 		pkt += 4;
 		pktlen -= 4;
@@ -337,6 +343,8 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt++;
 		pktlen--;
 	    }
+
+	    if( pktlen < 2 ) goto out_too_short;
 
 	    // Secure
 	    add_rule( server, "secure", *pkt ? "1" : "0" , 0 );
