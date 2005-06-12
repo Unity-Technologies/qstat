@@ -9,6 +9,7 @@
  */
 
 #include "qstat.h"
+#include "debug.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,7 +30,7 @@ int combine_packets( struct qserver *server )
 
     for ( ; sdata != NULL; sdata= sdata->next)
 	{
-		//fprintf( stderr, "COMB1: %d, %d\n", sdata->pkt_max, sdata->pkt_id );
+		debug( 4, "max:%d, id:%d\n", sdata->pkt_max, sdata->pkt_id );
 		if ( sdata->pkt_max == 0)
 		{
 			continue;
@@ -63,12 +64,11 @@ int combine_packets( struct qserver *server )
 			lengths[i]+= sdata->datalen;
 		}
     }
-	//fprintf( stderr, "COMB2: %d\n", n_ids );
     for ( i= 0; i < n_ids; i++)
     {
 		char *combined;
 		int datalen= 0;
-		//fprintf( stderr, "COMB3: %d != %d\n", counts[i], maxes[i] );
+		debug( 4, "counts: %d != %d\n", counts[i], maxes[i] );
 		if ( counts[i] != maxes[i])
 		{
 			continue;
@@ -85,7 +85,7 @@ int combine_packets( struct qserver *server )
 			segments[i][p]->datalen);
 			datalen+= segments[i][p]->datalen;
 		}
-		//fprintf( stderr, "COMB4: %d != %d\n", p, counts[i] );
+		debug( 4, "p: %d != %d\n", p, counts[i] );
 		if ( p < counts[i])
 		{
 			free( combined);
@@ -97,7 +97,11 @@ int combine_packets( struct qserver *server )
 			segments[i][p]->pkt_max= 0;
 		}
 
-		//fprintf( stderr, "COMB5: callback\n" );
+		debug( 4, "callback\n" );
+		if( 4 <= get_debug_level() )
+		{
+			print_packet( server, combined, datalen );
+		}
 		done= ( (int (*)()) server->type->packet_func)( server, combined, datalen);
 		free( combined);
 		if ( done || server->saved_data.data == NULL)
