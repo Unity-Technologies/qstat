@@ -127,39 +127,36 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
     if(pktlen < 5) goto out_too_short;
 
-    // fragmented packet
     if( 0 == memcmp(pkt, "\xFE\xFF\xFF\xFF", 4) )
     {
-	// pkt_id is currently constant
-	// pkt_max is the total number of packets expected
-	// pkt_index is a bit mask of the packets received.
+	// fragmented packet
 	unsigned char pkt_index, pkt_max;
 	unsigned int pkt_id = 1;
-	SavedData *sdata;
 
-	if(pktlen < 9) goto out_too_short;
+	if(pktlen < 5) goto out_too_short;
+	pkt += 4;
 
-	pkt += 8;
+	// format:
+	// int sequenceNumber
+	// byte packetId
+	// packetId format:
+	// bits 0 - 3 = packets position in the sequence ( 0 .. N - 1 )
+	// bits 4 - 7 = total number of packets
 
-	// next byte is the order byte?
-	debug(3, "fragment: %hhx", *pkt );
-	switch( *pkt )
-	{
-	    case 0x02:
-		pkt_index = 0;
-		break;
+	// sequenceId
+	memcpy( &pkt_id, pkt, 4 );
+	debug( 3, "sequenceId: %d", pkt_id );
+	pkt += 4;
 
-	    case 0x12:
-		pkt_index = 1;
-		break;
-
-	    default:
-		malformed_packet( server, "unknown packet index %hhx", *pkt );
-		goto out_error;
-	}
+	// packetId
+	pkt_max = ((unsigned char)*pkt) & 15;
+	pkt_index = ((unsigned char)*pkt) >> 4;
+	debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
 	pkt++;
 
-	pkt_max = 2;
+	// pkt_max is the total number of packets expected
+	// pkt_index is a bit mask of the packets received.
+	SavedData *sdata;
 
 	if ( server->saved_data.data == NULL )
 	{
@@ -177,14 +174,19 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	sdata->pkt_id = pkt_id;
 	sdata->datalen = pktlen - 9;
 	sdata->data= (char*) malloc( sdata->datalen);
+	if ( NULL == sdata->data )
+	{
+		fprintf( stderr, "Out of memory\n" );
+		cleanup_qserver( server, 1 );
+		return;
+	}
 	memcpy( sdata->data, pkt, sdata->datalen);
 
 	// combine_packets will call us recursively
 	combine_packets( server );
 	return;
     }
-
-    if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
+    else if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
     {
 	malformed_packet(server, "invalid packet header");
 	goto out_error;
@@ -213,10 +215,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    break;
 
 	case A2S_INFORESPONSE_HL1:
-	    //if(pktlen < 1) goto out_too_short;
-	    //snprintf(buf, sizeof(buf), "%hhX", *pkt);
-	    //add_rule(server, "protocol", buf, 0);
-	    //++pkt; --pktlen;
+	    if(pktlen < 28) goto out_too_short;
 
 	    // ip:port
 	    str = memchr(pkt, '\0', pktlen);
@@ -224,7 +223,6 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    //server->server_name = strdup(pkt);
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
-
 
 	    // server name
 	    str = memchr(pkt, '\0', pktlen);
@@ -240,7 +238,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
-	    // mod
+	    // mod dir
 	    str = memchr(pkt, '\0', pktlen);
 	    if(!str) goto out_too_short;
 	    server->game = strdup(pkt);
@@ -248,35 +246,40 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
-	    // description
+	    // mod description
 	    str = memchr(pkt, '\0', pktlen);
 	    if(!str) goto out_too_short;
 	    add_rule(server, "gamename", pkt, 0);
 	    pktlen -= str-pkt+1;
 	    pkt += str-pkt+1;
 
-	    if(pktlen < 9) goto out_too_short;
+	    if( pktlen < 22 ) goto out_too_short;
 
+	    // num players
 	    server->num_players = pkt[0];
+
+	    // max players
 	    server->max_players = pkt[1];
 
 	    // version
-	    //add_rule(server, "version", atoi( pkt[2] ) );
+	    sprintf( buf, "%hhu", pkt[2] );
+	    add_rule( server, "version", buf, 0 );
 
 	    // dedicated
-	    add_rule(server, "dedicated", pkt[3] == 'd' ? "1" : "0", 0);
+	    add_rule( server, "dedicated", pkt[3] == 'd' ? "1" : "0", 0 );
 
 	    // os
-	    if(pkt[4] == 'l')
+	    switch( pkt[4] )
 	    {
+	    case 'l':
 		add_rule(server, "sv_os", "linux", 0);
-	    }
-	    else if(pkt[4] == 'w')
-	    {
+		break;
+
+	    case 'w':
 		add_rule(server, "sv_os", "windows", 0);
-	    }
-	    else
-	    {
+		break;
+
+	    default:
 		buf[0] = pkt[4];
 		buf[1] = '\0';
 		add_rule(server, "sv_os", buf, 0);
@@ -313,34 +316,38 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += str-pkt+1;
 
 		// mod version
+		sprintf( buf, "%d", *pkt );
+		add_rule( server, "mod_ver", buf, 0 );
 		pkt += 4;
 		pktlen -= 4;
 
 		// mod size
+		sprintf( buf, "%d", *pkt );
+		add_rule( server, "mod_size", buf, 0 );
 		pkt += 4;
 		pktlen -= 4;
 
 		// svonly
-		pkt += 1;
-		pktlen -= 1;
+		add_rule( server, "mod_svonly", ( *pkt ) ? "1" : "0" , 0 );
+		pkt++;
+		pktlen--;
 
 		// cldll
-		pkt += 1;
-		pktlen -= 1;
+		add_rule( server, "mod_cldll", ( *pkt ) ? "1" : "0" , 0 );
+		pkt++;
+		pktlen--;
 	    }
 
 	    // Secure
-	    add_rule(server, "secure", *pkt ? "1" : "0" , 0);
+	    add_rule( server, "secure", *pkt ? "1" : "0" , 0 );
 	    pkt++;
 	    pktlen--;
 
 	    // Bots
-	    //add_rule(server, "bots", atoi( *pkt ) , 0);
+	    sprintf( buf, "%hhu", *pkt );
+	    add_rule( server, "bots", buf, 0 );
 	    pkt++;
 	    pktlen--;
-
-	    // Version
-	    //add_rule(server, "bots", atoi( *pkt ) , 0);
 
 	    status->have_info = 1;
 
