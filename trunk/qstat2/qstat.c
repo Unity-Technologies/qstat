@@ -11635,13 +11635,14 @@ deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// now each player details
 			// add the player
 			struct player *player;
+			char *val;
+			int val_len;
+
 			player = get_player_by_number( server, total_players );
 			if ( NULL == player )
 			{
 				player = add_player( server, total_players );
 			}
-			char *val;
-			int val_len;
 
 			if ( ptr >= end )
 			{
