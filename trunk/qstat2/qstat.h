@@ -65,10 +65,15 @@ static int gettimeofday(struct timeval *now, void *blah)
 typedef struct _server_type server_type;
 
 #include "qserver.h"
+
+// Packet modules
 #include "ut2004.h"
 #include "a2s.h"
+#include "gs2.h"
+#include "gs3.h"
 
-/* Various magic numbers.
+/*
+ * Various magic numbers.
  */
 
 #define Q_DEFAULT_PORT			26000
@@ -200,7 +205,8 @@ typedef void (*DisplayFunc)( struct qserver *);
 typedef void (*QueryFunc)( struct qserver *);
 typedef void (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
 
-/* Output and formatting functions
+/*
+ * Output and formatting functions
  */
 
 void display_server( struct qserver *server);
@@ -318,8 +324,6 @@ void deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
-void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
-void deal_with_gs3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 
@@ -616,10 +620,13 @@ unsigned char gs2_status_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff
 };
 
-// Gamespy v3 last 3 bytes:
-// 1: server + rules info (00 to disable)
-// 2: Player information (00 to disable)
-// 3: Team information (00 to disable)
+// Gamespy v3 bytes:
+// 1 - 3: query head
+// 4 - 7: queryid
+// 8: server + rules info (00 to disable)
+// 9: Player information (00 to disable)
+// 10: Team information (00 to disable)
+// 11: Request new format
 unsigned char gs3_status_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff,0x01
 };
@@ -2330,8 +2337,8 @@ server_type builtin_types[] = {
     TF_SINGLE_QUERY,		/* flags */
     "gametype",			/* game_rule */
     "GPS3PROTOCOL",		/* template_var */
-    (char*) &gs2_status_query,	/* status_packet */
-    sizeof( gs2_status_query),	/* status_len */
+    (char*) &gs3_status_query,	/* status_packet */
+    sizeof( gs3_status_query),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -2552,17 +2559,15 @@ char *ping_time( int ms);
 char *get_qw_game( struct qserver *server);
 
 
-/* Query status and packet handling functions
+/*
+ * Query status and packet handling functions
  */
 
 int cleanup_qserver( struct qserver *server, int force);
 
-int server_info_packet( struct qserver *server, struct q_packet *pkt,
-        int datalen);
-int player_info_packet( struct qserver *server, struct q_packet *pkt,
-        int datalen);
-int rule_info_packet( struct qserver *server, struct q_packet *pkt,
-	int datalen);
+int server_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
+int player_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
+int rule_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
 
 int time_delta( struct timeval *later, struct timeval *past);
 char * strherror( int h_err);
@@ -2570,16 +2575,13 @@ int connection_refused();
 
 void add_file( char *filename);
 int add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg);
-struct qserver* add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
-	server_type* type, int *new_server);
+struct qserver* add_qserver_byaddr( unsigned int ipaddr, unsigned short port, server_type* type, int *new_server);
 void init_qserver( struct qserver *server, server_type* type);
 int bind_qserver( struct qserver *server);
 int bind_sockets();
 void send_packets();
 struct qserver * find_server_by_address( unsigned int ipaddr, unsigned short port);
 void add_server_to_hash( struct qserver *server);
-
-
 
 void print_packet( struct qserver *server, char *buf, int buflen);
 
@@ -2589,8 +2591,11 @@ void print_packet( struct qserver *server, char *buf, int buflen);
 #define NO_KEY_COPY 4
 #define COMBINE_VALUES 8
 
-struct rule* add_rule( struct qserver *server, char *key, char *value,	int flags);
+struct player* get_player_by_number( struct qserver *server, int player_number );
+struct rule* add_rule( struct qserver *server, char *key, char *value,	int flags) ;
 struct player* add_player( struct qserver *server, int player_number );
+struct info* player_add_info( struct player *player, char *key, char *value, int flags );
+void players_set_teamname( struct qserver *server, int teamid, char *teamname );
 
 
 /*
