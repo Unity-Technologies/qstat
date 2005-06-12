@@ -132,6 +132,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	// fragmented packet
 	unsigned char pkt_index, pkt_max;
 	unsigned int pkt_id = 1;
+	SavedData *sdata;
 
 	if(pktlen < 5) goto out_too_short;
 	pkt += 4;
@@ -156,7 +157,6 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	// pkt_max is the total number of packets expected
 	// pkt_index is a bit mask of the packets received.
-	SavedData *sdata;
 
 	if ( server->saved_data.data == NULL )
 	{
