@@ -10,7 +10,7 @@
 #ifndef QSTAT_A2S_H
 #define QSTAT_A2S_H
 
-#include "qstat.h"
+#include "qserver.h"
 
 void send_a2s_request_packet(struct qserver *server);
 void send_a2s_rule_request_packet(struct qserver *server);
