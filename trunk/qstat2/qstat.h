@@ -168,8 +168,9 @@ typedef struct _server_type server_type;
 #define UT2004_MASTER (48|MASTER_SERVER)
 #define A2S_SERVER	49
 #define PARIAH_SERVER	50
+#define GAMESPY3_PROTOCOL_SERVER 51
 
-#define LAST_BUILTIN_SERVER  50
+#define LAST_BUILTIN_SERVER  51
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -318,6 +319,7 @@ void deal_with_descent3master_packet( struct qserver *server, char *pkt, int pkt
 void deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_gs3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 
@@ -612,6 +614,14 @@ char eye_ping_query[1]= "p";
 // 3: Team information (00 to disable)
 unsigned char gs2_status_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff
+};
+
+// Gamespy v3 last 3 bytes:
+// 1: server + rules info (00 to disable)
+// 2: Player information (00 to disable)
+// 3: Team information (00 to disable)
+unsigned char gs3_status_query[] = {
+	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff,0x01
 };
 
 // Steam
@@ -1761,7 +1771,6 @@ server_type builtin_types[] = {
 },
 
 
-
 /* --- MASTER SERVERS --- */
 {
     /* QUAKE WORLD MASTER */
@@ -2307,6 +2316,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_ut2003_packet,	/* packet_func */
+},
+{
+    /* GAMESPY V3 PROTOCOL */
+    GAMESPY3_PROTOCOL_SERVER,	/* id */
+    "GS3",			/* type_prefix */
+    "gs3",			/* type_string */
+    "-gs3",			/* type_option */
+    "Gamespy V3 Protocol",	/* game_name */
+    0,				/* master */
+    0,				/* default_port */
+    0,				/* port_offset */
+    TF_SINGLE_QUERY,		/* flags */
+    "gametype",			/* game_rule */
+    "GPS3PROTOCOL",		/* template_var */
+    (char*) &gs2_status_query,	/* status_packet */
+    sizeof( gs2_status_query),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_gs2_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_gs2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_gs2_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_gs3_packet,	/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */

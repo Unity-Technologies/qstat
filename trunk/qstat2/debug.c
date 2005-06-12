@@ -39,7 +39,10 @@ void _debug(const char* file, int line, const char* function, int level, const c
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
-	fputs("\n", stderr);
+	if ( '\n' != fmt[strlen(fmt)-1]  )
+	{
+		fputs("\n", stderr);
+	}
 	return;
 }
 #endif
@@ -106,34 +109,34 @@ void dump_packet(const char* buf, int buflen)
 void
 print_packet( struct qserver *server, char *buf, int buflen)
 {
-    static char *hex= "0123456789abcdef";
-    unsigned char *p= (unsigned char*)buf;
-    int i, h, a, b, astart, offset= 0;
-    char line[256];
+	static char *hex= "0123456789abcdef";
+	unsigned char *p= (unsigned char*)buf;
+	int i, h, a, b, astart, offset= 0;
+	char line[256];
 
-    if ( server != NULL)
+	if ( server != NULL)
 	fprintf( stderr, "FROM %s\n", server->arg);
 
-    for ( i= buflen; i ; offset+= 16)  {
+	for ( i= buflen; i ; offset+= 16)  {
 	memset( line, ' ', 256);
 	h= 0;
 	h+= sprintf( line, "%5d:", offset);
 	a= astart = h + 16*2 + 16/4 + 2;
 	for ( b=16; b && i; b--, i--, p++)  {
-	    if ( (b & 3) == 0)
+		if ( (b & 3) == 0)
 		line[h++]= ' ';
-	    line[h++]= hex[*p >> 4];
-	    line[h++]= hex[*p & 0xf];
-	    if ( isprint( *p))
+		line[h++]= hex[*p >> 4];
+		line[h++]= hex[*p & 0xf];
+		if ( isprint( *p))
 		line[a++]= *p;
-	    else
+		else
 		line[a++]= '.';
-	    if((a-astart)==8) line[a++] = ' ';
+		if((a-astart)==8) line[a++] = ' ';
 	}
 	line[a]= '\0';
 	fputs( line, stderr);
 	fputs( "\n", stderr);
-    }
-    fputs( "\n", stderr);
+	}
+	fputs( "\n", stderr);
 }
 
