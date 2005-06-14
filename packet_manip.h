@@ -14,5 +14,8 @@
 #include "qstat.h"
 
 int combine_packets( struct qserver *server );
+int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int pkt_max, int datalen, char *data, int calc_max );
+int next_sequence();
+SavedData* get_packet_fragment( int index );
 
 #endif
