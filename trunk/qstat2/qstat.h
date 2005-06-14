@@ -14,22 +14,11 @@
 #include "gnuconfig.h"
 #endif
 
-#ifdef _WIN32
-#else
-#define _ISUNIX
-#endif
-
 #ifdef __EMX__
 #include <sys/select.h>
 #include <sys/param.h>
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
-#endif
-
-
-#ifdef _ISUNIX
-#include <sys/time.h>
-#define SOCKET_ERROR -1
 #endif
 
 #ifdef _WIN32
@@ -58,6 +47,9 @@ static int gettimeofday(struct timeval *now, void *blah)
 #  define EADDRINUSE	WSAEADDRINUSE
 # endif
 # define snprintf _snprintf
+#else
+# include <sys/time.h>
+# define SOCKET_ERROR -1
 #endif /* _WIN32 */
 
 #include <string.h>
