@@ -207,7 +207,7 @@ int xml_display= 0;
 int xml_encoding= ENCODING_LATIN_1;
 
 #define SUPPORTED_SERVER_SORT	"pgihn"
-#define SUPPORTED_PLAYER_SORT	"PFTN"
+#define SUPPORTED_PLAYER_SORT	"PFTNS"
 #define SUPPORTED_SORT_KEYS	"l" SUPPORTED_SERVER_SORT SUPPORTED_PLAYER_SORT
 char sort_keys[32];
 int player_sort= 0;
