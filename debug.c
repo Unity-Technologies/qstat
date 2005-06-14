@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _ISUNIX
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/param.h>
 #endif
