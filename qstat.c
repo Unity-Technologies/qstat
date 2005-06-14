@@ -47,7 +47,7 @@ char *qstat_version= VERSION;
 #include "config.h"
 
 
-#ifdef _ISUNIX
+#ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>
 #ifndef VMS
@@ -75,7 +75,7 @@ extern int h_errno;
 #define INADDR_NONE ~0
 #endif
 #define sockerr()	errno
-#endif /* _ISUNIX */
+#endif /* _WIN32 */
 
 #ifdef __OS2__
 #include <sys/socket.h>
@@ -2795,7 +2795,7 @@ void do_work(void)
 
 		if ( rc == SOCKET_ERROR)
 		{
-#ifdef _ISUNIX
+#ifndef _WIN32
 			if ( errno == EINTR)
 				continue;
 #endif
@@ -4001,7 +4001,7 @@ bind_qserver( struct qserver *server)
 		(char*) &one, sizeof(one));
     }
 
-#ifdef _ISUNIX
+#ifndef _WIN32
     if ( server->fd >= max_connmap)  {
 	int old_max= max_connmap;
 	max_connmap= server->fd + 32;
@@ -5187,10 +5187,9 @@ void qserver_disconnect(struct qserver* server)
 #endif
     if ( server->fd != -1)  {
 	close( server->fd);
-#ifdef _ISUNIX
+#ifndef _WIN32
 	connmap[server->fd]= NULL;
-#endif
-#ifdef _WIN32
+#else
 	for ( i= 0; i < max_connmap; i++)  {
 	    if ( connmap[i] == server)  {
 		connmap[i]= NULL;
@@ -11564,30 +11563,26 @@ time_delta( struct timeval *later, struct timeval *past)
 int
 connection_refused()
 {
-#ifdef _ISUNIX
-    return errno == ECONNREFUSED;
-#endif
-
 #ifdef _WIN32
     return WSAGetLastError() == WSAECONNABORTED;
+#else
+    return errno == ECONNREFUSED;
 #endif
 }
 
 void
 set_non_blocking( int fd)
 {
-#ifdef _ISUNIX
+#ifdef _WIN32
+    int one= 1;
+    ioctlsocket( fd, FIONBIO, (unsigned long*)&one);
+#else
 #ifdef O_NONBLOCK
     fcntl( fd, F_SETFL, O_NONBLOCK);
 #else
     fcntl( fd, F_SETFL, O_NDELAY);
-#endif
-#endif
-
-#ifdef _WIN32
-    int one= 1;
-    ioctlsocket( fd, FIONBIO, (unsigned long*)&one);
-#endif
+#endif // O_NONBLOCK
+#endif // _WIN32
 }
 
 char *
@@ -11883,6 +11878,11 @@ player_compare( struct player *one, struct player *two)
 	    break;
 	case 'F':
 	    rc= two->frags - one->frags;
+	    if ( rc)
+		return rc;
+	    break;
+	case 'S':
+	    rc= two->score - one->score;
 	    if ( rc)
 		return rc;
 	    break;
