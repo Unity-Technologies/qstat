@@ -14,100 +14,212 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define MAX_PACKETS 8
+#define MAX_FAGMENTS 16
+
+int pkt_seq = 0;
+int pkt_id_index = -1;
+int n_ids;
+int counts[MAX_PACKETS];
+SavedData *segments[MAX_PACKETS][MAX_FAGMENTS];
+
 int combine_packets( struct qserver *server )
 {
-    unsigned int ids[8];
-    int maxes[8];
-    int counts[8];
-    int lengths[8];
-    SavedData * segments[8][16];
-    SavedData *sdata= & server->saved_data;
-    int n_ids= 0, i, p, done= 0;
+	unsigned int ids[MAX_PACKETS];
+	int maxes[MAX_PACKETS];
+	int lengths[MAX_PACKETS];
+	SavedData *sdata = &server->saved_data;
+	int i, p, done = 0;
+	n_ids = 0;
 
-    memset( &segments[0][0], 0, sizeof(segments));
-    memset( &counts[0], 0, sizeof(counts));
-    memset( &lengths[0], 0, sizeof(lengths));
+	memset( &segments[0][0], 0, sizeof(segments) );
+	memset( &counts[0], 0, sizeof(counts) );
+	memset( &lengths[0], 0, sizeof(lengths) );
 
-    for ( ; sdata != NULL; sdata= sdata->next)
+	// foreach packet
+	for ( ; sdata != NULL; sdata= sdata->next)
 	{
 		debug( 4, "max:%d, id:%d\n", sdata->pkt_max, sdata->pkt_id );
 		if ( sdata->pkt_max == 0)
 		{
+			// not expecting multi packets or already processed?
 			continue;
 		}
-		for (i= 0; i < n_ids; i++)
+
+		for ( i = 0; i < n_ids; i++ )
 		{
 			if ( sdata->pkt_id == ids[i])
 			{
+				// found this packetid
 				break;
 			}
 		}
-		if ( i >= n_ids)
+
+		if ( i >= n_ids )
 		{
-			if ( n_ids >= 8)
+			// packetid we havent seen yet
+			if ( n_ids >= MAX_PACKETS )
 			{
+				// we only deal up to MAX_PACKETS packetids
+				fprintf( stderr, "Too many distinct packetids %d max %d\n", n_ids, MAX_PACKETS );
 				continue;
 			}
 			ids[n_ids]= sdata->pkt_id;
 			maxes[n_ids]= sdata->pkt_max;
-			i= n_ids++;
+			i = n_ids++;
 		}
-		else if ( maxes[i] != sdata->pkt_max)
+		else if ( maxes[i] != sdata->pkt_max )
 		{
+			// max's dont match
+			debug( 4, "max mismatch %d != %d", maxes[i], sdata->pkt_max );
 			continue;
 		}
 
 		if ( segments[i][sdata->pkt_index] == NULL)
 		{
+			// add the packet to the list of segments
+			if ( sdata->pkt_index >= MAX_FAGMENTS )
+			{
+				// we only deal up to MAX_FAGMENTS packet fragment
+				fprintf( stderr, "Too many fragments for packetid %d max %d\n", sdata->pkt_id, MAX_FAGMENTS );
+				continue;
+			}
 			segments[i][sdata->pkt_index]= sdata;
 			counts[i]++;
-			lengths[i]+= sdata->datalen;
+			lengths[i] += sdata->datalen;
 		}
-    }
-    for ( i= 0; i < n_ids; i++)
-    {
+		else
+		{
+			debug( 2, "duplicate packet detected for id %d, index %d", sdata->pkt_id, sdata->pkt_index );
+		}
+	}
+
+	// foreach distinct packetid
+	for ( pkt_id_index = 0; pkt_id_index < n_ids; pkt_id_index++ )
+	{
 		char *combined;
 		int datalen= 0;
-		debug( 4, "counts: %d != %d\n", counts[i], maxes[i] );
-		if ( counts[i] != maxes[i])
+		if ( counts[pkt_id_index] != maxes[pkt_id_index] )
 		{
+			// we dont have all the expected packets yet
+			debug( 4, "more expected: %d != %d\n", counts[pkt_id_index], maxes[pkt_id_index] );
 			continue;
 		}
 
-		combined= (char*)malloc( lengths[i]);
-		for ( p= 0; p < counts[i]; p++)
+		// combine all the segments
+		combined = (char*)malloc( lengths[pkt_id_index] );
+		for ( p = 0; p < counts[pkt_id_index]; p++ )
 		{
-			if ( segments[i][p] == NULL)
+			if ( segments[pkt_id_index][p] == NULL )
 			{
-				break;
+				debug( 4, "missing segment[%d][%d]", pkt_id_index, p );
+				free( combined );
+				return 0;
 			}
-			memcpy( combined + datalen, segments[i][p]->data,
-			segments[i][p]->datalen);
-			datalen+= segments[i][p]->datalen;
-		}
-		debug( 4, "p: %d != %d\n", p, counts[i] );
-		if ( p < counts[i])
-		{
-			free( combined);
-			continue;
+			memcpy( combined + datalen, segments[pkt_id_index][p]->data, segments[pkt_id_index][p]->datalen );
+			datalen += segments[pkt_id_index][p]->datalen;
 		}
 
-		for ( p= 0; p < counts[i]; p++)
+		// prevent reprocessing?
+		for ( p = 0; p < counts[pkt_id_index]; p++)
 		{
-			segments[i][p]->pkt_max= 0;
+			segments[pkt_id_index][p]->pkt_max = 0;
 		}
 
-		debug( 4, "callback\n" );
+		debug( 4, "callback" );
 		if( 4 <= get_debug_level() )
 		{
 			print_packet( server, combined, datalen );
 		}
-		done= ( (int (*)()) server->type->packet_func)( server, combined, datalen);
-		free( combined);
+		// Call the server's packet processing method
+		done = ( (int (*)()) server->type->packet_func)( server, combined, datalen );
+
+		// reset to be unusable
+		pkt_id_index = -1;
+		free( combined );
+
+		// Note: this is currently invalid as packet processing methods
+		// are void not int
 		if ( done || server->saved_data.data == NULL)
 		{
 			break;
 		}
-    }
-    return done;
+	}
+	return done;
+}
+
+int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int pkt_max, int datalen, char *data, int calc_max )
+{
+	SavedData *sdata;
+
+	if ( server->saved_data.data == NULL )
+	{
+		debug( 4, "first packet" );
+		sdata = &server->saved_data;
+	}
+	else
+	{
+		debug( 4, "another packet" );
+		if ( calc_max )
+		{
+			// check we have the correct max
+			SavedData *cdata = &server->saved_data;
+			for ( ; cdata != NULL; cdata = cdata->next )
+			{
+				if ( cdata->pkt_max > pkt_max )
+				{
+					pkt_max = cdata->pkt_max;
+				}
+			}
+
+			// ensure all the packets know about this new max
+			for ( cdata = &server->saved_data; cdata != NULL; cdata = cdata->next )
+			{
+				cdata->pkt_max = pkt_max;
+			}
+		}
+
+		// allocate a new packet data and prepend to the list
+		sdata = (SavedData*) calloc( 1, sizeof(SavedData) );
+		sdata->next = server->saved_data.next;
+		server->saved_data.next = sdata;
+	}
+
+	sdata->pkt_id = pkt_id;
+	sdata->pkt_index = pkt_index;
+	sdata->pkt_max = pkt_max;
+	sdata->datalen = datalen;
+	sdata->data = (char*)malloc( sdata->datalen );
+	if ( NULL == sdata->data )
+	{
+		fprintf( stderr, "Out of memory\n" );
+		cleanup_qserver( server, 1 );
+		return 0;
+	}
+
+	memcpy( sdata->data, data, sdata->datalen );
+
+	return 1;
+}
+
+int next_sequence()
+{
+	return ++pkt_seq;
+}
+
+SavedData* get_packet_fragment( int index )
+{
+	if ( -1 == pkt_id_index )
+	{
+		fprintf( stderr, "Invalid call to get_packet_fragment" );
+		return NULL;
+	}
+
+	if ( index > counts[pkt_id_index] )
+	{
+		debug( 4, "Invalid index requested %d >  %d", index, pkt_id_index );
+		return NULL;
+	}
+
+	return segments[pkt_id_index][index];
 }
