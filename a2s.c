@@ -9,7 +9,7 @@
  *
  */
 
-#ifdef _ISUNIX
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 #include <sys/types.h>
