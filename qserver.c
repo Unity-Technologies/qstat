@@ -11,7 +11,7 @@
 #include "qstat.h"
 #include "qserver.h"
 
-#ifdef _ISUNIX
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
