@@ -37,6 +37,7 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	unsigned int pkt_id;
 	int pkt_index;
 	unsigned char flag;
+	unsigned int pkti, final;
 
 	debug( 2, "packet..." );
 
@@ -80,20 +81,18 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	}
 	ptr += 9;
 
+	pkt_index = ((unsigned char)*ptr) & 127;
+	final = ((unsigned char)*ptr) >> 7;
 	flag = *ptr++;
-	pkt_index = *ptr++;
+	pkti = *ptr++;
 
-	debug( 3, "splitnum: flag = 0x%hhx, index = %d", flag, pkt_index );
+	debug( 1, "splitnum: flag = 0x%hhx, index = %d, final = %d, %d", flag, pkt_index, final, pkti );
 	if ( 0xFF != flag )
 	{
 		// not a single packet response or a callback
 		int pkt_max = pkt_index + 1;
 
-		if (
-			0x00 != rawpkt[pktlen-3] ||
-			0x00 != rawpkt[pktlen-2] ||
-			0x00 != rawpkt[pktlen-1]
-		)
+		if ( ! final )
 		{
 			// Guess that we have more to come
 			pkt_max++;
