@@ -115,7 +115,7 @@ print_packet( struct qserver *server, char *buf, int buflen)
 	char line[256];
 
 	if ( server != NULL)
-	fprintf( stderr, "FROM %s\n", server->arg);
+	fprintf( stderr, "FROM %s len %d\n", server->arg, buflen );
 
 	for ( i= buflen; i ; offset+= 16)  {
 	memset( line, ' ', 256);
