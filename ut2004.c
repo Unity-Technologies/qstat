@@ -11,10 +11,10 @@
  *
  */
 
+#include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
 #endif
-#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 
