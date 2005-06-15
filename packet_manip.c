@@ -113,6 +113,8 @@ int combine_packets( struct qserver *server )
 			if ( segments[pkt_id_index][p] == NULL )
 			{
 				debug( 4, "missing segment[%d][%d]", pkt_id_index, p );
+				// reset to be unusable
+				pkt_id_index = -1;
 				free( combined );
 				return 0;
 			}
@@ -133,9 +135,6 @@ int combine_packets( struct qserver *server )
 		}
 		// Call the server's packet processing method
 		done = ( (int (*)()) server->type->packet_func)( server, combined, datalen );
-
-		// reset to be unusable
-		pkt_id_index = -1;
 		free( combined );
 
 		// Note: this is currently invalid as packet processing methods
@@ -145,6 +144,9 @@ int combine_packets( struct qserver *server )
 			break;
 		}
 	}
+	// reset to be unusable
+	pkt_id_index = -1;
+
 	return done;
 }
 
