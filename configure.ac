@@ -2,6 +2,7 @@ AC_INIT([qstat],[2.8],[qstat-users@yahoogroups.com])
 AC_CONFIG_SRCDIR([qstat.c])
 AM_CONFIG_HEADER([gnuconfig.h])
 
+AC_PREREQ(2.53)
 AM_INIT_AUTOMAKE([1.6 foreign])
 
 dnl Checks for programs.
