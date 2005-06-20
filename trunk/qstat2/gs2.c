@@ -113,7 +113,14 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 		if ( ptr + var_len + 2 > end )
 		{
-			fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+			if ( 0 != var_len )
+			{
+				fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+			}
+			else if ( get_player_info )
+			{
+				fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+			}
 			cleanup_qserver( server, 1);
 			return;
 		}
