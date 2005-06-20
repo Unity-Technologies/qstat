@@ -61,6 +61,7 @@ typedef struct _server_type server_type;
 // Packet modules
 #include "ut2004.h"
 #include "a2s.h"
+#include "gps.h"
 #include "gs2.h"
 #include "gs3.h"
 
@@ -273,7 +274,6 @@ char *str_replace( char *, char *, char *);
 void send_server_request_packet( struct qserver *server);
 void send_qserver_request_packet( struct qserver *server);
 void send_qwserver_request_packet( struct qserver *server);
-void send_unreal_request_packet( struct qserver *server);
 void send_ut2003_request_packet( struct qserver *server);
 void send_tribes_request_packet( struct qserver *server);
 void send_qwmaster_request_packet( struct qserver *server);
@@ -301,7 +301,6 @@ void deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen,
 void deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen);
 void deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
-void deal_with_unreal_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
@@ -1116,10 +1115,10 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
-    deal_with_unreal_packet,	/* packet_func */
+    deal_with_gps_packet,	/* packet_func */
 },
 {
     /* HALF LIFE */
@@ -1219,10 +1218,10 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
-    deal_with_unreal_packet,	/* packet_func */
+    deal_with_gps_packet,	/* packet_func */
 },
 {
     /* TRIBES */
@@ -1404,7 +1403,7 @@ server_type builtin_types[] = {
     0,				/* master */
     0,				/* default_port */
     0,				/* port_offset */
-    TF_SINGLE_QUERY,		/* flags */
+    TF_SINGLE_QUERY|TF_U2_NAMES,		/* flags */
     "gametype",			/* game_rule */
     "GAMESPYPROTOCOL",		/* template_var */
     (char*) &unreal_serverstatus,	/* status_packet */
@@ -1423,10 +1422,10 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
-    deal_with_unreal_packet,	/* packet_func */
+    deal_with_gps_packet,	/* packet_func */
 },
 {
     /* TRIBES 2 */
@@ -1491,10 +1490,10 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
-    deal_with_unreal_packet,	/* packet_func */
+    deal_with_gps_packet,	/* packet_func */
 },
 {
     /* DESCENT3 PROTOCOL */
@@ -1525,7 +1524,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_descent3_packet,	/* packet_func */
@@ -1559,7 +1558,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_unreal_request_packet,	/* status_query_func */
+    send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_descent3_packet,	/* packet_func */
@@ -2632,5 +2631,10 @@ float swap_float_from_little( void *f);
 
 /** \brief write four bytes in little endian order */
 void put_long_little(unsigned val, char* buf);
+
+/*
+ * Exported Globals
+ */
+extern int show_game_port;
 
 #endif
