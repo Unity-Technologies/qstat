@@ -2880,7 +2880,7 @@ void do_work(void)
 					ntohs(buffer[i].addr.sin_port));
 					if ( server == NULL)
 					continue;
-	/*
+/*
 					if ( show_errors)
 					{
 						fprintf(stderr,
@@ -2889,7 +2889,7 @@ void do_work(void)
 						print_packet( NULL, pkt, pktlen);
 					}
 					continue;
-	*/
+*/
 				}
 				else
 				{
@@ -4097,99 +4097,151 @@ bind_sockets()
 }
 
 
-/* Functions for sending packets
+/*
+ * Functions for sending packets
  */
 // this is so broken, someone please rewrite the timeout handling
 void
 send_packets()
 {
-    struct qserver *server;
-    struct timeval now;
-    int interval, n_sent=0, prev_n_sent;
-    unsigned i;
+	struct qserver *server;
+	struct timeval now;
+	int interval, n_sent=0, prev_n_sent;
+	unsigned i;
+	debug( 3, "processing..." );
 
-    gettimeofday( &now, NULL);
+	gettimeofday( &now, NULL);
 
-    if(!t_lastsend.tv_sec)
-    {
-    }
-    else if(connected && sendinterval && time_delta(&now, &t_lastsend) < sendinterval)
-    {
-	return;
-    }
-
-    for (i = 0; i < max_connmap; ++i)  {
-	server = connmap[i];
-	if(!server) continue;
-	if(server->fd == -1)
+	if(!t_lastsend.tv_sec)
 	{
-	    debug(0, "invalid entry in connmap\n");
+		// nothing
+	}
+	else if(connected && sendinterval && time_delta(&now, &t_lastsend) < sendinterval)
+	{
+		return;
 	}
 
-	if ( server->type->id & MASTER_SERVER)
-	    interval= master_retry_interval;
-	else
-	    interval= retry_interval;
-	debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
-	prev_n_sent= n_sent;
-	if ( server->server_name == NULL )  {
-	    if ( server->retry1 != n_retries &&
-		    time_delta( &now, &server->packet_time1) <
-			(interval*(n_retries-server->retry1+1)))
-	    {
-		continue;
-	    }
-	    if ( ! server->retry1)  {
-		cleanup_qserver( server, 1);
-		continue;
-	    }
-	    if(qserver_get_timeout(server, &now) <= 0)
-	    {
-		    server->type->status_query_func( server);
-		    gettimeofday(&t_lastsend, NULL);
-		    n_sent++;
-		    continue;
-	    }
-	}
-	if ( server->next_rule != NO_SERVER_RULES)  {
-	    if ( server->retry1 != n_retries &&
-		    time_delta( &now, &server->packet_time1) <
-			(interval*(n_retries-server->retry1+1)))
-		continue;
-	    if ( ! server->retry1)  {
-		server->next_rule= NULL;
-		server->missing_rules= 1;
-		cleanup_qserver( server, 0);
-		continue;
-	    }
-	    send_rule_request_packet( server);
-	    gettimeofday(&t_lastsend, NULL);
-	    n_sent++;
-	}
-	if ( server->next_player_info < server->num_players)  {
-	    if ( server->retry2 != n_retries &&
-		    time_delta( &now, &server->packet_time2) <
-			(interval*(n_retries-server->retry2+1)))
-		continue;
-	    if ( ! server->retry2)  {
-		server->next_player_info++;
-		if ( server->next_player_info >= server->num_players)  {
-		    cleanup_qserver( server, 0);
-		    continue;
+	for ( i = 0; i < max_connmap; ++i )
+	{
+		server = connmap[i];
+		if( ! server )
+		{
+			continue;
 		}
-		server->retry2= n_retries;
-	    }
-	    send_player_request_packet( server);
-	    gettimeofday(&t_lastsend, NULL);
-	    n_sent++;
+
+		if(server->fd == -1)
+		{
+			debug(0, "invalid entry in connmap\n");
+		}
+
+		if ( server->type->id & MASTER_SERVER)
+		{
+			interval = master_retry_interval;
+		}
+		else
+		{
+			interval = retry_interval;
+		}
+
+		debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
+		prev_n_sent = n_sent;
+		if ( server->server_name == NULL )
+		{
+			// We havent seen the server yet?
+			if (
+				server->retry1 != n_retries &&
+				time_delta( &now, &server->packet_time1) < (interval*(n_retries-server->retry1+1))
+			)
+			{
+				continue;
+			}
+
+			if ( ! server->retry1 )
+			{
+				// No more retries
+				cleanup_qserver( server, 1);
+				continue;
+			}
+
+			if( qserver_get_timeout(server, &now) <= 0 )
+			{
+				// Query status
+				server->type->status_query_func( server);
+				gettimeofday(&t_lastsend, NULL);
+				n_sent++;
+				continue;
+			}
+		}
+
+		if ( server->next_rule != NO_SERVER_RULES )
+		{
+			// We want server rules
+			if (
+				server->retry1 != n_retries &&
+				time_delta( &now, &server->packet_time1) < (interval*(n_retries-server->retry1+1))
+			)
+			{
+				continue;
+			}
+
+			if ( ! server->retry1 )
+			{
+				// no more retries
+				server->next_rule= NULL;
+				server->missing_rules = 1;
+				cleanup_qserver( server, 0);
+				continue;
+			}
+			send_rule_request_packet( server);
+			gettimeofday(&t_lastsend, NULL);
+			n_sent++;
+		}
+
+		if ( server->next_player_info < server->num_players)
+		{
+			// Expecting player details
+			if (
+				server->retry2 != n_retries &&
+				time_delta( &now, &server->packet_time2) < (interval*(n_retries-server->retry2+1))
+			)
+			{
+				continue;
+			}
+			if ( ! server->retry2 )
+			{
+				server->next_player_info++;
+				if ( server->next_player_info >= server->num_players )
+				{
+					// no more retries
+					cleanup_qserver( server, 0);
+					continue;
+				}
+				server->retry2 = n_retries;
+			}
+			send_player_request_packet( server);
+			gettimeofday(&t_lastsend, NULL);
+			n_sent++;
+		}
+
+		if ( prev_n_sent == n_sent )
+		{
+			// we didnt send any additional queries
+			debug(2, "%d %d", time_delta( &now, &server->packet_time1 ), (interval*(n_retries+1)));
+			if ( ! server->retry1 )
+			{
+				// no retries left
+				if ( time_delta( &now, &server->packet_time1 ) > (interval*(n_retries+1) ) )
+				{
+					cleanup_qserver( server, 1 );
+				}
+			}
+			else
+			{
+				// decrement as we didnt send any packets
+				server->retry1--;
+			}
+		}
 	}
-	if ( prev_n_sent == n_sent)  {
-	    debug(2, "%d %d", time_delta( &now, &server->packet_time1), (interval*(n_retries+1)));
-	    if ( ! server->retry1 && time_delta( &now, &server->packet_time1) >
-			(interval*(n_retries+1)))
-		cleanup_qserver( server, 1);
-	}
-    }
 }
 
 /* server starts sending data immediately, so we need not do anything */
