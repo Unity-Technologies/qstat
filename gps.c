@@ -93,9 +93,10 @@ void send_gps_request_packet( struct qserver *server )
 void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *key, *value, *end;
-	struct player *player= NULL;
+	struct player *player = NULL;
 	int id_major=0, id_minor=0, final=0, player_num;
 	char tmp[256];
+	debug( 2, "processing..." );
 
 	server->n_servers++;
 	if ( server->server_name == NULL)
