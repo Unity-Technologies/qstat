@@ -15,6 +15,7 @@ qstat_SOURCES = \
 	a2s.c a2s.h \
 	packet_manip.c packet_manip.h \
 	ut2004.c ut2004.h \
+	gps.c gps.h \
 	gs2.c gs2.h \
 	gs3.c gs3.h
 
