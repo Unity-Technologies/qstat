@@ -17,8 +17,8 @@ if test x$enable_debug != xno; then
 	CPPFLAGS="$CPPFLAGS -DDEBUG"
 fi
 
-AC_ARG_ENABLE(dump,[  --enable-dump           enable package dumps])
-if test x$enable_dump = xyes; then
+AC_ARG_ENABLE(dump,[  --enable-dump           enable packet dumps])
+if test x$enable_dump != xno; then
 	CPPFLAGS="$CPPFLAGS -DENABLE_DUMP"
 fi
 
