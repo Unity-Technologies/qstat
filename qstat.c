@@ -150,6 +150,7 @@ extern int h_errno;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+static int do_dump;
 #endif
 
 #include "debug.h"
@@ -2430,11 +2431,11 @@ usage( char *msg, char **argv, char *a1)
     printf( "-H\t\tresolve host names\n");
     printf( "-Hcache\t\thost name cache file\n");
 	printf( "-carets\t\tDisplay carets in Quake 3 player names\n" );
-	printf( "-d\t\tEnable debug options. By default, enables printing of all received packets to stderr.\n"
+	printf( "-d\t\tEnable debug options. Specify multiple times to increase debug level.\n");
 #ifdef ENABLE_DUMP
-			"  \t\tspecify three -d to write raw packets to dumpNNN files\n"
+	printf( "-dump\t\twrite received raw packets to dumpNNN files which must not exist before\n");
+	printf( "-pkt <file>\tuse file as server reply instead of quering the server. Works only with TF_SINGLE_QUERY servers\n");
 #endif
-			);
 	printf( "-htmlmode\tConvert <, >, and & to the equivalent HTML entities\n" );
 	printf( "-htmlnames\tColorize Quake 3 and Tribes 2 player names using html font tags\n" );
 	printf( "-nohtmlnames\tDo not colorize Quake 3 and Tribes 2 player names even if $HTML is used in an output template.\n" );
@@ -2694,8 +2695,8 @@ revert_server_types()
     types= &builtin_types[0];
 }
 
-unsigned pkt_dump_pos = 0;
 #ifdef ENABLE_DUMP
+unsigned pkt_dump_pos = 0;
 const char* pkt_dumps[64] = {0};
 static void add_pkt_from_file(const char* file)
 {
@@ -2703,12 +2704,10 @@ static void add_pkt_from_file(const char* file)
 		return;
 	pkt_dumps[pkt_dump_pos++] = file;
 }
-#endif
 
 /** FIXME: support multiple packets */
 static void replay_pkt_dumps()
 {
-#ifdef ENABLE_DUMP
 	struct qserver* server = servers;
 	char* pkt = NULL;
 	int fd;
@@ -2728,8 +2727,8 @@ err:
 	perror(__FUNCTION__);
 out:
 	close(fd);
-#endif // ENABLE_DUMP
 }
+#endif // ENABLE_DUMP
 
 struct rcv_pkt
 {
@@ -2759,11 +2758,13 @@ void do_work(void)
 
 	if(!buffer) return;
 
+#ifdef ENABLE_DUMP
 	if(pkt_dump_pos)
 	{
 		replay_pkt_dumps();
 	}
 	else
+#endif
 	{
 		bind_retry = bind_sockets();
 	}
@@ -2861,7 +2862,7 @@ void do_work(void)
 				print_packet( server, pkt, pktlen);
 
 #ifdef ENABLE_DUMP
-			if (get_debug_level() > 2)
+			if (do_dump)
 				dump_packet(pkt, pktlen);
 #endif
 
@@ -3292,6 +3293,9 @@ main( int argc, char *argv[])
 	    add_config_server_types();
 	}
 #ifdef ENABLE_DUMP
+	else if ( strcmp( argv[arg], "-dump") == 0)  {
+	    do_dump = 1;
+	}
 	else if ( strcmp( argv[arg], "-pkt") == 0)  {
 	    arg++;
 	    if ( arg >= argc)
@@ -6915,7 +6919,7 @@ get_player_by_number( struct qserver *server, int player_number)
     return NULL;
 }
 
-STATIC void
+void
 change_server_port( struct qserver *server, unsigned short port)
 {
     char arg[64];
