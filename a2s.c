@@ -74,6 +74,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
     {
 	if(!status->have_challenge)
 	{
+	    debug(3, "sending challenge");
 	    if(qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) == -1)
 		goto error;
 	    status->sent_challenge = 1;
@@ -83,6 +84,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 	{
 	    char buf[sizeof(A2S_RULES)-1+4] = A2S_RULES;
 	    memcpy(buf+sizeof(A2S_RULES)-1, &status->challenge, 4);
+	    debug(3, "sending rule query");
 	    if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
 		goto error;
 	    status->sent_rules = 1;
@@ -92,6 +94,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 	{
 	    char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
 	    memcpy(buf+sizeof(A2S_PLAYER)-1, &status->challenge, 4);
+	    debug(3, "sending player query");
 	    if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
 		goto error;
 	    status->sent_player = 1;
@@ -99,6 +102,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 	}
 	else
 	{
+	    debug(3, "timeout");
 	    // we are probably called due to timeout, restart.
 	    status->have_challenge = 0;
 	    status->have_rules = 0;
