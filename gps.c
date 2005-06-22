@@ -15,6 +15,7 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "debug.h"
 #include "qstat.h"
@@ -108,12 +109,14 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 		gettimeofday( &server->packet_time1, NULL);
 	}
 
+	/*
 	// We're using the saved_data a bit differently here to track received
 	// packets.
 	// pkt_id is the id_major from the \queryid\
 	// pkt_max is the total number of packets expected
 	// pkt_index is a bit mask of the packets received.  The id_minor of
 	// \queryid\ provides packet numbers (1 through pkt_max).
+	*/
 	if ( server->saved_data.pkt_index == -1)
 	{
 		server->saved_data.pkt_index= 0;
