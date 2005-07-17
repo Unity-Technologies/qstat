@@ -9,6 +9,10 @@
  *
  */
 
+#include <sys/types.h>
+#ifndef _WIN32
+#include <sys/socket.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -75,9 +79,18 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	// Next we have the splitnum details
 	if ( 0 != strncmp( ptr, "splitnum", 8 ) )
 	{
-		fprintf( stderr, "Invalid packet ( missing splitnum )\n" );
-		cleanup_qserver( server, 1 );
-		return;
+		if ( server->flags & TF_STATUS_QUERY )
+		{
+			// we have the status response
+			deal_with_gs3_status( server, ptr, pktlen - ( ptr - rawpkt )  );
+			return;
+		}
+		else
+		{
+			fprintf( stderr, "Invalid packet ( missing splitnum )\n" );
+			cleanup_qserver( server, 1 );
+			return;
+		}
 	}
 	ptr += 9;
 
@@ -124,6 +137,51 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	// if we get here we have what should be a full packet
 	process_gs3_packet( server );
 	return;
+}
+
+void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
+{
+	unsigned char *pkt = rawpkt;
+	unsigned short port;
+	debug( 1, "status packet" );
+
+	// Server name
+	server->server_name = strdup( pkt );
+	pkt += strlen( pkt ) + 1;
+
+	// gametype
+	add_rule( server, "gametype", pkt, NO_FLAGS );
+	pkt += strlen( pkt ) + 1;
+
+	// map
+	server->map_name = strdup( pkt );
+	pkt += strlen( pkt ) + 1;
+
+	// num players
+	server->num_players = atoi( pkt );
+	pkt += strlen( pkt ) + 1;
+
+	// max_players
+	server->max_players = atoi( pkt );
+	pkt += strlen( pkt ) + 1;
+
+	// hostport
+	port = atoi( pkt );
+	if ( port != server->port )
+	{
+		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
+		{
+			change_server_port( server, port );
+		}
+		else
+		{
+			// N.B. Pointless really as we weren't asked for rules
+			add_rule( server, "hostport", pkt, NO_FLAGS);
+		}
+    }
+	pkt += strlen( pkt ) + 1;
+
+	cleanup_qserver( server, 1 );
 }
 
 int process_gs3_packet( struct qserver *server )
@@ -254,7 +312,6 @@ int process_gs3_packet( struct qserver *server )
 
 			if ( 0 == strcmp( header, "player_" ) )
 			{
-
 				header_type = PLAYER_NAME_HEADER;
 			}
 			else if ( 0 == strcmp( header, "score_" ) )
@@ -463,4 +520,52 @@ int process_gs3_packet( struct qserver *server )
 
 	cleanup_qserver( server, 1 );
 	return 1;
+}
+
+void send_gs3_request_packet( struct qserver *server )
+{
+	int rc;
+	unsigned char *packet;
+	int len;
+
+	// The below should work but seems to make no difference to what some
+	// servers send
+	if ( get_player_info || get_server_rules )
+	{
+		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
+		packet = server->type->player_packet;
+		len = server->type->player_len;
+	}
+	else
+	{
+		server->flags |= TF_STATUS_QUERY;
+		packet = server->type->status_packet;
+		len = server->type->status_len;
+	}
+
+	if ( server->flags & FLAG_BROADCAST)
+	{
+		rc = send_broadcast( server, packet, len );
+	}
+	else
+	{
+		rc = send( server->fd, packet, len, 0 );
+	}
+
+	if ( rc == SOCKET_ERROR )
+	{
+		perror( "send" );
+	}
+
+	if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+	}
+	else
+	{
+		server->n_retries++;
+	}
+	server->retry1--;
+	server->n_packets++;
 }
