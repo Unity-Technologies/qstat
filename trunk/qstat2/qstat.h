@@ -191,6 +191,7 @@ typedef struct _server_type server_type;
 #define TF_MASTER_STEAM		(1<<16)  /* supports steam server filter */
 
 // What response type are we expecting
+// XXX: this is not what server->flags is for
 #define TF_STATUS_QUERY		(1<<17)
 #define TF_PLAYER_QUERY		(1<<18)
 #define TF_RULES_QUERY		(1<<19)
