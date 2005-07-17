@@ -190,6 +190,11 @@ typedef struct _server_type server_type;
 
 #define TF_MASTER_STEAM		(1<<16)  /* supports steam server filter */
 
+// What response type are we expecting
+#define TF_STATUS_QUERY		(1<<17)
+#define TF_PLAYER_QUERY		(1<<18)
+#define TF_RULES_QUERY		(1<<19)
+
 #define TRIBES_TEAM	-1
 
 struct q_packet;
@@ -603,23 +608,50 @@ unsigned char ghostrecon_playerquery[] = {
 char eye_status_query[1]= "s";
 char eye_ping_query[1]= "p";
 
-// Gamespy v2 last 3 bytes:
-// 1: server + rules info (00 to disable)
-// 2: Player information (00 to disable)
-// 3: Team information (00 to disable)
+// Gamespy v2
+// Format:
+// 1 - 3: query head
+// 4 - 7: queryid
+// 8: server + rules info (00 to disable)
+// 9: Player information (00 to disable)
+// 10: Team information (00 to disable)
 unsigned char gs2_status_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff
 };
 
-// Gamespy v3 bytes:
+// Gamespy v3
+// Format:
 // 1 - 3: query head
 // 4 - 7: queryid
 // 8: server + rules info (00 to disable)
 // 9: Player information (00 to disable)
 // 10: Team information (00 to disable)
 // 11: Request new format
-unsigned char gs3_status_query[] = {
+unsigned char gs3_player_query[] = {
 	0xfe,0xfd,0x00,0x10,0x20,0x30,0x40,0xff,0xff,0xff,0x01
+};
+
+// Format:
+// 1 - 3: query head
+// 4 - 7: queryid
+// 8: requested number of rules
+// 9 - 9 + no_rules: requested ruleid
+// last 2 : terminator?
+
+// Known ruleid's:
+// 0x01: hostname
+// 0x03: version
+// 0x04: hostport
+// 0x05: map
+// 0x06: gametype
+// 0x07: gamevarient
+// 0x08: num_players
+// 0x0a: max_players
+// 0x0b: gamemode
+unsigned char gs3_status_query[] = {
+	0xfe,0xfd,0x00,
+	0x10,0x20,0x30,0x40,
+	0x06,0x01,0x06,0x05,0x08,0x0a,0x04,0x00,0x00
 };
 
 // Steam
@@ -2330,8 +2362,8 @@ server_type builtin_types[] = {
     "GPS3PROTOCOL",		/* template_var */
     (char*) &gs3_status_query,	/* status_packet */
     sizeof( gs3_status_query),	/* status_len */
-    NULL,			/* player_packet */
-    0,				/* player_len */
+    (char*) &gs3_player_query,	/* player_packet */
+    sizeof( gs3_player_query),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
@@ -2344,7 +2376,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_gs2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_gs2_request_packet,	/* status_query_func */
+    send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_gs3_packet,	/* packet_func */
