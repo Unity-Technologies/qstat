@@ -1062,20 +1062,30 @@ get_qw_game( struct qserver *server)
 {
     struct rule *rule;
     if ( server->type->game_rule == NULL || *server->type->game_rule == '\0')
-	return "";
-    rule= server->rules;
-    for ( ; rule != NULL; rule= rule->next)
-	if ( strcmp( rule->name, server->type->game_rule) == 0)  {
-	    if ( server->type->id == Q3_SERVER &&
-			strcmp( rule->value, "baseq3") == 0)
+	{
 		return "";
-	    return rule->value;
+	}
+    rule = server->rules;
+    for ( ; rule != NULL; rule = rule->next)
+	{
+		if ( strcmp( rule->name, server->type->game_rule) == 0)
+		{
+			if ( server->type->id == Q3_SERVER && strcmp( rule->value, "baseq3") == 0)
+			{
+				return "";
+			}
+			return rule->value;
+		}
 	}
     rule= server->rules;
-    for ( ; rule != NULL; rule= rule->next)
-	if ( strcmp( rule->name, "game") == 0)
-	    return rule->value;
-    return "";
+    for ( ; rule != NULL; rule = rule->next)
+	{
+		if ( strcmp( rule->name, "game" ) == 0)
+		{
+			return rule->value;
+		}
+	}
+	return "";
 }
 
 /* Raw output for web master types
@@ -5959,15 +5969,17 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 			strcmp( key, "pure") == 0)  {
 		add_rule( server, key, value, NO_VALUE_COPY);
 	    }
-	    else if ( get_server_rules || strncmp( key, "game", 4) == 0)  {
-		if ( add_rule( server, key, value,
-			NO_VALUE_COPY|check_duplicate_rules) == NULL)
-		    free(value);      /* duplicate, so free value */
-		if ( server->game == NULL &&
-			strcmp( key, server->type->game_rule) == 0)  {
-		    server->game= value;
-		    server->flags |= FLAG_DO_NOT_FREE_GAME;
-		}
+	    else if ( get_server_rules || strncmp( key, "game", 4) == 0)
+		{
+			if ( add_rule( server, key, value, NO_VALUE_COPY|check_duplicate_rules) == NULL)
+			{
+				free(value);      /* duplicate, so free value */
+			}
+			if ( server->game == NULL && strcmp( key, server->type->game_rule) == 0)
+			{
+				server->game= value;
+				server->flags |= FLAG_DO_NOT_FREE_GAME;
+			}
 	    }
 	    else
 		free(value);
