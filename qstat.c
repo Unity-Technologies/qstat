@@ -9217,6 +9217,11 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 				}
 			}
 		}
+		else if ( 0 == strcmp( "L3", key ) )
+		{
+			// PunkBuster state
+			add_rule( server, "PunkBuster", value, NO_FLAGS );
+		}
 		else if ( 0 == strcmp( "M1", key ) )
 		{
 			// Players times
