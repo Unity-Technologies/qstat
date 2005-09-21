@@ -48,6 +48,7 @@ char *qstat_version= VERSION;
 
 
 #ifndef _WIN32
+#include <signal.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #ifndef VMS
@@ -814,7 +815,7 @@ display_unreal_player_info( struct qserver *server)
 			if ( player->team_name)
 			{
 				fprintf( OF, fmt_team_name,
-					(player->score) ? player->score : player->frags,
+					(player->score && NA_INT != player->score ) ? player->score : player->frags,
 					player->team_name,
 					ping_time(player->ping),
 					xform_name( player->name, server)
@@ -823,7 +824,7 @@ display_unreal_player_info( struct qserver *server)
 			else
 			{
 				fprintf( OF, fmt_team_number,
-					(player->score) ? player->score : player->frags,
+					(player->score && NA_INT != player->score ) ? player->score : player->frags,
 					player->team,
 					ping_time(player->ping),
 					xform_name( player->name, server)
@@ -985,6 +986,20 @@ display_gs2_player_info( struct qserver *server)
 		ping_time(player->ping),
 		player->team,
 		xform_name( player->name, server));
+    }
+}
+
+void
+display_ts2_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+    {
+	    fprintf( OF, "\t%6s %s\n",
+			ping_time(player->ping),
+			xform_name( player->name, server)
+		);
     }
 }
 
@@ -1552,6 +1567,26 @@ raw_display_gs2_player_info( struct qserver *server)
 		RD, play_time( player->connect_time,1)
 	);
 	fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_ts2_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%s" "%s%s";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+    {
+	    fprintf( OF, fmt,
+			xform_name( player->name, server),
+			RD, player->ping,
+			RD, player->skin ? player->skin : "",
+			RD, play_time( player->connect_time, 1 )
+		);
+		fputs( "\n", OF);
     }
 }
 
@@ -2219,9 +2254,20 @@ xml_display_gs2_player_info( struct qserver *server)
 		fprintf( OF, "\t\t\t<player>\n");
 
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
-		fprintf( OF, "\t\t\t\t<score>%d</score>\n", player->score);
 		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		if ( player->team_name)
+		if ( NA_INT != player->score )
+		{
+			fprintf( OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		}
+		if ( NA_INT != player->deaths )
+		{
+			fprintf( OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+		}
+		if ( NA_INT != player->frags )
+		{
+			fprintf( OF, "\t\t\t\t<frags>%d</frags>\n", player->frags);
+		}
+		if ( player->team_name )
 		{
 		    fprintf( OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
@@ -2236,6 +2282,42 @@ xml_display_gs2_player_info( struct qserver *server)
 		}
 
 		if ( player->connect_time)
+		{
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
+		}
+
+		for ( ; NULL != info; info = info->next )
+		{
+			if ( info->name )
+			{
+				char *name = xml_escape( info->name );
+				char *value = xml_escape( info->value );
+				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
+			}
+		}
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_ts2_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+	{
+		struct info *info = player->info;
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+
+		if ( player->connect_time )
 		{
 		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
 		}
@@ -2882,15 +2964,18 @@ void do_work(void)
 				unsigned short port= ntohs(buffer[i].addr.sin_port);
 				/* create new server and init */
 				if ( ! (no_port_offset || server->flags & TF_NO_PORT_OFFSET))
+				{
 					port-= server->type->port_offset;
-				server= add_qserver_byaddr( ntohl(buffer[i].addr.sin_addr.s_addr),
-					port, server->type, NULL);
+				}
+				server= add_qserver_byaddr( ntohl(buffer[i].addr.sin_addr.s_addr), port, server->type, NULL);
 				if ( server == NULL)
 				{
 					server= find_server_by_address( buffer[i].addr.sin_addr.s_addr,
 					ntohs(buffer[i].addr.sin_port));
 					if ( server == NULL)
-					continue;
+					{
+						continue;
+					}
 /*
 					if ( show_errors)
 					{
@@ -2934,6 +3019,12 @@ void do_work(void)
 
 	free(buffer);
 }
+#ifndef _WIN32
+int sigpipe( int sig )
+{
+	fprintf( stderr, "SIG: %d\n", sig );
+}
+#endif
 
 int
 main( int argc, char *argv[])
@@ -2951,6 +3042,8 @@ main( int argc, char *argv[])
 	fprintf( stderr, "Could not open winsock\n");
 	exit(1);
     }
+#else
+	signal( SIGPIPE, &sigpipe );
 #endif
 
     types= &builtin_types[0];
@@ -3474,45 +3567,57 @@ finish_output()
 void
 add_file( char *filename)
 {
-    FILE *file;
-    char name[200], *comma, *query_arg = NULL;
-    server_type* type;
+	FILE *file;
+	char name[200], *comma, *query_arg = NULL;
+	server_type* type;
 
-    if ( strcmp( filename, "-") == 0)  {
-	file= stdin;
-	current_filename= NULL;
-    }
-    else  {
-	file= fopen( filename, "r");
-	current_filename= filename;
-    }
-    current_fileline= 1;
-
-    if ( file == NULL)  {
-	perror( filename);
-	return;
-    }
-    for ( ; fscanf( file, "%s", name) == 1; current_fileline++)  {
-	comma= strchr( name, ',');
-	if ( comma)  {
-	    *comma++= '\0';
-	    query_arg= strdup( comma);
+	if ( strcmp( filename, "-") == 0)
+	{
+		file= stdin;
+		current_filename= NULL;
 	}
-	type= find_server_type_string( name);
-	if ( type == NULL)
-	    add_qserver( name, default_server_type, NULL, NULL);
-	else if ( fscanf( file, "%s", name) == 1)  {
-	    if ( type->flags & TF_QUERY_ARG && comma && *query_arg)
-		add_qserver( name, type, NULL, query_arg);
-	    else
-		add_qserver( name, type, NULL, NULL);
+	else
+	{
+		file= fopen( filename, "r");
+		current_filename= filename;
 	}
-    }
+	current_fileline= 1;
 
-    if ( file != stdin)
+	if ( file == NULL)
+	{
+		perror( filename);
+		return;
+	}
+	for ( ; fscanf( file, "%s", name) == 1; current_fileline++)
+	{
+		comma= strchr( name, ',');
+		if ( comma)
+		{
+			*comma++= '\0';
+			query_arg= strdup( comma);
+		}
+		type = find_server_type_string( name);
+		if ( type == NULL)
+		{
+			add_qserver( name, default_server_type, NULL, NULL);
+		}
+		else if ( fscanf( file, "%s", name) == 1)
+		{
+			if ( type->flags & TF_QUERY_ARG && comma && *query_arg)
+			{
+				add_qserver( name, type, NULL, query_arg );
+			}
+			else
+			{
+				add_qserver( name, type, NULL, NULL );
+			}
+		}
+	}
+
+	if ( file != stdin)
 	fclose(file);
 
-    current_fileline= 0;
+	current_fileline= 0;
 }
 
 void
@@ -3544,199 +3649,265 @@ parse_query_params( struct qserver *server, char *params)
 int
 add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 {
-    struct qserver *server, *prev_server;
-    int flags= 0;
-    char *colon= NULL, *arg_copy, *hostname= NULL;
-    unsigned int ipaddr;
-    unsigned short port, port_max;
-    int portrange = 0;
-    unsigned colonpos = 0;
+	struct qserver *server, *prev_server;
+	int flags= 0;
+	char *colon= NULL, *arg_copy, *hostname= NULL;
+	unsigned int ipaddr;
+	unsigned short port, port_max;
+	int portrange = 0;
+	unsigned colonpos = 0;
 
-    if ( run_timeout && time(0)-start_time >= run_timeout)  {
-	finish_output();
-	exit(0);
-    }
-
-    port = port_max = type->default_port;
-
-    if ( outfilename && strcmp( outfilename, "-") != 0)  {
-	FILE *outfile= fopen( outfilename, "r+");
-	if ( outfile == NULL && (errno == EACCES || errno == EISDIR ||
-		errno == ENOSPC || errno == ENOTDIR))  {
-	    perror( outfilename);
-	    return -1;
+	if ( run_timeout && time(0)-start_time >= run_timeout)
+	{
+		finish_output();
+		exit(0);
 	}
-	if ( outfile)
-	    fclose(outfile);
+
+	port = port_max = type->default_port;
+
+	if ( outfilename && strcmp( outfilename, "-") != 0)
+	{
+		FILE *outfile= fopen( outfilename, "r+");
+		if ( outfile == NULL && (errno == EACCES || errno == EISDIR ||
+			errno == ENOSPC || errno == ENOTDIR))
+		{
+			perror( outfilename);
+			return -1;
+		}
+		if ( outfile)
+		{
+			fclose(outfile);
+		}
     }
 
     arg_copy= strdup(arg);
 
     colon= strchr( arg, ':');
-    if ( colon != NULL)  {
-	if(sscanf( colon+1, "%hd-%hd", &port, &port_max) == 2)
-	    portrange = 1;
-	else
-	    port_max = port;
-	*colon= '\0';
-	colonpos = colon-arg;
+    if ( colon != NULL)
+    {
+		if(sscanf( colon+1, "%hd-%hd", &port, &port_max) == 2)
+		{
+			portrange = 1;
+		}
+		else
+		{
+			port_max = port;
+		}
+		*colon= '\0';
+		colonpos = colon-arg;
     }
 
-    if ( *arg == '+')  {
-	flags|= FLAG_BROADCAST;
-	arg++;
+    if ( *arg == '+')
+    {
+		flags|= FLAG_BROADCAST;
+		arg++;
     }
 
     ipaddr= inet_addr(arg);
-    if ( ipaddr == INADDR_NONE)  {
-	if ( strcmp( arg, "255.255.255.255") != 0)
-	    ipaddr= htonl( hcache_lookup_hostname(arg));
+    if ( ipaddr == INADDR_NONE)
+    {
+		if ( strcmp( arg, "255.255.255.255") != 0)
+		{
+			ipaddr= htonl( hcache_lookup_hostname(arg));
+		}
     }
     else if ( hostname_lookup && !(flags&FLAG_BROADCAST))
-	hostname= hcache_lookup_ipaddr( ntohl(ipaddr));
+    {
+		hostname= hcache_lookup_ipaddr( ntohl(ipaddr));
+	}
 
-    if ( (ipaddr == INADDR_NONE || ipaddr == 0) &&
-		strcmp( arg, "255.255.255.255") != 0)  {
-	print_file_location();
-	fprintf( stderr, "%s: %s\n", arg, strherror(h_errno));
-	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
+    if ( (ipaddr == INADDR_NONE || ipaddr == 0) && strcmp( arg, "255.255.255.255") != 0)
+	{
+		print_file_location();
+		fprintf( stderr, "%s: %s\n", arg, strherror(h_errno));
+		server= (struct qserver *) calloc( 1, sizeof( struct qserver));
+		for(;port <= port_max; ++port)
+		{
+			init_qserver( server, type);
+			if(portrange)
+			{
+				server->arg = ( port==port_max ) ? arg_copy : strdup(arg_copy);
+			}
+			if(portrange)
+			{
+				sprintf(server->arg+colonpos+1, "%hu", port);
+			}
+			server->server_name= HOSTNOTFOUND;
+			server->error= strdup( strherror(h_errno));
+			server->port= port;
+			if ( last_server != &servers)
+			{
+				prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+				server->prev= prev_server;
+			}
+			*last_server= server;
+			last_server= & server->next;
+			if ( one_server_type_id == ~MASTER_SERVER)
+			{
+				one_server_type_id= type->id;
+			}
+			else if ( one_server_type_id != type->id)
+			{
+				one_server_type_id= 0;
+			}
+		}
+		return -1;
+	}
+
 	for(;port <= port_max; ++port)
 	{
-	    init_qserver( server, type);
-	    if(portrange)
-	    server->arg= port==port_max?arg_copy:strdup(arg_copy);
-	    if(portrange)
-		sprintf(server->arg+colonpos+1, "%hu", port);
-	    server->server_name= HOSTNOTFOUND;
-	    server->error= strdup( strherror(h_errno));
-	    server->port= port;
-	    if ( last_server != &servers)  {
-		prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-		server->prev= prev_server;
-	    }
-	    *last_server= server;
-	    last_server= & server->next;
-	    if ( one_server_type_id == ~MASTER_SERVER)
-		one_server_type_id= type->id;
-	    else if ( one_server_type_id != type->id)
-		one_server_type_id= 0;
+		// TODO: this prevents servers with the same ip:port being queried
+		// and hence breaks virtual servers support e.g. Teamspeak 2
+		//if ( find_server_by_address( ipaddr, port) != NULL)
+		//{
+		//	return 0;
+		//}
+
+		server= (struct qserver *) calloc( 1, sizeof( struct qserver));
+		server->arg= port==port_max?arg_copy:strdup(arg_copy);
+		if(portrange)
+		{
+			sprintf(server->arg+colonpos+1, "%hu", port);
+		}
+		if ( hostname && colon)
+		{
+			server->host_name= (char*)malloc( strlen(hostname) + 5 +2);
+			sprintf( server->host_name, "%s:%hu", hostname, port);
+		}
+		else
+		{
+			server->host_name= strdup((hostname)?hostname:arg);
+		}
+
+		server->ipaddr= ipaddr;
+		server->port= port;
+		server->type= type;
+		server->outfilename= outfilename;
+		server->flags= flags;
+		if (query_arg)
+		{
+			server->query_arg = ( port == port_max ) ? query_arg : strdup(query_arg);
+			parse_query_params( server, server->query_arg);
+		}
+		else
+		{
+			server->query_arg = NULL;
+		}
+		init_qserver( server, type);
+
+		if ( server->type->master)
+		{
+			waiting_for_masters++;
+		}
+
+		if ( num_servers_total % 10 == 0)
+		{
+			hcache_update_file();
+		}
+
+		if ( last_server != &servers )
+		{
+			prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+			server->prev= prev_server;
+		}
+		*last_server= server;
+		last_server= &server->next;
+
+		add_server_to_hash( server );
+
+		if ( one_server_type_id == ~MASTER_SERVER)
+		{
+			one_server_type_id= type->id;
+		}
+		else if ( one_server_type_id != type->id)
+		{
+			one_server_type_id= 0;
+		}
+
+		++num_servers;
 	}
-        return -1;
-    }
-
-    for(;port <= port_max; ++port)
-    {
-	if ( find_server_by_address( ipaddr, port) != NULL)
-	    return 0;
-
-	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
-	server->arg= port==port_max?arg_copy:strdup(arg_copy);
-	if(portrange)
-	    sprintf(server->arg+colonpos+1, "%hu", port);
-	if ( hostname && colon)  {
-	    server->host_name= (char*)malloc( strlen(hostname) + 5 +2);
-	    sprintf( server->host_name, "%s:%hu", hostname, port);
-	}
-	else
-	    server->host_name= strdup((hostname)?hostname:arg);
-
-	server->ipaddr= ipaddr;
-	server->port= port;
-	server->type= type;
-	server->outfilename= outfilename;
-	server->flags= flags;
-	if (query_arg)
-	{
-	    server->query_arg= port==port_max?query_arg:strdup(query_arg);
-	    parse_query_params( server, server->query_arg);
-	}
-	else
-	    server->query_arg = NULL;
-	init_qserver( server, type);
-
-	if ( server->type->master)
-	    waiting_for_masters++;
-
-	if ( num_servers_total % 10 == 0)
-	    hcache_update_file();
-
-	if ( last_server != &servers)  {
-	    prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-	    server->prev= prev_server;
-	}
-	*last_server= server;
-	last_server= & server->next;
-
-	add_server_to_hash( server);
-
-	if ( one_server_type_id == ~MASTER_SERVER)
-	    one_server_type_id= type->id;
-	else if ( one_server_type_id != type->id)
-	    one_server_type_id= 0;
-
-	++num_servers;
-    }
-    return 0;
+	return 0;
 }
 
 struct qserver *
 add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
 	server_type* type, int *new_server)
 {
-    char arg[36];
-    struct qserver *server, *prev_server;
-    char *hostname= NULL;
+	char arg[36];
+	struct qserver *server, *prev_server;
+	char *hostname= NULL;
 
-    if ( run_timeout && time(0)-start_time >= run_timeout)  {
-	finish_output();
-	exit(0);
-    }
+	if ( run_timeout && time(0)-start_time >= run_timeout)
+	{
+		finish_output();
+		exit(0);
+	}
 
-    if ( new_server)
-	*new_server= 0;
-    ipaddr= htonl(ipaddr);
-    if ( ipaddr == 0)
-	return 0;
-    if ( find_server_by_address( ipaddr, port) != NULL)
-	return 0;
+	if ( new_server)
+	{
+		*new_server= 0;
+	}
+	ipaddr= htonl(ipaddr);
+	if ( ipaddr == 0)
+	{
+		return 0;
+	}
 
-    if ( new_server)
-	*new_server= 1;
+	// TODO: this prevents servers with the same ip:port being queried
+	// and hence breaks virtual servers support e.g. Teamspeak 2
+	if ( find_server_by_address( ipaddr, port) != NULL)
+	{
+		return 0;
+	}
 
-    server= (struct qserver *) calloc( 1, sizeof( struct qserver));
-    server->ipaddr= ipaddr;
-    ipaddr= ntohl(ipaddr);
-    sprintf( arg, "%d.%d.%d.%d:%hu", ipaddr>>24, (ipaddr>>16)&0xff,
+	if ( new_server)
+	{
+		*new_server= 1;
+	}
+
+	server= (struct qserver *) calloc( 1, sizeof( struct qserver));
+	server->ipaddr= ipaddr;
+	ipaddr= ntohl(ipaddr);
+	sprintf( arg, "%d.%d.%d.%d:%hu", ipaddr>>24, (ipaddr>>16)&0xff,
 	(ipaddr>>8)&0xff, ipaddr&0xff, port);
-    server->arg= strdup(arg);
+	server->arg= strdup(arg);
 
-    if ( hostname_lookup)
-	hostname= hcache_lookup_ipaddr( ipaddr);
-    if ( hostname)  {
-	server->host_name= (char*)malloc( strlen(hostname) + 6 + 2);
-	sprintf( server->host_name, "%s:%hu", hostname, port);
-    }
-    else
-	server->host_name= strdup( arg);
+	if ( hostname_lookup)
+	{
+		hostname= hcache_lookup_ipaddr( ipaddr);
+	}
 
-    server->port= port;
-    init_qserver( server, type);
+	if ( hostname)
+	{
+		server->host_name= (char*)malloc( strlen(hostname) + 6 + 2);
+		sprintf( server->host_name, "%s:%hu", hostname, port);
+	}
+	else
+	{
+		server->host_name= strdup( arg);
+	}
 
-    if ( num_servers_total % 10 == 0)
-	hcache_update_file();
+	server->port= port;
+	init_qserver( server, type);
 
-    if ( last_server != &servers)  {
-	prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
-	server->prev= prev_server;
-    }
-    *last_server= server;
-    last_server= & server->next;
+	if ( num_servers_total % 10 == 0)
+	{
+		hcache_update_file();
+	}
 
-    add_server_to_hash( server);
+	if ( last_server != &servers)
+	{
+		prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
+		server->prev= prev_server;
+	}
+	*last_server= server;
+	last_server= & server->next;
 
-    ++num_servers;
+	add_server_to_hash( server);
 
-    return server;
+	++num_servers;
+
+	return server;
 }
 
 void
@@ -3875,7 +4046,7 @@ find_server_by_address( unsigned int ipaddr, unsigned short port)
 	return NULL;
     }
 
-    hashed= server_hash[hash];
+    hashed = server_hash[hash];
     for ( i= server_hash_len[hash]; i; i--, hashed++)
 	if ( *hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)
 	    return *hashed;
@@ -3886,13 +4057,14 @@ void
 add_server_to_hash( struct qserver *server)
 {
     unsigned int hash;
-    hash= (server->ipaddr + server->port) % ADDRESS_HASH_LENGTH;
+    hash = (server->ipaddr + server->port) % ADDRESS_HASH_LENGTH;
 
-    if ( server_hash_len[hash] % 16 == 0)  {
-	server_hash[hash]= (struct qserver**) realloc( server_hash[hash],
-		sizeof( struct qserver **) * (server_hash_len[hash]+16));
-	memset( &server_hash[hash][server_hash_len[hash]], 0,
-		sizeof( struct qserver **) * 16);
+    if ( server_hash_len[hash] % 16 == 0)
+    {
+		server_hash[hash]= (struct qserver**) realloc( server_hash[hash],
+			sizeof( struct qserver **) * (server_hash_len[hash]+16));
+		memset( &server_hash[hash][server_hash_len[hash]], 0,
+			sizeof( struct qserver **) * 16);
     }
     server_hash[hash][server_hash_len[hash]]= server;
     server_hash_len[hash]++;
@@ -6915,6 +7087,9 @@ add_player( struct qserver *server, int player_number )
     player->number = player_number;
     player->next = server->players;
     player->n_info = 0;
+    player->score = NA_INT;
+    player->deaths = NA_INT;
+    player->frags = NA_INT;
     player->last_info = NULL;
     server->players = player;
     server->n_player_info++;
