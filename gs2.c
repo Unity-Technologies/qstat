@@ -159,6 +159,19 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			server->num_players = no_players = atoi( val );
 		}
+		else if( 0 == strcmp( var, "hostport" ) )
+		{
+			if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
+			{
+				int port = atoi( val );
+
+				if ( port != server->port && port > 0 )
+				{
+					change_server_port( server, port );
+				}
+			}
+			add_rule( server, var, val, NO_FLAGS);  
+		}
 		else if ( 0 == var_len )
 		{
 			// check for end of section

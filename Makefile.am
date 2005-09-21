@@ -17,7 +17,8 @@ qstat_SOURCES = \
 	ut2004.c ut2004.h \
 	gps.c gps.h \
 	gs2.c gs2.h \
-	gs3.c gs3.h
+	gs3.c gs3.h \
+	ts2.c ts2.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
