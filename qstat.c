@@ -3685,7 +3685,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
     colon= strchr( arg, ':');
     if ( colon != NULL)
     {
-		if(sscanf( colon+1, "%hd-%hd", &port, &port_max) == 2)
+		if(sscanf( colon+1, "%hu-%hu", &port, &port_max) == 2)
 		{
 			portrange = 1;
 		}
@@ -3754,7 +3754,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 		return -1;
 	}
 
-	for(;port <= port_max; ++port)
+	for(; port > 0 && port <= port_max; ++port)
 	{
 		// TODO: this prevents servers with the same ip:port being queried
 		// and hence breaks virtual servers support e.g. Teamspeak 2
