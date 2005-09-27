@@ -73,10 +73,7 @@ void send_ts2_request_packet( struct qserver *server )
 
 void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *key, *value, *end;
-	struct player *player = NULL;
-	int id_major=0, id_minor=0, final=0, player_num;
-	char tmp[256];
+	char *s, *end;
 	int total_players = 0;
 	int ping, connect_time;
 	char name[256];
@@ -130,7 +127,7 @@ void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 				add_rule( server, key, value, NO_FLAGS);
 			}
 		}
-		else if ( 3 == sscanf( s, "%*d %*d %*d %*d %*d %*d %*d %d %d %*d %*d %*d %*d \"0.0.0.0\" \"%[^\"]", &ping, &connect_time, name ) )
+		else if ( 3 == sscanf( s, "%*d %*d %*d %*d %*d %*d %*d %d %d %*d %*d %*d %*d \"0.0.0.0\" \"%255[^\"]", &ping, &connect_time, name ) )
 		{
 			// Player info
 			struct player *player = add_player( server, total_players++ );
