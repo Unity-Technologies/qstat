@@ -145,7 +145,7 @@ void add_query_param( struct qserver *server, char *arg);
  * @param default_value value to return if key was not found
  * @return value for key or default_value
  */
-char * get_param_value( struct qserver *server, char *key, char *default_value);
+char * get_param_value( struct qserver *server, const char *key, char *default_value);
 
 /** @see get_param_value */
 int get_param_i_value( struct qserver *server, char *key, int default_value);

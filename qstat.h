@@ -109,8 +109,6 @@ typedef struct _server_type server_type;
 #define SAVAGE_DEFAULT_PORT	11235
 #define FARCRY_DEFAULT_PORT	49001
 #define STEAM_MASTER_DEFAULT_PORT	27010
-#define DOOM3_DEFAULT_PORT	27666
-#define DOOM3_MASTER_DEFAULT_PORT	27650
 #define HL2_DEFAULT_PORT	27015
 #define HL2_MASTER_DEFAULT_PORT	27011
 #define TS2_DEFAULT_PORT 51234
@@ -171,8 +169,10 @@ typedef struct _server_type server_type;
 #define PARIAH_SERVER	50
 #define GAMESPY3_PROTOCOL_SERVER 51
 #define TS2_PROTOCOL_SERVER 52
+#define QUAKE4_SERVER 53
+#define QUAKE4_MASTER (53|MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  52
+#define LAST_BUILTIN_SERVER  53
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -2425,6 +2425,74 @@ server_type builtin_types[] = {
     deal_with_ts2_packet,			/* packet_func */
 },
 {
+    /* QUAKE 4 */
+    QUAKE4_SERVER,					/* id */
+    "Q4S",							/* type_prefix */
+    "q4s",							/* type_string */
+    "-q4s",						/* type_option */
+    "Quake 4",						/* game_name */
+    0,								/* master */
+    QUAKE4_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "fs_game",						/* game_rule */
+    "QUAKE4",						/* template_var */
+    (char*) &doom3_serverinfo,		/* status_packet */
+    sizeof( doom3_serverinfo),		/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_doom3_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_doom3_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_doom3_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_qwserver_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_quake4_packet,			/* packet_func */
+},
+{
+    /* QUAKE 4 MASTER */
+    QUAKE4_MASTER,		/* id */
+    "Q4M",			/* type_prefix */
+    "q4m",			/* type_string */
+    "-q4m",			/* type_option */
+    "Quake 4 Master",		/* game_name */
+    QUAKE4_SERVER,		/* master */
+    QUAKE4_MASTER_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_OUTFILE|TF_QUERY_ARG,	/* flags */
+    "",				/* game_rule */
+    "QUAKE4MASTER",			/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,	/* master_packet */
+    0,          /* master_len */
+    NULL,	/* master_protocol */
+    NULL,	/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_qwmaster_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_doom3master_packet,	/* packet_func */
+},
+{
     Q_UNKNOWN_TYPE,		/* id */
     "",				/* type_prefix */
     "",				/* type_string */
@@ -2489,7 +2557,7 @@ struct player  {
     short flags;
     short type_flag;	/* Tribes 2 only */
     int packet_loss;	/* Tribes only */
-    char *tribe_tag;	/* Tribes 2 only */
+    char *tribe_tag;	/* Tribes 2 / Quake 4 clan name */
     char *skin;
     char *mesh;		/* Unreal only */
     char *face;		/* Unreal only */
