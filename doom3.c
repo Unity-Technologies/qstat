@@ -2,7 +2,7 @@
  * qstat 2.9
  * by Steve Jankowski
  *
- * Doom3 protocol
+ * Doom3 / Quake4 protocol
  * Copyright 2005 Ludwig Nussel
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
@@ -17,8 +17,32 @@
 
 static const char doom3_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00";
 //                                                  version ^^^^^^^^^^^^^^^^
-//                                                               filterbyte ^^^^ 
-//                                                   null terminated mod string ^^^^
+//                                               null terminated mod string ^^^^
+//                                                                   filterbyte ^^^^ 
+
+
+static const char quake4_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00\x00\x00";
+//                                                   version ^^^^^^^^^^^^^^^^
+//                                                null terminated mod string ^^^^
+//                                                 null terminated player string ^^^^
+//                                                       null terminated clan string ^^^^
+//                                                                            filterbyte ^^^^ 
+
+static unsigned put_param_string(struct qserver* server, const char* paramname, char* buf, unsigned buflen, unsigned off)
+{
+	char* val = get_param_value( server, paramname, NULL);
+	if(val && strlen(val) < buflen-off-2)
+	{
+		strcpy(buf+off, val);
+		off += strlen(val) + 1;
+	}
+	else
+	{
+		buf[off++] = '\0';
+	}
+
+	return off;
+}
 
 char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* buflen)
 {
@@ -28,11 +52,20 @@ char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* bufl
 	char *proto = server->query_arg;
 	unsigned ver;
 	unsigned off = 13;
+	int q4 = (server->type->id == QUAKE4_MASTER);
 
 	if(!proto)
 	{
-		*buflen = sizeof(doom3_master_query);
-		return (char*)doom3_master_query;
+		if(q4)
+		{
+			*buflen = sizeof(quake4_master_query);
+			return (char*)quake4_master_query;
+		}
+		else
+		{
+			*buflen = sizeof(doom3_master_query);
+			return (char*)doom3_master_query;
+		}
 	}
 
 	ver = (atoi(proto) & 0xFFFF) << 16;
@@ -41,19 +74,20 @@ char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* bufl
 	{
 		ver |= (atoi(proto) & 0xFFFF);
 	}
+	if(q4)
+	{
+		ver |= 1 << 31; // third party flag
+	}
 	memcpy(buf, doom3_master_query, sizeof(doom3_master_query));
 	put_long_little(ver, buf+off);
 	off += 4;
 
-	pkt = get_param_value( server, "game", NULL);
-	if(pkt && strlen(pkt) < *buflen-off-2)
+	off = put_param_string(server, "game", buf, *buflen, off);
+
+	if(q4)
 	{
-		strcpy(buf+off, pkt);
-		off += strlen(pkt) + 1;
-	}
-	else
-	{
-		buf[off++] = '\0';
+		off = put_param_string(server, "player", buf, *buflen, off);
+		off = put_param_string(server, "clan", buf, *buflen, off);
 	}
 
 	pkt = get_param_value( server, "status", NULL);
@@ -95,6 +129,7 @@ char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* bufl
 }
 
 static const char doom3_masterresponse[] = "\xFF\xFFservers";
+
 void
 deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
@@ -115,7 +150,7 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	pkt = rawpkt + sizeof(doom3_masterresponse);
-	len	= pktlen - sizeof(doom3_masterresponse);
+	len = pktlen - sizeof(doom3_masterresponse);
 
 	if(server->master_pkt_len < len)
 	{
@@ -148,8 +183,7 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
 static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
 
-void
-deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
+static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, int q4)
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -158,6 +192,9 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
 	char tmp[32];
+	unsigned expect_version = 1;
+
+	if(q4) expect_version = 2;
 
 	server->n_servers++;
 	if ( server->server_name == NULL)
@@ -189,9 +226,9 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)",
 		challenge, tmp, protocolver);
 
-	if(protocolver >> 16 != 1)
+	if(protocolver >> 16 != expect_version)
 	{
-		malformed_packet(server, "protocol version != 1");
+		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, expect_version);
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -277,7 +314,7 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	while( ptr < end )
 	{
 		struct player *player;
-		char *name;
+		char *val;
 		unsigned char player_id = *ptr++;
 		short prediction = 0;
 		unsigned rate = 0;
@@ -314,7 +351,7 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 		// XXX no idea what's so important about the rate
 
-		name = ptr;
+		val = ptr;
 		ptr = memchr(ptr, '\0', end-ptr);
 		if ( !ptr )
 		{
@@ -323,9 +360,24 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 			return;
 		}
 		++ptr;
-		player->name = strdup( name );
-		debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
-				num_players, player->name, prediction, rate, player_id);
+		player->name = strdup( val );
+
+		if(q4)
+		{
+			val = ptr;
+			ptr = memchr(ptr, '\0', end-ptr);
+			if ( !ptr )
+			{
+				malformed_packet( server, "player clan not null terminated" );
+				cleanup_qserver( server, 1);
+				return;
+			}
+			++ptr;
+			player->tribe_tag = strdup( val );
+		}
+
+		debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, clan %s",
+				num_players, player->name, prediction, rate, player_id, player->tribe_tag);
 
 		++num_players;
 	}
@@ -346,4 +398,14 @@ deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 
 	cleanup_qserver( server, 1 );
 	return;
+}
+
+void deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	_deal_with_doom3_packet(server, rawpkt, pktlen, 0);
+}
+
+void deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	_deal_with_doom3_packet(server, rawpkt, pktlen, 1);
 }

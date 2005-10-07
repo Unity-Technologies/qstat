@@ -2680,7 +2680,7 @@ add_query_param( struct qserver *server, char *arg)
 }
 
 char *
-get_param_value( struct qserver *server, char *key, char *default_value)
+get_param_value( struct qserver *server, const char *key, char *default_value)
 {
     struct query_param *p= server->params;
     for ( ; p; p= p->next)
@@ -4798,7 +4798,7 @@ send_qwmaster_request_packet( struct qserver *server)
 				packet_len++;
 			}
 		}
-		else if ( server->type->id == DOOM3_MASTER)
+		else if ( server->type->id == DOOM3_MASTER || server->type->id == QUAKE4_MASTER)
 		{
 			packet_len = sizeof(query_buf);
 			packet = build_doom3_masterfilter(server, query_buf, (unsigned*)&packet_len);
