@@ -224,6 +224,7 @@ int u2xmp_html_color( short color, char *dest, int *font_tag );
 int ut2k4_html_color( char *color, char *dest, int *font_tag );
 
 int show_errors= 0;
+static int noserverdups = 1;
 
 #define DEFAULT_COLOR_NAMES_RAW		0
 #define DEFAULT_COLOR_NAMES_DISPLAY	1
@@ -2511,6 +2512,7 @@ usage( char *msg, char **argv, char *a1)
     printf( "-maxsim\t\tset maximum simultaneous queries\n");
     printf( "-sendinterval\t\tset time in ms between sending packets, default %u\n", sendinterval);
     printf( "-errors\t\tdisplay errors\n");
+    printf( "-allowserverdups\t\tallow adding multiple servers with same ip:port (needed for ts2)\n");
     printf( "-of\t\toutput file\n");
 	printf( "-af\t\tLike -of, but append to the file\n" );
     printf( "-raw <delim>\toutput in raw format using <delim> as delimiter\n");
@@ -3395,6 +3397,9 @@ main( int argc, char *argv[])
 		return 1;
 	    add_config_server_types();
 	}
+	else if ( strcmp( argv[arg], "-allowserverdups") == 0)  {
+	    noserverdups = 0;
+	}
 #ifdef ENABLE_DUMP
 	else if ( strcmp( argv[arg], "-dump") == 0)  {
 	    do_dump = 1;
@@ -3756,12 +3761,10 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 
 	for(; port > 0 && port <= port_max; ++port)
 	{
-		// TODO: this prevents servers with the same ip:port being queried
-		// and hence breaks virtual servers support e.g. Teamspeak 2
-		//if ( find_server_by_address( ipaddr, port) != NULL)
-		//{
-		//	return 0;
-		//}
+		if ( noserverdups && find_server_by_address( ipaddr, port) != NULL)
+		{
+			continue;
+		}
 
 		server= (struct qserver *) calloc( 1, sizeof( struct qserver));
 		server->arg= port==port_max?arg_copy:strdup(arg_copy);
