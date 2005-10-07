@@ -60,6 +60,7 @@ typedef struct _server_type server_type;
 
 // Packet modules
 #include "ut2004.h"
+#include "doom3.h"
 #include "a2s.h"
 #include "gps.h"
 #include "gs2.h"
@@ -497,9 +498,6 @@ char q2_masterquery[] = { 'q', 'u', 'e', 'r', 'y', '\n', '\0' };
 char q3_master_query_template[] = "\377\377\377\377getservers %s %s";
 char q3_master_default_protocol[] = "68";
 char q3_master_default_query[] = "empty full demo\n";
-
-char doom3_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00";
-//                                             ^^^^^^^^^^^^^^^^ version
 
 /* RETURN TO CASTLE WOLFENSTEIN */
 char rtcw_master_default_protocol[] = "60";
@@ -1934,8 +1932,8 @@ server_type builtin_types[] = {
     0,				/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
-    doom3_master_query,	/* master_packet */
-    sizeof(doom3_master_query),/* master_len */
+    NULL,	/* master_packet */
+    0,          /* master_len */
     NULL,	/* master_protocol */
     NULL,	/* master_query */
     display_qwmaster,		/* display_player_func */
