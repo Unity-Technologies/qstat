@@ -3020,7 +3020,7 @@ void do_work(void)
 	free(buffer);
 }
 #ifndef _WIN32
-int sigpipe( int sig )
+void sigpipe( int sig )
 {
 	fprintf( stderr, "SIG: %d\n", sig );
 }
