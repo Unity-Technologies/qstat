@@ -1,0 +1,349 @@
+/*
+ * qstat 2.9
+ * by Steve Jankowski
+ *
+ * Doom3 protocol
+ * Copyright 2005 Ludwig Nussel
+ *
+ * Licensed under the Artistic License, see LICENSE.txt for license terms
+ */
+
+#include "stdio.h"
+#include "stdlib.h"
+
+#include "qstat.h"
+#include "debug.h"
+#include "assert.h"
+
+static const char doom3_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00";
+//                                                  version ^^^^^^^^^^^^^^^^
+//                                                               filterbyte ^^^^ 
+//                                                   null terminated mod string ^^^^
+
+char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* buflen)
+{
+	int flen = 0;
+	char *pkt, *r, *sep= "";
+	unsigned char b = 0;
+	char *proto = server->query_arg;
+	unsigned ver;
+	unsigned off = 13;
+
+	if(!proto)
+	{
+		*buflen = sizeof(doom3_master_query);
+		return (char*)doom3_master_query;
+	}
+
+	ver = (atoi(proto) & 0xFFFF) << 16;
+	proto = strchr(proto, '.');
+	if(proto && *++proto)
+	{
+		ver |= (atoi(proto) & 0xFFFF);
+	}
+	memcpy(buf, doom3_master_query, sizeof(doom3_master_query));
+	put_long_little(ver, buf+off);
+	off += 4;
+
+	pkt = get_param_value( server, "game", NULL);
+	if(pkt && strlen(pkt) < *buflen-off-2)
+	{
+		strcpy(buf+off, pkt);
+		off += strlen(pkt) + 1;
+	}
+	else
+	{
+		buf[off++] = '\0';
+	}
+
+	pkt = get_param_value( server, "status", NULL);
+	r = pkt ;
+	while ( pkt && sep )
+	{
+		sep= strchr( r, ':');
+		if ( sep )
+			flen= sep-r;
+		else
+			flen= strlen(r);
+
+		if ( strncmp( r, "password", flen) == 0)
+			b |= 0x01;
+		else if ( strncmp( r, "nopassword", flen) == 0)
+			b |= 0x02;
+		else if ( strncmp( r, "notfull", flen) == 0)
+			b |= 0x04;
+		else if ( strncmp( r, "notfullnotempty", flen) == 0)
+			b |= 0x08;
+		r= sep+1;
+	}
+
+	pkt = get_param_value( server, "gametype", NULL);
+	if(pkt)
+	{
+		if ( strncmp( pkt, "dm", flen) == 0)
+			b |= 0x10;
+		else if ( strncmp( pkt, "tourney", flen) == 0)
+			b |= 0x20;
+		else if ( strncmp( pkt, "tdm", flen) == 0)
+			b |= 0x30;
+	}
+
+	buf[off++] = (char)b;
+	*buflen = off;
+
+	return buf;
+}
+
+static const char doom3_masterresponse[] = "\xFF\xFFservers";
+void
+deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	char* pkt, *dest;
+	int len;
+	server->ping_total+= time_delta( &packet_recv_time,
+		&server->packet_time1);
+
+	if ( pktlen < sizeof(doom3_masterresponse)
+			|| (pktlen - sizeof(doom3_masterresponse)) % 6
+			|| memcmp( doom3_masterresponse, rawpkt, sizeof(doom3_masterresponse) ) != 0 )
+	{
+		server->server_name= SERVERERROR;
+		server->master_pkt_len = 0;
+		malformed_packet(server, "too short or invalid response");
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	pkt = rawpkt + sizeof(doom3_masterresponse);
+	len	= pktlen - sizeof(doom3_masterresponse);
+
+	if(server->master_pkt_len < len)
+	{
+		server->master_pkt = (char*)realloc( server->master_pkt, len);
+	}
+	server->master_pkt_len = len;
+
+	dest = server->master_pkt;
+	while(len > 0)
+	{
+		memcpy(dest, pkt, 4 );
+		dest[4] = pkt[5];
+		dest[5] = pkt[4];
+		dest += 6;
+		pkt += 6;
+		len -= 6;
+	}
+	assert(len == 0);
+
+	server->n_servers= server->master_pkt_len / 6;
+	server->retry1= 0;
+
+	debug(2, "%d servers added", server->n_servers);
+
+	server->server_name = MASTER;
+	cleanup_qserver( server, 0);
+	bind_sockets();
+}
+
+static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
+static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
+
+void
+deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
+{
+	char *ptr = rawpkt;
+	char *end = rawpkt + pktlen;
+	int type = 0;
+	unsigned num_players = 0;
+	unsigned challenge = 0;
+	unsigned protocolver = 0;
+	char tmp[32];
+
+	server->n_servers++;
+	if ( server->server_name == NULL)
+	{
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+	}
+	else
+	{
+		gettimeofday( &server->packet_time1, NULL);
+	}
+
+	// Check if correct reply
+	if ( pktlen < sizeof(doom3_inforesponse) +4 +4 +1 ||
+		memcmp( doom3_inforesponse, ptr, sizeof(doom3_inforesponse)) != 0 )
+	{
+		malformed_packet(server, "too short or invalid response");
+		cleanup_qserver( server, 1);
+		return;
+	}
+	ptr += sizeof(doom3_inforesponse);
+
+	challenge = swap_long_from_little(ptr);
+	ptr += 4;
+
+	protocolver = swap_long_from_little(ptr);
+	ptr += 4;
+
+	snprintf(tmp, sizeof(tmp), "%u.%u", protocolver >> 16, protocolver & 0xFFFF);
+	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)",
+		challenge, tmp, protocolver);
+
+	if(protocolver >> 16 != 1)
+	{
+		malformed_packet(server, "protocol version != 1");
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	server->protocol_version = protocolver;
+	add_rule( server, "protocol", tmp, NO_FLAGS );
+
+	while ( ptr < end )
+	{
+		// server info:
+		// name value pairs null seperated
+		// empty name && value signifies the end of section
+		char *key, *val;
+		unsigned keylen, vallen;
+
+		key = ptr;
+		ptr = memchr(ptr, '\0', end-ptr);
+		if ( !ptr )
+		{
+			malformed_packet( server, "no rule key" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+		keylen = ptr - key;
+
+		val = ++ptr;
+		ptr = memchr(ptr, '\0', end-ptr);
+		if ( !ptr )
+		{
+			malformed_packet( server, "no rule value" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+		vallen = ptr - val;
+		++ptr;
+		debug( 2, "key:%s=%s:", key, val);
+
+		if(keylen == 0 && vallen == 0)
+		{
+			type = 1;
+			break; // end
+		}
+
+		// Lets see what we've got
+		if ( 0 == strcasecmp( key, "si_name" ) )
+		{
+			server->server_name = strdup( val );
+		}
+		else if( 0 == strcasecmp( key, "fs_game" ) )
+		{
+			server->game = strdup( val );
+		}
+#if 0
+		else if( 0 == strcasecmp( key, "si_version" ) )
+		{
+			// format:
+			// DOOM 1.0.1262.win-x86 Jul  8 2004 16:46:37
+			server->protocol_version = atoi( val+1 );
+		}
+#endif
+		else if( 0 == strcasecmp( key, "si_map" ) )
+		{
+			server->map_name = strdup( val );
+		}
+		else if( 0 == strcasecmp( key, "si_maxplayers" ) )
+		{
+			server->max_players = atoi( val );
+		}
+
+		add_rule( server, key, val, NO_FLAGS );
+	}
+
+	if ( type != 1 )
+	{
+		// no more info should be player headers here as we
+		// requested it
+		malformed_packet( server, "player info missing" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+
+	// now each player details
+	while( ptr < end )
+	{
+		struct player *player;
+		char *name;
+		unsigned char player_id = *ptr++;
+		short prediction = 0;
+		unsigned rate = 0;
+
+		if(player_id == MAX_DOOM3_ASYNC_CLIENTS)
+			break;
+
+		/* id's are not steady
+		if(player_id != num_players)
+		{
+			malformed_packet(server, "unexpected player id");
+			cleanup_qserver( server, 1);
+			return;
+		}
+		*/
+
+		if ( ptr + 7 > end ) // 2 pred + 4 rate + empty player name ('\0')
+		{
+			// run off the end and shouldnt have
+			malformed_packet( server, "player info too short" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+
+		player = add_player( server, num_players );
+
+		prediction = swap_short_from_little(ptr);
+		ptr += 2;
+
+		player->ping = prediction; // seems to be ping
+
+		rate = swap_long_from_little(ptr);
+		ptr += 4;
+
+		// XXX no idea what's so important about the rate
+
+		name = ptr;
+		ptr = memchr(ptr, '\0', end-ptr);
+		if ( !ptr )
+		{
+			malformed_packet( server, "player name not null terminated" );
+			cleanup_qserver( server, 1);
+			return;
+		}
+		++ptr;
+		player->name = strdup( name );
+		debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
+				num_players, player->name, prediction, rate, player_id);
+
+		++num_players;
+	}
+
+	if(end - ptr == 4)
+	{
+		snprintf(tmp, sizeof(tmp), "0x%X", swap_long_from_little(ptr));
+		add_rule( server, "osmask", tmp, NO_FLAGS );
+		debug( 2, "osmask %s", tmp);
+		ptr += 4;
+	}
+	else
+	{
+		malformed_packet(server, "osmask missing");
+	}
+
+	server->num_players = num_players;
+
+	cleanup_qserver( server, 1 );
+	return;
+}
