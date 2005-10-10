@@ -1942,7 +1942,7 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
-    send_qwmaster_request_packet,/* status_query_func */
+    send_doom3master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_doom3master_packet,	/* packet_func */
@@ -2487,7 +2487,7 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
-    send_qwmaster_request_packet,/* status_query_func */
+    send_quake4master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_doom3master_packet,	/* packet_func */
@@ -2782,5 +2782,7 @@ void put_long_little(unsigned val, char* buf);
 extern int show_game_port;
 
 #define NA_INT -32767
+#define NO_PLAYER_INFO 0xffff
+#define NO_SERVER_RULES NULL
 
 #endif

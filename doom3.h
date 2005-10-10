@@ -18,8 +18,10 @@
 #define QUAKE4_DEFAULT_PORT	28004
 #define QUAKE4_MASTER_DEFAULT_PORT	27650
 
-char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* buflen);
+void send_doom3master_request_packet( struct qserver *server);
 void deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen);
+
 void deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen);
+void send_quake4master_request_packet( struct qserver *server);
 
 #endif

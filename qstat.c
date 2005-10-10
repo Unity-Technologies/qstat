@@ -2445,8 +2445,6 @@ struct qserver * get_next_ready_server();
 /* Misc flags
  */
 
-char * NO_SERVER_RULES= NULL;
-int NO_PLAYER_INFO= 0xffff;
 struct timeval packet_recv_time;
 int one_server_type_id= ~ MASTER_SERVER;
 static int one= 1;
@@ -4797,11 +4795,6 @@ send_qwmaster_request_packet( struct qserver *server)
 				*(packet + packet_len ) = 0x00;
 				packet_len++;
 			}
-		}
-		else if ( server->type->id == DOOM3_MASTER || server->type->id == QUAKE4_MASTER)
-		{
-			packet_len = sizeof(query_buf);
-			packet = build_doom3_masterfilter(server, query_buf, (unsigned*)&packet_len);
 		}
 		else if ( server->type->flags & TF_QUERY_ARG)
 		{
