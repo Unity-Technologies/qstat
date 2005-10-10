@@ -1,15 +1,29 @@
-QStat version 2.8
+QStat version 2.9
 
-** UPDATED for 2.8 + CVS **
-April 03, 2005
+** UPDATED for 2.9 **
+October ???, 2005
 
 Summary of New Features
 -----------------------
-added support for pariah protocol (-prs)
+new protocols:
+   Pariah [-prs]
+   Steam Master for A2S [-stma2s]
+   Nexuiz [-nexuizm, -nexuizs]
+   Gamespy V3 [-gs3]
+   Quake 4 [-q4m, -q4s]
+
+add option -allowserverdups to be able to query ts2 servers
+support for LAN broadcasts with A2S
+add option -sendinterval for tuning send throttling
+add support for port ranges
+support HL1 protocol variant in A2S
+add 'S' player sort option to sort by score
 
 Fixes
 -----
-N/A
+fix eye protocol not showing the last player
+always use an offset of 123 with eye protocol
+fix infinite loop and memory expansion when port is 65535
 
 --
 Steve Jankowski
