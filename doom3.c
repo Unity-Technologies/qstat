@@ -44,7 +44,7 @@ static unsigned put_param_string(struct qserver* server, const char* paramname, 
 	return off;
 }
 
-char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* buflen)
+static char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* buflen, int q4)
 {
 	int flen = 0;
 	char *pkt, *r, *sep= "";
@@ -52,7 +52,6 @@ char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* bufl
 	char *proto = server->query_arg;
 	unsigned ver;
 	unsigned off = 13;
-	int q4 = (server->type->id == QUAKE4_MASTER);
 
 	if(!proto)
 	{
@@ -126,6 +125,68 @@ char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigned* bufl
 	*buflen = off;
 
 	return buf;
+}
+
+void send_doom3master_request_packet( struct qserver *server)
+{
+	int rc = 0;
+	int packet_len = -1;
+	char* packet = NULL;
+	char query_buf[4096] = {0};
+
+	server->next_player_info = NO_PLAYER_INFO;
+
+	packet_len = sizeof(query_buf);
+	packet = build_doom3_masterfilter(server, query_buf, (unsigned*)&packet_len, 0);
+
+	rc= send( server->fd, packet, packet_len, 0);
+	if ( rc == SOCKET_ERROR)
+	{
+		perror( "send");
+	}
+
+	if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+	}
+	else
+	{
+		server->n_retries++;
+	}
+	server->retry1--;
+	server->n_packets++;
+}
+
+void send_quake4master_request_packet( struct qserver *server)
+{
+	int rc = 0;
+	int packet_len = -1;
+	char* packet = NULL;
+	char query_buf[4096] = {0};
+
+	server->next_player_info = NO_PLAYER_INFO;
+
+	packet_len = sizeof(query_buf);
+	packet = build_doom3_masterfilter(server, query_buf, (unsigned*)&packet_len, 1);
+
+	rc= send( server->fd, packet, packet_len, 0);
+	if ( rc == SOCKET_ERROR)
+	{
+		perror( "send");
+	}
+
+	if ( server->retry1 == n_retries)
+	{
+		gettimeofday( &server->packet_time1, NULL);
+		server->n_requests++;
+	}
+	else
+	{
+		server->n_retries++;
+	}
+	server->retry1--;
+	server->n_packets++;
 }
 
 static const char doom3_masterresponse[] = "\xFF\xFFservers";
