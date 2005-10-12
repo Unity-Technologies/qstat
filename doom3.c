@@ -8,8 +8,9 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#include "stdio.h"
-#include "stdlib.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
 
 #include "qstat.h"
 #include "debug.h"
@@ -401,6 +402,9 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		}
 
 		player = add_player( server, num_players );
+
+		player->score = 0;
+		player->frags = 0;
 
 		prediction = swap_short_from_little(ptr);
 		ptr += 2;
