@@ -1010,11 +1010,11 @@ display_doom3_player_info( struct qserver *server)
     struct player *player;
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	if ( player->team_name)
+	if ( player->tribe_tag)
 	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
 		player->score,
 		ping_time(player->ping),
-		player->team_name,
+		player->tribe_tag,
 		xform_name( player->name, server));
 	else
 	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
@@ -1511,12 +1511,12 @@ raw_display_doom3_player_info( struct qserver *server)
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
-	if ( player->team_name)
+	if ( player->tribe_tag)
 	    fprintf( OF, fmt_team_name,
 		xform_name( player->name, server),
 		RD, player->score,
 		RD, player->ping,
-		RD, player->team_name,
+		RD, player->tribe_tag,
 		RD, player->skin ? player->skin : "",
 		RD, play_time( player->connect_time,1)
 	);
@@ -1575,7 +1575,6 @@ void
 raw_display_ts2_player_info( struct qserver *server)
 {
     static const char *fmt= "%s" "%s%d" "%s%s" "%s%s";
-    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
     struct player *player;
 
     player= server->players;
@@ -2215,9 +2214,9 @@ xml_display_doom3_player_info( struct qserver *server)
 			player->score);
 		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n",
 			player->ping);
-		if ( player->team_name)
-		    fprintf( OF, "\t\t\t\t<team>%s</team>\n",
-			xml_escape(player->team_name));
+		if ( player->tribe_tag)
+		    fprintf( OF, "\t\t\t\t<clan>%s</clan>\n",
+			player->tribe_tag ? xml_escape(xform_name(player->tribe_tag,server)) : "");
 		else
 		    fprintf( OF, "\t\t\t\t<team>%d</team>\n",
 			player->team);
