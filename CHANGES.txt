@@ -1,7 +1,7 @@
 QStat version 2.9
 
 ** UPDATED for 2.9 **
-October ???, 2005
+October 20, 2005
 
 Summary of New Features
 -----------------------
