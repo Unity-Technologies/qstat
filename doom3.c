@@ -10,7 +10,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <sys/socket.h>
+#endif
 
 #include "qstat.h"
 #include "debug.h"
@@ -19,7 +21,7 @@
 static const char doom3_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00";
 //                                                  version ^^^^^^^^^^^^^^^^
 //                                               null terminated mod string ^^^^
-//                                                                   filterbyte ^^^^ 
+//                                                                   filterbyte ^^^^
 
 
 static const char quake4_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x00\x00\x00\x00";
@@ -27,7 +29,7 @@ static const char quake4_master_query[] = "\xFF\xFFgetServers\x00\x00\x00\x00\x0
 //                                                null terminated mod string ^^^^
 //                                                 null terminated player string ^^^^
 //                                                       null terminated clan string ^^^^
-//                                                                            filterbyte ^^^^ 
+//                                                                            filterbyte ^^^^
 
 static unsigned put_param_string(struct qserver* server, const char* paramname, char* buf, unsigned buflen, unsigned off)
 {
