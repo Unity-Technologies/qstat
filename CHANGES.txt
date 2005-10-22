@@ -1,3 +1,20 @@
+QStat version 2.10
+
+** UPDATED for 2.10 **
+October 22, 2005
+
+Fixes
+-----
+fix Quake4 master only returning 231 servers
+fix busy loop when waiting for Quake3 and Quake4/Doom3 master packets
+fix win32 build
+
+--
+Steve Jankowski
+Steven Hartland
+Ludwig Nussel
+
+
 QStat version 2.9
 
 ** UPDATED for 2.9 **
