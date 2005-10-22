@@ -202,7 +202,7 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 	server->ping_total+= time_delta( &packet_recv_time,
 		&server->packet_time1);
 
-	if ( pktlen < sizeof(doom3_masterresponse)
+	if ( pktlen < sizeof(doom3_masterresponse) + 6 // at least one server
 			|| (pktlen - sizeof(doom3_masterresponse)) % 6
 			|| memcmp( doom3_masterresponse, rawpkt, sizeof(doom3_masterresponse) ) != 0 )
 	{
@@ -213,16 +213,17 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 		return;
 	}
 
+	server->retry1 = 0; // received at least one packet so no need to retry
+
 	pkt = rawpkt + sizeof(doom3_masterresponse);
 	len = pktlen - sizeof(doom3_masterresponse);
 
-	if(server->master_pkt_len < len)
-	{
-		server->master_pkt = (char*)realloc( server->master_pkt, len);
-	}
-	server->master_pkt_len = len;
+	server->master_pkt = (char*)realloc( server->master_pkt, server->master_pkt_len + len);
 
-	dest = server->master_pkt;
+	dest = server->master_pkt + server->master_pkt_len;
+
+	server->master_pkt_len += len;
+
 	while(len > 0)
 	{
 		memcpy(dest, pkt, 4 );
@@ -235,13 +236,8 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 	assert(len == 0);
 
 	server->n_servers= server->master_pkt_len / 6;
-	server->retry1= 0;
 
 	debug(2, "%d servers added", server->n_servers);
-
-	server->server_name = MASTER;
-	cleanup_qserver( server, 0);
-	bind_sockets();
 }
 
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
