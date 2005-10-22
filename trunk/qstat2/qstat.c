@@ -4329,7 +4329,7 @@ send_packets()
 			interval = retry_interval;
 		}
 
-		debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players);
+		debug(2, "server %p, name %s, retry1 %d, next_rule %p, next_player_info %d, num_players %d, n_retries %d", server, server->server_name, server->retry1, server->next_rule, server->next_player_info, server->num_players, n_retries);
 		prev_n_sent = n_sent;
 		if ( server->server_name == NULL )
 		{
@@ -4352,6 +4352,7 @@ send_packets()
 			if( qserver_get_timeout(server, &now) <= 0 )
 			{
 				// Query status
+				debug(2, "calling status_query_func for %p", server);
 				server->type->status_query_func( server);
 				gettimeofday(&t_lastsend, NULL);
 				n_sent++;
@@ -5462,6 +5463,9 @@ static int qserver_get_timeout(struct qserver* server, struct timeval* now)
 			time_delta( now, &server->packet_time2);
 	}
 
+	debug(2, "timeout for %p is diff1 %d diff2 %d", server, diff1, diff2);
+
+
 	diff= (diff1<diff2)?diff1:diff2;
 
 	return diff;
@@ -6423,8 +6427,8 @@ decode_q3master_packet( struct qserver *server, char *pkt, int pktlen)
 	    p++;
     }
     server->n_servers= server->master_pkt_len / 6;
-    server->next_player_info= -1;
-    server->retry1= 0;
+//    server->next_player_info= -1; evil, causes busy loop!
+    server->retry1 = 0; // received at least one packet so no need to retry
 }
 
 void
