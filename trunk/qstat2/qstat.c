@@ -6049,16 +6049,15 @@ deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
 	    *end= '\0';
 	    key= pkt;
 	    pkt+= strlen(pkt)+1;
-	    end= strchr( pkt, '\\');
-	    if ( end == NULL)  {
-		end= strchr( pkt, '\n');
-		if ( end == NULL)
+	    end= strpbrk( pkt, "\\\n");
+	    if(!end) {
 		    end= rawpkt+pktlen;
 	    }
 	    value= (char*) malloc(end-pkt+1);
 	    memcpy( value, pkt, end-pkt);
 	    value[end-pkt]= '\0';
 	    pkt= end;
+	    debug(3, "%s = %s", key, value);
 	    if ( server->server_name == NULL &&
 			(strcmp( key, "hostname") == 0 ||
 			strcmp( key, "sv_hostname") == 0))
@@ -6107,6 +6106,8 @@ player_info:
 	    pkt++;
 	    if ( *pkt == '\0')
 		break;
+	    if(!strncmp(pkt, "\\challenge\\", 11)) // qfusion
+		    break;
 	    rc= sscanf( pkt, "%d %n", &frags, &len);
 	    if ( rc == 1 && pkt[len] != '"')  {
 		pkt+= len;
