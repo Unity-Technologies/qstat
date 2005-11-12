@@ -6622,6 +6622,7 @@ deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen)
     if ( pkt[0] != TRIBES2_RESPONSE_MASTER)  {
 	/* error */
 	cleanup_qserver( server, 1);
+	return;
     }
 
     server_limit= get_param_ui_value( server, "limit", ~0);
