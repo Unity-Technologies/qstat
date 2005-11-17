@@ -181,6 +181,7 @@ char *multi_delimiter = "|";
 int player_address= 0;
 int hex_player_names= 0;
 int hex_server_names= 0;
+int name_xforms= 1;
 int strip_carets= 1;
 int max_simultaneous= MAXFD_DEFAULT;
 int sendinterval = 5;
@@ -3177,6 +3178,7 @@ main( int argc, char *argv[])
 	}
 	else if ( strcmp( argv[arg], "-utf8") == 0) {
 	    xml_encoding= ENCODING_UTF_8;
+	    name_xforms= 0;
 	}
 	else if ( strcmp( argv[arg], "-ncn") == 0)  {
 	    color_names= 0;
@@ -3186,6 +3188,12 @@ main( int argc, char *argv[])
  	}
 	else if ( strcmp( argv[arg], "-hc") == 0)  {
 	    color_names= 2;
+ 	}
+	else if ( strcmp( argv[arg], "-nx") == 0)  {
+	    name_xforms= 1;
+ 	}
+	else if ( strcmp( argv[arg], "-nnx") == 0)  {
+	    name_xforms= 0;
  	}
 	else if ( strcmp( argv[arg], "-tc") == 0)  {
 	    time_format= CLOCK_TIME;
@@ -10667,7 +10675,10 @@ xml_escape( char *string)
 	default:
 	    break;
 	}
-	if ( xml_encoding == ENCODING_LATIN_1)  {
+	if ( ! name_xforms)  {
+	    *b++= c;
+	}
+	else if ( xml_encoding == ENCODING_LATIN_1)  {
 	    if ( isprint(c))
 		*b++= c;
 	    else
@@ -10716,6 +10727,11 @@ xform_name( char *string, struct qserver *server)
 	{
 		q[0]= '?';
 		q[1]= '\0';
+		return _q;
+	}
+
+	if ( ! name_xforms)  {
+		strcpy( _q, string);
 		return _q;
 	}
 
