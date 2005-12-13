@@ -171,8 +171,9 @@ typedef struct _server_type server_type;
 #define TS2_PROTOCOL_SERVER 52
 #define QUAKE4_SERVER 53
 #define QUAKE4_MASTER (53|MASTER_SERVER)
+#define ARMYOPS_SERVER 54
 
-#define LAST_BUILTIN_SERVER  53
+#define LAST_BUILTIN_SERVER  54
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -231,6 +232,7 @@ void display_savage_player_info( struct qserver *server);
 void display_farcry_player_info( struct qserver *server);
 void display_ghostrecon_player_info( struct qserver *server);
 void display_eye_player_info( struct qserver *server);
+void display_armyops_player_info( struct qserver *server);
 void display_gs2_player_info( struct qserver *server);
 void display_doom3_player_info( struct qserver *server);
 void display_hl2_player_info( struct qserver *server);
@@ -253,6 +255,7 @@ void raw_display_farcry_player_info( struct qserver *server);
 void raw_display_descent3_player_info( struct qserver *server);
 void raw_display_ghostrecon_player_info( struct qserver *server);
 void raw_display_eye_player_info( struct qserver *server);
+void raw_display_armyops_player_info( struct qserver *server);
 void raw_display_gs2_player_info( struct qserver *server);
 void raw_display_doom3_player_info( struct qserver *server);
 void raw_display_hl2_player_info( struct qserver *server);
@@ -277,6 +280,7 @@ void xml_display_bfris_player_info( struct qserver *server);
 void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
 void xml_display_eye_player_info( struct qserver *server);
+void xml_display_armyops_player_info( struct qserver *server);
 void xml_display_gs2_player_info( struct qserver *server);
 void xml_display_doom3_player_info( struct qserver *server);
 void xml_display_hl2_player_info( struct qserver *server);
@@ -1700,6 +1704,40 @@ server_type builtin_types[] = {
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_gs2_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_gs2_packet,	/* packet_func */
+},
+{
+    /* AMERICA'S ARMY EXTENSION (GS2 BASED) */
+    ARMYOPS_SERVER,		/* id */
+    "AMS",			/* type_prefix */
+    "ams",			/* type_string */
+    "-ams",			/* type_option */
+    "America's Army v2.x",	/* game_name */
+    0,				/* master */
+    1716,			/* default_port */
+    1,				/* port_offset */
+    TF_SINGLE_QUERY|TF_U2_NAMES,	/* flags */
+    "gametype",			/* game_rule */
+    "AMERICASARMY",		/* template_var */
+    (char*) &gs2_status_query,	/* status_packet */
+    sizeof( gs2_status_query),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_armyops_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_armyops_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_armyops_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */

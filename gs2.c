@@ -145,6 +145,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// format:
 			// v1.0
 			server->protocol_version = atoi( val+1 );
+			add_rule( server, var, val, NO_FLAGS );
 		}
 		else if( 0 == strcmp( var, "mapname" ) )
 		{
