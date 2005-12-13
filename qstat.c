@@ -970,6 +970,29 @@ display_eye_player_info( struct qserver *server)
     }
 }
 
+int
+calculate_armyops_score( struct player *player)
+{
+	/* Calculates a player's score for ArmyOps from the basic components */
+
+	int score = 0;
+	int kill_score = 0;
+	struct info *info;
+	
+	for ( info = player->info; info; info = info->next )
+	{
+		if ( 0 == strcmp( info->name, "leader") || 0 == strcmp( info->name, "goal") || 0 == strcmp( info->name, "roe") )
+			score += atoi( info->value );
+		else if ( 0 == strcmp( info->name, "kia") || 0 == strcmp( info->name, "enemy") )
+			kill_score += atoi( info->value );
+	}
+	
+	if ( kill_score > 0 )
+		score += kill_score;
+	
+	return score;
+}
+
 void
 display_gs2_player_info( struct qserver *server)
 {
@@ -989,6 +1012,19 @@ display_gs2_player_info( struct qserver *server)
 		player->team,
 		xform_name( player->name, server));
     }
+}
+
+void
+display_armyops_player_info( struct qserver *server)
+{
+	struct player *player;
+	
+	player= server->players;
+	for ( ; player != NULL; player= player->next)  {
+		player->score = calculate_armyops_score( player );
+	}
+	
+	display_gs2_player_info(server);
 }
 
 void
@@ -1570,6 +1606,19 @@ raw_display_gs2_player_info( struct qserver *server)
 	);
 	fputs( "\n", OF);
     }
+}
+
+void
+raw_display_armyops_player_info( struct qserver *server)
+{
+	struct player *player;
+	
+	player= server->players;
+	for ( ; player != NULL; player= player->next)  {
+		player->score = calculate_armyops_score( player );
+	}
+	
+	raw_display_gs2_player_info(server);
 }
 
 void
@@ -2300,6 +2349,20 @@ xml_display_gs2_player_info( struct qserver *server)
     }
 
     fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_armyops_player_info( struct qserver *server)
+{
+	struct player *player;
+	
+	player= server->players;
+	for ( ; player != NULL; player= player->next)
+	{
+		player->score = calculate_armyops_score( player );
+	}
+	
+	xml_display_gs2_player_info(server);
 }
 
 void
