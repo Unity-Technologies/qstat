@@ -18,7 +18,8 @@
 #else
 	#ifdef DEBUG
 		#include <stdarg.h>
-		void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...);
+		void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
+			GCC_FORMAT_PRINTF(5, 6);
 		#define debug(level,fmt,rem...) \
 		  if( level <= get_debug_level() ) \
 			_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
@@ -30,7 +31,7 @@
 void dump_packet(const char* buf, int buflen);
 
 /** report a packet decoding error to stderr */
-void malformed_packet(struct qserver* server, const char* fmt, ...);
+void malformed_packet(const struct qserver* server, const char* fmt, ...) GCC_FORMAT_PRINTF(2, 3);
 
 int get_debug_level (void);
 void set_debug_level (int level);
