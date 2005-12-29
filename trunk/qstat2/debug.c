@@ -59,7 +59,7 @@ int get_debug_level (void)
   return (debug_level);
 }
 
-void malformed_packet(struct qserver* server, const char* fmt, ...)
+void malformed_packet(const struct qserver* server, const char* fmt, ...)
 {
 	va_list ap;
 
