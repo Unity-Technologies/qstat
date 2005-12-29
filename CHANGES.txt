@@ -1,3 +1,26 @@
+QStat version 2.11
+
+** UPDATED for 2.11 **
+INSTERT DATE HERE
+
+Summary of New Features
+-----------------------
+new protocols:
+   Warsow [-warsows]
+
+add -nx and -nnx options that enable resp. disable name transformation
+calculate player score for AMS servers
+
+Fixes
+-----
+fix segfault when a "tribes2 master" returns garbage
+
+--
+Steve Jankowski
+Steven Hartland
+Ludwig Nussel
+
+
 QStat version 2.10
 
 ** UPDATED for 2.10 **
