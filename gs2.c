@@ -115,11 +115,11 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			if ( 0 != var_len )
 			{
-				fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+				malformed_packet( server, "no rule value" );
 			}
 			else if ( get_player_info )
 			{
-				fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+				malformed_packet( server, "no player headers" );
 			}
 			cleanup_qserver( server, 1);
 			return;
@@ -188,7 +188,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// no more info should be player headers here as we
 		// requested it
-		fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+		malformed_packet( server, "no player headers" );
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -203,7 +203,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 	if ( ptr >= end )
 	{
-		fprintf( stderr, "Invalid packet detected (no player headers)\n" );
+		malformed_packet( server, "no player headers" );
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -218,7 +218,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		tmpp = (char**)realloc( headers, no_headers * sizeof( char* ) );
 		if ( NULL == tmpp )
 		{
-			fprintf( stderr, "Failed to realloc memory for headers\n" );
+			debug( 0, "Failed to realloc memory for headers\n" );
 			if ( NULL != headers )
 			{
 				free( headers );
@@ -245,7 +245,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// no more info should be player info here as we
 		// requested it
-		fprintf( stderr, "Invalid packet detected (no players)\n" );
+		malformed_packet( server, "no players" );
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -259,7 +259,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// no players
 			if ( 0 != no_players )
 			{
-				fprintf( stderr, "Invalid packet detected (no players)\n" );
+				malformed_packet( server, "no players" );
 				cleanup_qserver( server, 1);
 				return;
 			}
@@ -276,7 +276,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 				if ( ptr >= end )
 				{
-					fprintf( stderr, "Invalid packet detected (short player detail)\n" );
+					malformed_packet( server, "short player detail" );
 					cleanup_qserver( server, 1);
 					return;
 				}
@@ -326,7 +326,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 		if ( total_players > no_players )
 		{
-			fprintf( stderr, "Invalid packet detected (to many players %d > %d)\n", total_players, no_players );
+			malformed_packet( server, "to many players %d > %d", total_players, no_players );
 			cleanup_qserver( server, 1);
 			return;
 		}
@@ -336,7 +336,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			if ( total_players != no_players )
 			{
-				fprintf( stderr, "Invalid packet detected (bad number of players %d != %d)\n", total_players, no_players );
+				malformed_packet( server, "bad number of players %d != %d", total_players, no_players );
 				cleanup_qserver( server, 1);
 				return;
 			}
@@ -349,7 +349,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// no more info should be team info here as we
 		// requested it
-		fprintf( stderr, "Invalid packet detected (no teams)\n" );
+		malformed_packet( server, "no teams" );
 		cleanup_qserver( server, 1 );
 		return;
 	}
@@ -370,7 +370,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		tmpp = (char**)realloc( headers, no_headers * sizeof( char* ) );
 		if ( NULL == tmpp )
 		{
-			fprintf( stderr, "Failed to realloc memory for headers\n" );
+			debug( 0, "Failed to realloc memory for headers\n" );
 			if ( NULL != headers )
 			{
 				free( headers );
@@ -396,7 +396,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// no more info should be team info here as we
 		// requested it
-		fprintf( stderr, "Invalid packet detected (no teams)\n" );
+		malformed_packet( server, "no teams" );
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -412,7 +412,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 			if ( ptr >= end )
 			{
-				fprintf( stderr, "Invalid packet detected (short team detail)\n" );
+				malformed_packet( server, "short team detail" );
 				cleanup_qserver( server, 1);
 				return;
 			}
@@ -432,7 +432,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 		if ( total_teams > no_teams )
 		{
-			fprintf( stderr, "Invalid packet detected (to many teams)\n" );
+			malformed_packet( server, "to many teams" );
 			cleanup_qserver( server, 1);
 			return;
 		}

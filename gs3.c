@@ -48,14 +48,14 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( pktlen < 12 )
 	{
 		// invalid packet?
-		fprintf( stderr, "Invalid packet ( too short )\n" );
+		malformed_packet( server, "too short" );
 		cleanup_qserver( server, 1 );
 		return;
 	}
 
 	if ( 0x00 != *ptr )
 	{
-		fprintf( stderr, "Invalid packet ( bad initial byte '%hhx' )\n", *ptr );
+		malformed_packet( server, "bad initial byte '%hhx'", *ptr );
 		cleanup_qserver( server, 1 );
 		return;
 	}
@@ -87,7 +87,7 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		}
 		else
 		{
-			fprintf( stderr, "Invalid packet ( missing splitnum )\n" );
+			malformed_packet( server, "missing splitnum" );
 			cleanup_qserver( server, 1 );
 			return;
 		}
@@ -207,7 +207,7 @@ int process_gs3_packet( struct qserver *server )
 		if ( pktlen < 16 )
 		{
 			// invalid packet?
-			fprintf( stderr, "Invalid packet ( too short )\n" );
+			malformed_packet( server, "too short" );
 			cleanup_qserver( server, 1 );
 			return 0;
 		}
@@ -238,7 +238,7 @@ int process_gs3_packet( struct qserver *server )
 
 			if ( ptr + 1 > end )
 			{
-				fprintf( stderr, "Invalid packet detected (no rule value)\n" );
+				malformed_packet( server, "no rule value" );
 				cleanup_qserver( server, 1);
 				return 0;
 			}
@@ -314,7 +314,7 @@ int process_gs3_packet( struct qserver *server )
 
 			if ( ptr > end )
 			{
-				fprintf( stderr, "Invalid packet detected (no details for header '%s')", header );
+				malformed_packet( server, "no details for header '%s'", header );
 				cleanup_qserver( server, 1 );
 				return 0;
 			}
@@ -383,7 +383,7 @@ int process_gs3_packet( struct qserver *server )
 
 				if ( ptr >= end )
 				{
-					fprintf( stderr, "Invalid packet detected (short player detail)\n" );
+					malformed_packet( server, "short player detail" );
 					cleanup_qserver( server, 1);
 					return 0;
 				}
@@ -439,7 +439,7 @@ int process_gs3_packet( struct qserver *server )
 
 				if ( total_players > no_players )
 				{
-					fprintf( stderr, "Invalid packet detected (to many players %d > %d)\n", total_players, no_players );
+					malformed_packet( server, "to many players %d > %d", total_players, no_players );
 					cleanup_qserver( server, 1 );
 					return 0;
 				}
@@ -493,7 +493,7 @@ int process_gs3_packet( struct qserver *server )
 
 				if ( ptr >= end )
 				{
-					fprintf( stderr, "Invalid packet detected (short team detail)\n" );
+					malformed_packet( server, "short team detail" );
 					cleanup_qserver( server, 1);
 					return 0;
 				}
