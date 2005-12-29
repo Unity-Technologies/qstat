@@ -56,6 +56,12 @@ static int gettimeofday(struct timeval *now, void *blah)
 
 typedef struct _server_type server_type;
 
+#ifdef __GNUC__
+#define GCC_FORMAT_PRINTF(a, b) __attribute__ ((format (printf, a, b)))
+#else
+#define GCC_FORMAT_PRINTF(a, b)
+#endif
+
 #include "qserver.h"
 
 // Packet modules
