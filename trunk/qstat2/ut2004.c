@@ -35,8 +35,8 @@ static void bin2hex(const char* in, size_t len, char* out);
 // arbitrary
 #define MAX_LISTING_RECORD_LEN 0x04FF
 
-#define RESPONSE_OFFSET_CDKEY     4
-#define RESPONSE_OFFSET_CHALLENGE 38
+#define RESPONSE_OFFSET_CDKEY     5
+#define RESPONSE_OFFSET_CHALLENGE 39
 
 static const char challenge_response[] = {
     0x68, 0x00, 0x00, 0x00,  '!', 0xCD, 0xCD, 0xCD, 
@@ -656,8 +656,8 @@ static void bin2hex(const char* in, size_t len, char* out)
     in += len;
     do
     {
-	*o-- = hexchar[*--in&0x0F];
-	*o-- = hexchar[(*in>>4)&0x0F];
+	*--o = hexchar[*--in&0x0F];
+	*--o = hexchar[(*in>>4)&0x0F];
     } while(o != out);
 }
 
