@@ -38,6 +38,7 @@ struct qserver {
     char *query_arg;
     struct query_param *params;
     unsigned short port;
+    unsigned short query_port;
     /** \brief number of retries _left_ for status query or rule query.
      *
      * That means
@@ -71,14 +72,14 @@ struct qserver {
     int n_packets;
 
     /** \brief number of servers in master_pkt
-     * 
+     *
      * normally master_pkt_len/6
      */
     int n_servers;
     /** \brief length of master_pkt */
     int master_pkt_len;
     /** \brief IPs received from master.
-     * 
+     *
      * array of four bytes ip, two bytes port in network byte order
      */
     char *master_pkt;

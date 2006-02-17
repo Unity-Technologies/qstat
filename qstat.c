@@ -217,10 +217,14 @@ char sort_keys[32];
 int player_sort= 0;
 int server_sort= 0;
 
+void quicksort( void **array, int i, int j, int (*compare)(void*,void*));
+int qpartition( void **array, int i, int j, int (*compare)(void*,void*));
 void sort_servers( struct qserver **array, int size);
 void sort_players( struct qserver *server);
 int server_compare( struct qserver *one, struct qserver *two);
 int player_compare( struct player *one, struct player *two);
+int type_option_compare( server_type *one, server_type *two );
+int type_string_compare( server_type *one, server_type *two );
 int u2xmp_html_color( short color, char *dest, int *font_tag );
 int ut2k4_html_color( char *color, char *dest, int *font_tag );
 
@@ -978,7 +982,7 @@ calculate_armyops_score( struct player *player)
 	int score = 0;
 	int kill_score = 0;
 	struct info *info;
-	
+
 	for ( info = player->info; info; info = info->next )
 	{
 		if ( 0 == strcmp( info->name, "leader") || 0 == strcmp( info->name, "goal") || 0 == strcmp( info->name, "roe") )
@@ -986,10 +990,10 @@ calculate_armyops_score( struct player *player)
 		else if ( 0 == strcmp( info->name, "kia") || 0 == strcmp( info->name, "enemy") )
 			kill_score += atoi( info->value );
 	}
-	
+
 	if ( kill_score > 0 )
 		score += kill_score;
-	
+
 	return score;
 }
 
@@ -1018,12 +1022,12 @@ void
 display_armyops_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	player= server->players;
 	for ( ; player != NULL; player= player->next)  {
 		player->score = calculate_armyops_score( player );
 	}
-	
+
 	display_gs2_player_info(server);
 }
 
@@ -1612,12 +1616,12 @@ void
 raw_display_armyops_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	player= server->players;
 	for ( ; player != NULL; player= player->next)  {
 		player->score = calculate_armyops_score( player );
 	}
-	
+
 	raw_display_gs2_player_info(server);
 }
 
@@ -2355,13 +2359,13 @@ void
 xml_display_armyops_player_info( struct qserver *server)
 {
 	struct player *player;
-	
+
 	player= server->players;
 	for ( ; player != NULL; player= player->next)
 	{
 		player->score = calculate_armyops_score( player );
 	}
-	
+
 	xml_display_gs2_player_info(server);
 }
 
@@ -2525,7 +2529,9 @@ char * strndup( const char *string, size_t len);
 void
 usage( char *msg, char **argv, char *a1)
 {
+	int i;
     server_type *type;
+	server_type **sorted_types;
 
     if ( msg)
 	fprintf( stderr, msg, a1);
@@ -2533,14 +2539,29 @@ usage( char *msg, char **argv, char *a1)
     printf( "Usage: %s [options ...]\n", argv[0]);
     printf( "\t[-default server-type] [-cfg file] [-f file] [host[:port]] ...\n");
     printf( "Where host is an IP address or host name\n");
-    type= &types[0];
-    for ( ; type->id != Q_UNKNOWN_TYPE; type++)
-	printf( "%s\t\tquery %s server\n", type->type_option,
-		type->game_name);
+
+	sorted_types = (server_type **) malloc( sizeof(server_type *) * n_server_types );
+	type = &types[0];
+	for ( i = 0; type->id != Q_UNKNOWN_TYPE; type++, i++ )
+	{
+		sorted_types[i] = type;
+	}
+    quicksort( (void**)sorted_types, 0, n_server_types-1, (int (*)(void*,void*)) type_option_compare );
+
+
+    for ( i = 0; i < n_server_types; i++ )
+    {
+    	type = sorted_types[i];
+		printf( "%s\t\tquery %s server\n", type->type_option, type->game_name );
+	}
+
+    quicksort( (void**)sorted_types, 0, n_server_types-1, (int (*)(void*,void*)) type_string_compare );
     printf( "-default\tset default server type:");
-    type= &types[0];
-    for ( ; type->id != Q_UNKNOWN_TYPE; type++)
-	printf( " %s", type->type_string);
+    for ( i = 0; i < n_server_types; type++, i++ )
+    {
+        type = sorted_types[i];
+		printf( " %s", type->type_string );
+	}
     puts("");
 	printf( "-nocfg\t\tIgnore qstat configuration loaded from any default location. Must be the first option on the command-line.\n" );
     printf( "-cfg\t\tread the extended types from given file not the default one\n");
@@ -3807,7 +3828,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 			}
 			server->server_name= HOSTNOTFOUND;
 			server->error= strdup( strherror(h_errno));
-			server->port= port;
+			server->query_port = server->port= port;
 			if ( last_server != &servers)
 			{
 				prev_server= (struct qserver*) ((char*)last_server - ((char*)&server->next - (char*)server));
@@ -3851,7 +3872,7 @@ add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg)
 		}
 
 		server->ipaddr= ipaddr;
-		server->port= port;
+		server->query_port = server->port = port;
 		server->type= type;
 		server->outfilename= outfilename;
 		server->flags= flags;
@@ -3958,7 +3979,7 @@ add_qserver_byaddr( unsigned int ipaddr, unsigned short port,
 		server->host_name= strdup( arg);
 	}
 
-	server->port= port;
+	server->query_port = server->port = port;
 	init_qserver( server, type);
 
 	if ( num_servers_total % 10 == 0)
@@ -7074,32 +7095,54 @@ get_player_by_number( struct qserver *server, int player_number)
     return NULL;
 }
 
+// Updates a servers port information.
+// Sets the rules:
+// _queryport <queryport>
+// hostport <port>
 void
-change_server_port( struct qserver *server, unsigned short port)
+change_server_port( struct qserver *server, unsigned short port, int force )
 {
-    char arg[64];
-    unsigned int ipaddr= ntohl(server->ipaddr);
-    sprintf( arg, "%d.%d.%d.%d:%hu", ipaddr>>24, (ipaddr>>16)&0xff,
-	    (ipaddr>>8)&0xff, ipaddr&0xff, port);
-    if ( strcmp( server->arg, server->host_name) == 0)  {
-	free( server->host_name);
-	server->host_name= strdup(arg);
-    }
-    else  {
-	char *colon= strchr( server->host_name, ':');
-	if ( colon)  {
-	    char *hostname= malloc( strlen(server->host_name)+6);
-	    *colon= '\0';
-	    sprintf( hostname, "%s:%hu", server->host_name, port);
-	    free( server->host_name);
-	    server->host_name= hostname;
+	if ( port > 0 && port != server->port )
+	{
+		// valid port and changing
+		char arg[64];
+
+		if (  show_game_port || force || server->flags & TF_SHOW_GAME_PORT )
+		{
+			unsigned int ipaddr = ntohl(server->ipaddr);
+
+			// Update the servers hostname as required
+			sprintf( arg, "%d.%d.%d.%d:%hu", ipaddr>>24, (ipaddr>>16)&0xff, (ipaddr>>8)&0xff, ipaddr&0xff, port );
+			if ( 0 != strcmp( server->arg, server->host_name ) != 0 )
+			{
+				// hostname isnt the query arg
+				char *colon = strchr( server->host_name, ':' );
+				if ( colon )
+				{
+					// dns hostname or hostname:port
+					char *hostname = malloc( strlen(server->host_name) + 6 );
+					*colon= '\0';
+					sprintf( hostname, "%s:%hu", server->host_name, port);
+					free( server->host_name);
+					server->host_name= hostname;
+				}
+			}
+			// Update the server arg
+			free( server->arg );
+			server->arg = strdup( arg );
+
+			// Add a rule noting the previous query port
+			sprintf( arg, "%hu", server->port );
+			add_rule( server, "_queryport", arg, NO_FLAGS);
+
+			// Update the servers port
+			server->port = port;
+		}
+
+		// Add a rule noting the servers hostport
+		sprintf( arg, "%hu", port );
+		add_rule( server, "hostport", arg, NO_FLAGS);
 	}
-    }
-    free( server->arg);
-    server->arg= strdup(arg);
-    sprintf( arg, "%hu", server->port);
-    add_rule( server, "_queryport", arg, NO_FLAGS);
-    server->port= port;
 }
 
 STATIC void
@@ -7156,20 +7199,7 @@ pariah_basic_packet( struct qserver *server, char *rawpkt, char *end)
 {
     char *next;
     char *string;
-    unsigned short port= swap_short_from_little( &rawpkt[14]);
-    if ( port != server->port )
-    {
-		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
-		{
-			change_server_port( server, port);
-		}
-		else
-		{
-			char str[12];
-			sprintf( str, "%hu", port);
-			add_rule( server, "hostport", str, NO_FLAGS);
-		}
-    }
+	change_server_port( server, swap_short_from_little( &rawpkt[14]), 0 );
     if ( NULL == ( string = ut2003_strdup( &rawpkt[18], end, &next) ) )
     {
 		return -1;
@@ -7224,20 +7254,8 @@ ut2003_basic_packet( struct qserver *server, char *rawpkt, char *end)
 {
     char *next;
     char *string;
-    unsigned short port= swap_short_from_little( &rawpkt[6]);
-    if ( port != server->port)
-    {
-		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT)
-		{
-			change_server_port( server, port);
-		}
-		else
-		{
-			char str[12];
-			sprintf( str, "%hu", port);
-			add_rule( server, "hostport", str, NO_FLAGS);
-		}
-    }
+	change_server_port( server, swap_short_from_little( &rawpkt[6]), 0 );
+
     if ( NULL == ( string = ut2003_strdup( &rawpkt[14], end, &next) ) )
     {
 		return -1;
@@ -9313,13 +9331,7 @@ deal_with_ravenshield_packet( struct qserver *server, char *rawpkt, int pktlen)
 			// Game port
 			// Not pretty ignore for now
 			/*
-			unsigned short port = atoi( value );
-			// Probably a response from a broadcast query, change port
-			if ( port > 0 && port != server->port && ( show_game_port || server->flags & TF_SHOW_GAME_PORT ) )
-			{
-				change_server_port( server, port );
-			}
-			add_rule( server, "port", value, NO_FLAGS);
+			change_server_port( server, atoi( value ), 0 );
 			*/
 		}
 		else if ( 0 == strcmp( "Q1", key ) )
@@ -11332,9 +11344,6 @@ strcmp_withnull( char *one, char *two)
  * Sorting functions
  */
 
-void quicksort( void **array, int i, int j, int (*compare)(void*,void*));
-int qpartition( void **array, int i, int j, int (*compare)(void*,void*));
-
 void
 sort_servers( struct qserver **array, int size)
 {
@@ -11428,6 +11437,18 @@ server_compare( struct qserver *one, struct qserver *two)
     }
 
     return 0;
+}
+
+int
+type_option_compare( server_type *one, server_type *two )
+{
+    return strcmp_withnull( one->type_option, two->type_option );
+}
+
+int
+type_string_compare( server_type *one, server_type *two )
+{
+    return strcmp_withnull( one->type_string, two->type_string );
 }
 
 int

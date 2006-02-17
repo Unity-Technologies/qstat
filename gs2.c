@@ -162,16 +162,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		}
 		else if( 0 == strcmp( var, "hostport" ) )
 		{
-			if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
-			{
-				int port = atoi( val );
-
-				if ( port != server->port && port > 0 )
-				{
-					change_server_port( server, port );
-				}
-			}
-			add_rule( server, var, val, NO_FLAGS);  
+			change_server_port( server, atoi( val ), 1 );
 		}
 		else if ( 0 == var_len )
 		{
