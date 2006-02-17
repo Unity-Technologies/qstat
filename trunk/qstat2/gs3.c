@@ -142,7 +142,6 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	unsigned char *pkt = rawpkt;
-	unsigned short port;
 	debug( 1, "status packet" );
 
 	// Server name
@@ -166,19 +165,7 @@ void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 	pkt += strlen( pkt ) + 1;
 
 	// hostport
-	port = atoi( pkt );
-	if ( port != server->port && port > 0 )
-	{
-		if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
-		{
-			change_server_port( server, port );
-		}
-		else
-		{
-			// N.B. Pointless really as we weren't asked for rules
-			add_rule( server, "hostport", pkt, NO_FLAGS);
-		}
-    }
+	change_server_port( server, atoi( pkt ), 0 );
 	pkt += strlen( pkt ) + 1;
 
 	cleanup_qserver( server, 1 );
@@ -277,16 +264,7 @@ int process_gs3_packet( struct qserver *server )
 			}
 			else if( 0 == strcmp( var, "hostport" ) )
 			{
-				if ( show_game_port || server->flags & TF_SHOW_GAME_PORT )
-				{
-					int port = atoi( val );
-
-					if ( port != server->port && port > 0 )
-					{
-						change_server_port( server, port );
-					}
-				}
-				add_rule( server, var, val, NO_FLAGS);
+				change_server_port( server, atoi( val ), 0 );
 			}
 			else
 			{

@@ -28,7 +28,7 @@ void send_ts2_request_packet( struct qserver *server )
 	char buf[256];
 
 	int serverport = get_param_i_value( server, "port", 0 );
-	change_server_port( server, serverport );
+	change_server_port( server, serverport, 1 );
 
 	if ( get_player_info )
 	{
@@ -109,8 +109,7 @@ void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			}
 			else if ( 0 == strcmp( "server_udpport", key ) )
 			{
-				unsigned short port = atoi( value );
-				change_server_port( server, port );
+				change_server_port( server, atoi( value ), 0 );
 				add_rule( server, key, value, NO_FLAGS );
 			}
 			else if ( 0 == strcmp( "server_maxusers", key ) )
