@@ -8,11 +8,12 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
 #endif
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "qstat.h"
 #include "debug.h"
