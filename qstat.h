@@ -2742,7 +2742,7 @@ char *get_qw_game( struct qserver *server);
  */
 
 int cleanup_qserver( struct qserver *server, int force);
-void change_server_port( struct qserver *server, unsigned short port);
+void change_server_port( struct qserver *server, unsigned short port, int force );
 
 int server_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
 int player_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );

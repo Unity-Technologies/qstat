@@ -271,15 +271,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 		}
 		else if ( strcmp( key, "hostport") == 0)
 		{
-			unsigned short port= atoi( value);
-			/* Probably a response from a broadcast query, change port */
-			if ( port > 0 && port != server->port &&
-				(show_game_port || server->flags & TF_SHOW_GAME_PORT)
-			)
-			{
-				change_server_port( server, port );
-			}
-			add_rule( server, key, value, NO_FLAGS);
+			change_server_port( server, atoi( value), 0 );
 		}
 		else if ( strcmp( key, "maxplayers") == 0)
 		{
