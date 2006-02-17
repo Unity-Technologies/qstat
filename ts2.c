@@ -74,7 +74,6 @@ void send_ts2_request_packet( struct qserver *server )
 void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end;
-	int total_players = 0;
 	int ping, connect_time;
 	char name[256];
 	debug( 2, "processing..." );
@@ -130,10 +129,13 @@ void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		else if ( 3 == sscanf( s, "%*d %*d %*d %*d %*d %*d %*d %d %d %*d %*d %*d %*d \"0.0.0.0\" \"%255[^\"]", &ping, &connect_time, name ) )
 		{
 			// Player info
-			struct player *player = add_player( server, total_players++ );
-			player->name = strdup( name );
-			player->ping = ping;
-			player->connect_time = connect_time;
+			struct player *player = add_player( server, server->n_player_info );
+			if ( NULL != player )
+			{
+				player->name = strdup( name );
+				player->ping = ping;
+				player->connect_time = connect_time;
+			}
 		}
 		else if ( 0 == strcmp( "OK", s ) )
 		{
