@@ -585,7 +585,7 @@ display_server_var( struct qserver *server, int var)
     char *game;
     int full_data= 1;
     if ( server->server_name == DOWN || server->server_name == TIMEOUT ||
-		server->server_name == SYSERROR || 
+		server->server_name == SYSERROR ||
 		server->error != NULL || server->type->master)
 	full_data= 0;
 
@@ -904,7 +904,7 @@ parse_var( char *varname, int *varlen)
     }
 
     for ( ; *v; v++)
-	if ( (!quote && !isalpha( *v)) || (quote && (*v == ')' || *v == ':')))
+	if ( (!quote && !isalpha( (unsigned char)*v)) || (quote && (*v == ')' || *v == ':')))
 	    break;
     if ( v-varname == 0)
 	return -1;
@@ -920,7 +920,7 @@ parse_var( char *varname, int *varlen)
 		*varlen == strlen(variable_defs[i].var))  {
 	    if ( colon != NULL && ((variable_defs[i].options & OPTIONS_OK) || quote))  {
 		for ( v++; *v; v++)  {
-		    if ( (!quote && !isalnum( *v) && *v != '*' && *v != '_' && *v != '.' && (*v == ' ' && !rule_name_spaces)) ||
+		    if ( (!quote && !isalnum( (unsigned char)*v) && *v != '*' && *v != '_' && *v != '.' && (*v == ' ' && !rule_name_spaces)) ||
 			(quote==1 && *v == ')')) break;
 		    if ( *v == '(')
 			quote++;
