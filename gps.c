@@ -165,7 +165,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 			s++;
 		}
 		//fprintf( stderr, "%s = %s\n", key, value );
-		if ( s[1] && !isalpha(s[1]))
+		if ( s[1] && !isalpha((unsigned char)s[1]))
 		{
 			// escape char?
 			s++;
@@ -175,7 +175,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 				s++;
 			}
 		}
-		else if ( s[1] && isalpha(s[1]) &&
+		else if ( s[1] && isalpha((unsigned char)s[1]) &&
 			0 == strncmp( key, "player_", 7) &&
 			0 != strcmp( key, "player_flags" )
 		)
@@ -363,7 +363,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 			player = get_player_by_number( server, atoi( key+5 ) );
 			if ( NULL != player )
 			{
-				if ( ! isdigit( *value ) )
+				if ( ! isdigit( (unsigned char)*value ) )
 				{
 					player->team_name= strdup(value);
 				}
@@ -415,7 +415,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 			}
 		}
 		// isnum( key[6] ) as halo uses score_tX for team scores
-		else if ( strncmp( key, "score_", 6) == 0 && isdigit( key[6] ) )
+		else if ( strncmp( key, "score_", 6) == 0 && isdigit( (unsigned char)key[6] ) )
 		{
 			player = get_player_by_number( server, atoi( key+6 ) );
 			if ( NULL != player )

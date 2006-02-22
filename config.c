@@ -579,7 +579,7 @@ STATIC int parse_server_flags(const char* value)
 
     while(*s)
     {
-	while(isspace(*s))
+	while(isspace((unsigned char)*s))
 	    ++s;
 
 	if(!first)
@@ -592,7 +592,7 @@ STATIC int parse_server_flags(const char* value)
 
 	    ++s;
 
-	    while(isspace(*s))
+	    while(isspace((unsigned char)*s))
 		++s;
 	}
 	else
@@ -600,7 +600,7 @@ STATIC int parse_server_flags(const char* value)
 
 	e = s;
 
-	while(isalnum(*e) || *e == '_')
+	while(isalnum((unsigned char)*e) || *e == '_')
 	    ++e;
 
 	if(e == s) {
@@ -615,7 +615,7 @@ STATIC int parse_server_flags(const char* value)
 	    val = -1;
 	    break;
 	}
-	
+
 	s = e;
 	val |= v;
     }
@@ -922,13 +922,13 @@ STATIC char *
 get_token()
 {
     char *token= &token_buf[0];
-    while ( isspace(*token_end))
+    while ( isspace((unsigned char)*token_end))
 	token_end++;
 
     if ( token_end == parse_end)
 	return NULL;
 
-    while ( (isalnum(*token_end) || *token_end == '.' || *token_end == '_' || *token_end == '-')
+    while ( (isalnum((unsigned char)*token_end) || *token_end == '.' || *token_end == '_' || *token_end == '-')
 		&& token < &token_buf[0] + sizeof(token_buf))
 	*token++= *token_end++;
 
@@ -944,7 +944,7 @@ STATIC char *
 next_value()
 {
     char *token= &token_buf[0];
-    while ( isspace(*token_end))
+    while ( isspace((unsigned char)*token_end))
 	token_end++;
 
     if ( token_end == parse_end)
@@ -958,9 +958,9 @@ next_value()
     if ( strchr( token_buf, '\\'))
 	return parse_value(token_buf, (token - token_buf)+1);
 
-    while ( isspace(*token))
+    while ( isspace((unsigned char)*token))
 	*token--= '\0';
- 
+
     value_len= token - token_buf + 1;
 
     return &token_buf[0];
@@ -1006,7 +1006,7 @@ printf( "parse_value <%.*s>\n", len, source);
 		break;
 	    source++; len--;
 	}
-	else if ( isdigit( *source))  {
+	else if ( isdigit( (unsigned char)*source))  {
 	    if ( len < 3)
 		break;
 	    *v++= parse_oct(source, 3, &error);
@@ -1050,7 +1050,7 @@ parse_hex( char *hex, int len, int *error)
     *error= 0;
     for ( ; len; len--, hex++)  {
 	result <<= 4;
-	if ( ! isxdigit( *hex))  {
+	if ( ! isxdigit( (unsigned char)*hex))  {
 	    *error= 1;
 	    REPORT_ERROR(( stderr, "Invalid hex \"%.*s\"", save_len+2,
 		save_hex-2));

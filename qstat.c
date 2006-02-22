@@ -2807,7 +2807,7 @@ parse_source_address( char *addr, unsigned int *ip, unsigned short *port)
 	*port= 0;
 
     *ip= inet_addr( addr);
-    if ( *ip == INADDR_NONE && !isdigit( *ip))
+    if ( *ip == INADDR_NONE && !isdigit( (unsigned char)*ip))
 	*ip= hcache_lookup_hostname( addr);
     if ( *ip == INADDR_NONE)  {
 	fprintf( stderr, "%s: Not an IP address or unknown host name\n", addr);
@@ -6234,7 +6234,7 @@ player_info:
 
 	    pkt+= len;
 
-	    if ( isdigit(*pkt))  {
+	    if ( isdigit((unsigned char)*pkt))  {
 		/* probably an SOF2 1.01 server, includes team # */
 		int team;
 		rc= sscanf( pkt, "%d %n", &team, &len);
@@ -10257,7 +10257,7 @@ deal_with_eye_packet( struct qserver *server, char *rawpkt, int pktlen)
 			{
 				break;
 			}
-			if ( isdigit(value[0]))
+			if ( isdigit((unsigned char)value[0]))
 			{
 				player->team= atoi(value);
 				free(value);
