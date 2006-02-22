@@ -98,7 +98,7 @@ hcache_open( char *filename, int update)
 	    continue;
 	}
 	l= line;
-	while ( isspace( *l)) l++;
+	while ( isspace( (unsigned char)*l)) l++;
 	if ( *l == '#' || *l == '\0')
 	    continue;
 	if ( sscanf( l, "%s%n", ipstr, &end) != 1)  {
@@ -120,7 +120,7 @@ hcache_open( char *filename, int update)
 	entry= init_entry( ipaddr, NULL, NULL);
 	while ( 1)  {
 	    l+= end;
-	    while ( isspace( *l)) l++;
+	    while ( isspace( (unsigned char)*l)) l++;
 	    if ( *l == '#' || *l == '\0')
 		break;
 	    hostname[0]= '\0';
