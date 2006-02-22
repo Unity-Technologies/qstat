@@ -162,7 +162,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		}
 		else if( 0 == strcmp( var, "hostport" ) )
 		{
-			change_server_port( server, atoi( val ), 1 );
+			change_server_port( server, atoi( val ), 0 );
 		}
 		else if ( 0 == var_len )
 		{
