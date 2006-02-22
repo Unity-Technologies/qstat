@@ -7107,7 +7107,7 @@ change_server_port( struct qserver *server, unsigned short port, int force )
 		// valid port and changing
 		char arg[64];
 
-		if (  show_game_port || force || server->flags & TF_SHOW_GAME_PORT )
+		if ( show_game_port || force || server->flags & TF_SHOW_GAME_PORT )
 		{
 			unsigned int ipaddr = ntohl(server->ipaddr);
 
