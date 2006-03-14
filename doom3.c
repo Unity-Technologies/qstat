@@ -400,7 +400,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 			return;
 		}
 
-		player = add_player( server, num_players );
+		player = add_player( server, player_id );
 
 		player->score = 0;
 		player->frags = 0;
@@ -413,7 +413,11 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		rate = swap_long_from_little(ptr);
 		ptr += 4;
 
-		// XXX no idea what's so important about the rate
+		{
+			char buf[16];
+			snprintf(buf, sizeof(buf), "%u", rate);
+			player_add_info(player, "rate", buf, NO_FLAGS);
+		}
 
 		val = ptr;
 		ptr = memchr(ptr, '\0', end-ptr);
