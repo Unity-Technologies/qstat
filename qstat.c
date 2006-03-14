@@ -258,6 +258,7 @@ static unsigned num_servers; /* current number of servers in memory */
 static struct qserver **server_hash[ADDRESS_HASH_LENGTH];
 static unsigned int server_hash_len[ADDRESS_HASH_LENGTH];
 static void free_server_hash();
+static void xml_display_player_info_info(struct player* player);
 
 char *DOWN= "DOWN";
 char *SYSERROR= "SYSERROR";
@@ -1052,13 +1053,15 @@ display_doom3_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
 	if ( player->tribe_tag)
-	    fprintf( OF, "\tscore %4d %6s team %12s %s\n",
+	    fprintf( OF, "\t#%-4d score %4d %6s team %12s %s\n",
+		player->number,
 		player->score,
 		ping_time(player->ping),
 		player->tribe_tag,
 		xform_name( player->name, server));
 	else
-	    fprintf( OF, "\tscore %4d %6s team#%d %s\n",
+	    fprintf( OF, "\t#%-4d score %4d %6s team#%d %s\n",
+		player->number,
 		player->score,
 		ping_time(player->ping),
 		player->team,
@@ -1546,8 +1549,8 @@ raw_display_eye_player_info( struct qserver *server)
 void
 raw_display_doom3_player_info( struct qserver *server)
 {
-    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%s" "%s%s";
-    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%s" "%s%s";
+    static const char *fmt= "%s" "%s%d" "%s%d" "%s%d" "%s%u";
+    static const char *fmt_team_name= "%s" "%s%d" "%s%d" "%s%s" "%s%u";
     struct player *player;
 
     player= server->players;
@@ -1558,8 +1561,7 @@ raw_display_doom3_player_info( struct qserver *server)
 		RD, player->score,
 		RD, player->ping,
 		RD, player->tribe_tag,
-		RD, player->skin ? player->skin : "",
-		RD, play_time( player->connect_time,1)
+		RD, player->number
 	);
 	else
 	    fprintf( OF, fmt,
@@ -1567,8 +1569,7 @@ raw_display_doom3_player_info( struct qserver *server)
 		RD, player->score,
 		RD, player->ping,
 		RD, player->team,
-		RD, player->skin ? player->skin : "",
-		RD, play_time( player->connect_time,1)
+		RD, player->number
 	);
 	fputs( "\n", OF);
     }
@@ -1935,6 +1936,21 @@ xml_display_q2_player_info( struct qserver *server)
 	fprintf( OF, "\t\t</players>\n");
 }
 
+void xml_display_player_info_info(struct player* player)
+{
+	struct info *info;
+
+	for (info = player->info; info; info = info->next )
+	{
+		if ( info->name )
+		{
+			char *name = xml_escape( info->name );
+			char *value = xml_escape( info->value );
+			fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
+		}
+	}
+}
+
 void
 xml_display_unreal_player_info( struct qserver *server)
 {
@@ -1945,7 +1961,6 @@ xml_display_unreal_player_info( struct qserver *server)
 	player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
-		struct info *info = player->info;
 		fprintf( OF, "\t\t\t<player>\n");
 
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
@@ -1987,16 +2002,8 @@ xml_display_unreal_player_info( struct qserver *server)
 			fprintf( OF, "\t\t\t\t<face>%s</face>\n",
 				player->face ? xml_escape(player->face) : "");
 		}
-		for ( ; NULL != info; info = info->next )
-		{
-			if ( info->name )
-			{
-				char *name = xml_escape( info->name );
-				char *value = xml_escape( info->value );
-				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
-			}
-		}
 
+		xml_display_player_info_info(player);
 		fprintf( OF, "\t\t\t</player>\n");
 	}
 
@@ -2262,6 +2269,8 @@ xml_display_doom3_player_info( struct qserver *server)
     for ( ; player != NULL; player= player->next)  {
 		fprintf( OF, "\t\t\t<player>\n");
 
+		fprintf( OF, "\t\t\t\t<number>%u</number>\n",
+			player->number);
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n",
 			xml_escape(xform_name( player->name, server)));
 		fprintf( OF, "\t\t\t\t<score>%d</score>\n",
@@ -2280,6 +2289,8 @@ xml_display_doom3_player_info( struct qserver *server)
 		if ( player->connect_time)
 		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
 			xml_escape(play_time( player->connect_time,1)));
+
+		xml_display_player_info_info(player);
 
 		fprintf( OF, "\t\t\t</player>\n");
     }
@@ -2304,7 +2315,6 @@ xml_display_gs2_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
-		struct info *info = player->info;
 		fprintf( OF, "\t\t\t<player>\n");
 
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
@@ -2340,15 +2350,8 @@ xml_display_gs2_player_info( struct qserver *server)
 		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
 		}
 
-		for ( ; NULL != info; info = info->next )
-		{
-			if ( info->name )
-			{
-				char *name = xml_escape( info->name );
-				char *value = xml_escape( info->value );
-				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
-			}
-		}
+		xml_display_player_info_info(player);
+
 		fprintf( OF, "\t\t\t</player>\n");
     }
 
@@ -2379,7 +2382,6 @@ xml_display_ts2_player_info( struct qserver *server)
     player= server->players;
     for ( ; player != NULL; player= player->next)
 	{
-		struct info *info = player->info;
 		fprintf( OF, "\t\t\t<player>\n");
 
 		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
@@ -2390,15 +2392,7 @@ xml_display_ts2_player_info( struct qserver *server)
 		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
 		}
 
-		for ( ; NULL != info; info = info->next )
-		{
-			if ( info->name )
-			{
-				char *name = xml_escape( info->name );
-				char *value = xml_escape( info->value );
-				fprintf( OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name );
-			}
-		}
+		xml_display_player_info_info(player);
 		fprintf( OF, "\t\t\t</player>\n");
     }
 
