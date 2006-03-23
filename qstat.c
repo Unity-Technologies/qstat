@@ -147,10 +147,12 @@ extern int h_errno;
 #endif
 
 #ifdef ENABLE_DUMP
+#ifndef _WIN32
 #include <sys/mman.h>
+#include <unistd.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 static int do_dump;
 #endif
 
@@ -2881,13 +2883,29 @@ static void replay_pkt_dumps()
 	struct qserver* server = servers;
 	char* pkt = NULL;
 	int fd;
+	int bytes_read = 0; // should be ssize_t but for ease with win32
 	struct stat statbuf;
 	gettimeofday( &packet_recv_time, NULL);
 
-	if((fd = open(pkt_dumps[0], O_RDONLY)) == -1) goto err;
-	if(fstat(fd, &statbuf) == -1) goto err;
-	pkt = mmap(NULL, statbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
-	if(!pkt) goto err;
+	if((fd = open(pkt_dumps[0], O_RDONLY)) == -1)
+	{
+		goto err;
+	}
+	if( fstat( fd, &statbuf) == -1 )
+	{
+		goto err;
+	}
+	pkt = malloc( statbuf.st_size );
+	if ( NULL == pkt )
+	{
+		goto err;
+	}
+	bytes_read = read( fd, pkt, statbuf.st_size );
+	if ( bytes_read != statbuf.st_size )
+	{
+		fprintf( stderr, "Failed to read entire packet from disk got %d of %d bytes\n", bytes_read, statbuf.st_size );
+		goto err;
+	}
 
 	server->type->packet_func( server, pkt, statbuf.st_size);
 
