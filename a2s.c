@@ -76,7 +76,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 		{
 			debug(3, "sending challenge");
 			if(qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) == -1)
-			goto error;
+				goto error;
 			status->sent_challenge = 1;
 			break;
 		}
@@ -86,7 +86,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(A2S_RULES)-1, &status->challenge, 4);
 			debug(3, "sending rule query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-			goto error;
+				goto error;
 			status->sent_rules = 1;
 			break;
 		}
@@ -96,7 +96,7 @@ void send_a2s_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(A2S_PLAYER)-1, &status->challenge, 4);
 			debug(3, "sending player query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-			goto error;
+				goto error;
 			status->sent_player = 1;
 			break;
 		}
