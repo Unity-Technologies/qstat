@@ -168,7 +168,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
 		pkt+=2;
 
-		pktlen -= 9;
+		pktlen -= 10;
 
 		// pkt_max is the total number of packets expected
 		// pkt_index is a bit mask of the packets received.
