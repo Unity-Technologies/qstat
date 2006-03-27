@@ -138,7 +138,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		unsigned int pkt_id = 1;
 		SavedData *sdata;
 
-		if(pktlen < 9) goto out_too_short;
+		if(pktlen < 10) goto out_too_short;
 
 		pkt += 4;
 
