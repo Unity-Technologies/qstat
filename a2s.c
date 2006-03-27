@@ -155,10 +155,18 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += 4;
 
 		// packetId
-		pkt_max = ((unsigned char)*pkt) & 15;
-		pkt_index = ((unsigned char)*pkt) >> 4;
+		// According to:
+		// http://developer.valvesoftware.com/wiki/Source_Server_Queries
+		// the following is right but by experience its not
+		// The next two bytes are:
+		// 1. the max packets sent
+		// 2. the index of this packet starting from 0
+		// pkt_max = ((unsigned char)*pkt) & 15;
+		// pkt_index = ((unsigned char)*pkt) >> 4;
+		pkt_max = ((unsigned char)*pkt);
+		pkt_index = ((unsigned char)*(pkt+1));
 		debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
-		pkt++;
+		pkt+=2;
 
 		pktlen -= 9;
 
