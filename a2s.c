@@ -40,6 +40,7 @@ struct a2s_status
 	unsigned have_player : 1;
 	unsigned sent_rules : 1;
 	unsigned have_rules : 1;
+	unsigned char type;
 	unsigned challenge;
 };
 
@@ -51,6 +52,7 @@ void send_a2s_request_packet(struct qserver *server)
 		goto error;
 
 	status->sent_info = 1;
+	status->type = 0;
 
 	if(get_server_rules || get_player_info)
 		server->next_rule = ""; // trigger calling send_a2s_rule_request_packet
@@ -138,7 +140,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		unsigned int pkt_id = 1;
 		SavedData *sdata;
 
-		if(pktlen < 10) goto out_too_short;
+		if(pktlen < 9) goto out_too_short;
 
 		pkt += 4;
 
@@ -155,20 +157,36 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += 4;
 
 		// packetId
-		// According to:
-		// http://developer.valvesoftware.com/wiki/Source_Server_Queries
-		// the following is right but by experience its not
-		// The next two bytes are:
-		// 1. the max packets sent
-		// 2. the index of this packet starting from 0
-		// pkt_max = ((unsigned char)*pkt) & 15;
-		// pkt_index = ((unsigned char)*pkt) >> 4;
-		pkt_max = ((unsigned char)*pkt);
-		pkt_index = ((unsigned char)*(pkt+1));
-		debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
-		pkt+=2;
-
-		pktlen -= 10;
+		if ( 1 == status->type )
+		{
+			// HL2 format
+			// The lower four bits represent the number of packets (2 to 15) and
+			// the upper four bits represent the current packet starting with 0
+			pkt_max = ((unsigned char)*pkt) & 15;
+			pkt_index = ((unsigned char)*pkt) >> 4;
+			debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
+			pkt++;
+			pktlen -= 9;
+		}
+		else if ( 2 == status->type )
+		{
+			// HL2 format
+			// The next two bytes are:
+			// 1. the max packets sent
+			// 2. the index of this packet starting from 0
+			if(pktlen < 10) goto out_too_short;
+			pkt_max = ((unsigned char)*pkt);
+			pkt_index = ((unsigned char)*(pkt+1));
+			debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
+			pkt+=2;
+			pktlen -= 10;
+		}
+		else
+		{
+			fprintf( stderr, "Unable to determine packet format\n" );
+			cleanup_qserver( server, 1 );
+			return;
+		}
 
 		// pkt_max is the total number of packets expected
 		// pkt_index is a bit mask of the packets received.
@@ -231,6 +249,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	case A2S_INFORESPONSE_HL1:
 		if(pktlen < 28) goto out_too_short;
+		status->type = 1;
 
 		// ip:port
 		str = memchr(pkt, '\0', pktlen);
@@ -379,6 +398,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	case A2S_INFORESPONSE_HL2:
 		if(pktlen < 1) goto out_too_short;
+		status->type = 2;
 		snprintf(buf, sizeof(buf), "%hhX", *pkt);
 		add_rule(server, "protocol", buf, 0);
 		++pkt; --pktlen;
