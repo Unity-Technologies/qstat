@@ -40,8 +40,8 @@ struct a2s_status
 	unsigned have_player : 1;
 	unsigned sent_rules : 1;
 	unsigned have_rules : 1;
-	unsigned char type;
 	unsigned challenge;
+	unsigned char type;
 };
 
 void send_a2s_request_packet(struct qserver *server)
@@ -183,7 +183,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		}
 		else
 		{
-			fprintf( stderr, "Unable to determine packet format\n" );
+			malformed_packet( server, "Unable to determine packet format" );
 			cleanup_qserver( server, 1 );
 			return;
 		}
@@ -209,7 +209,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		sdata->data= (char*) malloc( sdata->datalen);
 		if ( NULL == sdata->data )
 		{
-			fprintf( stderr, "Out of memory\n" );
+			malformed_packet(server, "Out of memory");
 			cleanup_qserver( server, 1 );
 			return;
 		}
