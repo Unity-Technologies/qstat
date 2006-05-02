@@ -100,13 +100,13 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 	debug( 2, "processing..." );
 
 	server->n_servers++;
-	if ( server->server_name == NULL)
+	if ( server->server_name == NULL )
 	{
 		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
 	}
 	else
 	{
-		gettimeofday( &server->packet_time1, NULL);
+		gettimeofday( &server->packet_time1, NULL );
 	}
 
 	/*
@@ -153,6 +153,7 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// out of packet
 			break;
 		}
+
 		// Terminate the key
 		*s++= '\0';
 
@@ -164,31 +165,36 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			s++;
 		}
-		//fprintf( stderr, "%s = %s\n", key, value );
-		if ( s[1] && !isalpha((unsigned char)s[1]))
+
+		if ( s[0] && s[1] )
 		{
-			// escape char?
-			s++;
-			// while we still have data and its not a '\'
-			while ( *s && *s != '\\')
+			//fprintf( stderr, "%s = %s\n", key, value );
+			if ( ! isalpha((unsigned char)s[1]) )
 			{
-				s++;
-			}
-		}
-		else if ( s[1] && isalpha((unsigned char)s[1]) &&
-			0 == strncmp( key, "player_", 7) &&
-			0 != strcmp( key, "player_flags" )
-		)
-		{
-			// possible '\' in player name
-			if ( ! gps_player_info_key( s+1, end ) )
-			{
-				// yep there was an escape in the player name
+				// escape char?
 				s++;
 				// while we still have data and its not a '\'
 				while ( *s && *s != '\\')
 				{
 					s++;
+				}
+			}
+			else if (
+				isalpha((unsigned char)s[1]) &&
+				0 == strncmp( key, "player_", 7 ) &&
+				0 != strcmp( key, "player_flags" )
+			)
+			{
+				// possible '\' in player name
+				if ( ! gps_player_info_key( s+1, end ) )
+				{
+					// yep there was an escape in the player name
+					s++;
+					// while we still have data and its not a '\'
+					while ( *s && *s != '\\')
+					{
+						s++;
+					}
 				}
 			}
 		}
@@ -197,13 +203,14 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			*s++= '\0';
 		}
+
 		//fprintf( stderr, "%s = %s\n", key, value );
 		if ( *value == '\0')
 		{
-			if ( strcmp( key, "final") == 0)
+			if ( strcmp( key, "final" ) == 0 )
 			{
 				final= 1;
-				if ( id_minor > server->saved_data.pkt_max)
+				if ( id_minor > server->saved_data.pkt_max )
 				{
 					server->saved_data.pkt_max = id_minor;
 				}
