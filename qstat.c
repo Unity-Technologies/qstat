@@ -2903,7 +2903,7 @@ static void replay_pkt_dumps()
 	bytes_read = read( fd, pkt, statbuf.st_size );
 	if ( bytes_read != statbuf.st_size )
 	{
-		fprintf( stderr, "Failed to read entire packet from disk got %d of %d bytes\n", bytes_read, statbuf.st_size );
+		fprintf( stderr, "Failed to read entire packet from disk got %d of %ld bytes\n", bytes_read, (long)statbuf.st_size );
 		goto err;
 	}
 
