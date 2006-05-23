@@ -37,6 +37,7 @@ struct qserver {
     char *outfilename;
     char *query_arg;
     struct query_param *params;
+    unsigned long challenge;
     unsigned short port;
     unsigned short query_port;
     /** \brief number of retries _left_ for status query or rule query.
