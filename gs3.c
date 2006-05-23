@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
+#include <netinet/in.h>
 #include <sys/socket.h>
 #endif
 #include <stdlib.h>
@@ -35,6 +36,21 @@ int process_gs3_packet( struct qserver *server );
 #define TEAM_NAME_HEADER 1
 #define TEAM_OTHER_HEADER 2
 
+// Challenge response algorithum
+// Before sending a qr2 query (type 0x00) the client must first send a
+// challenge request (type 0x09).  The host will respond with the same
+// packet type containing a string signed integer.
+//
+// Once the challenge is received the client should convert the string to a
+// network byte order integer and embed it in the keys query.
+//
+// Example:
+//
+// 	challenge request: [0xFE][0xFD][0x09][0x.. 4-byte-instance]
+//	challenge response: [0x09][0x.. 4-byte-instance]["-1287574694"]
+//	query: [0xFE][0xFD][0x00][0x.. 4-byte-instance][0xb3412b5a "-1287574694"]
+//
+
 void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
@@ -50,6 +66,19 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// invalid packet?
 		malformed_packet( server, "too short" );
 		cleanup_qserver( server, 1 );
+		return;
+	}
+
+	if ( 0x09 == *ptr )
+	{
+		// challenge response
+		// Could check the header here should
+		// match the 4 byte id sent
+		ptr++;
+		memcpy( &pkt_id, ptr, 4 );
+		ptr += 4;
+		server->challenge = atoi( ptr );
+		send_gs3_request_packet( server );
 		return;
 	}
 
@@ -516,21 +545,58 @@ void send_gs3_request_packet( struct qserver *server )
 {
 	int rc;
 	unsigned char *packet;
+	char query_buf[128] = {0};
 	int len;
 
-	// The below should work but seems to make no difference to what some
-	// servers send
+	// In the old v3 protocol the doesnt seems to make a difference
+	// to what the servers sends but in the challenge version it definitely does
 	if ( get_player_info || get_server_rules )
 	{
 		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
-		packet = server->type->player_packet;
-		len = server->type->player_len;
+		if ( server->challenge )
+		{
+			// also send challenge string
+			len = sprintf(
+				query_buf,
+				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\xff\xff\xff\x01",
+				0x00,
+				(unsigned char)(server->challenge >> 24),
+				(unsigned char)(server->challenge >> 16),
+				(unsigned char)(server->challenge >> 8),
+				(unsigned char)(server->challenge >> 0)
+			);
+			packet = query_buf;
+		}
+		else
+		{
+			packet = server->type->player_packet;
+			len = server->type->player_len;
+		}
 	}
 	else
 	{
 		server->flags |= TF_STATUS_QUERY;
-		packet = server->type->status_packet;
-		len = server->type->status_len;
+		if ( server->challenge )
+		{
+			// also send challenge string
+			len = sprintf(
+				query_buf,
+				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\x06\x01\x06\x05\x08\x0a\x04%c%c",
+				0x00,
+				(unsigned char)(server->challenge >> 24),
+				(unsigned char)(server->challenge >> 16),
+				(unsigned char)(server->challenge >> 8),
+				(unsigned char)(server->challenge >> 0),
+				0x00,
+				0x00
+			);
+			packet = query_buf;
+		}
+		else
+		{
+			packet = server->type->status_packet;
+			len = server->type->status_len;
+		}
 	}
 
 	if ( server->flags & FLAG_BROADCAST)
