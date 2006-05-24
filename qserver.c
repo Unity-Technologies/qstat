@@ -10,6 +10,7 @@
 
 #include "qstat.h"
 #include "qserver.h"
+#include "debug.h"
 
 #ifndef _WIN32
 #include <sys/socket.h>
@@ -90,4 +91,60 @@ send_broadcast( struct qserver *server, const char *pkt, size_t pktlen)
     memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
     return sendto( server->fd, (const char*) pkt, pktlen, 0,
 		(struct sockaddr *) &addr, sizeof(addr));
+}
+
+void register_send( struct qserver *server )
+{
+    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
+	{
+		server->n_requests++;
+    }
+    else
+	{
+		server->n_retries++;
+	}
+
+	// New request so reset the sent time. This ensures
+	// that we record an accurate ping time even on retry
+	gettimeofday( &server->packet_time1, NULL);
+    server->retry1--;
+    server->n_packets++;
+}
+
+int send_packet( struct qserver* server, const char* data, size_t len )
+{
+    int ret = 0;
+
+	debug( 2, "[%s] send", server->type->type_prefix );
+	if( 4 <= get_debug_level() )
+	{
+		print_packet( server, data, len );
+	}
+    if( data )
+    {
+		if ( server->flags & FLAG_BROADCAST )
+		{
+			ret = send_broadcast( server, data, len );
+		}
+		else
+		{
+			ret = send( server->fd, data, len, 0 );
+		}
+
+		if ( ret == SOCKET_ERROR )
+		{
+			unsigned int ipaddr = ntohl(server->ipaddr) ;
+			fprintf( stderr, "Error on %d.%d.%d.%d, skipping ...\n",
+				(ipaddr>>24)&0xff,
+				(ipaddr>>16)&0xff,
+				(ipaddr>>8)&0xff,
+				ipaddr&0xff
+			);
+			perror( "send");
+		}
+    }
+
+	register_send( server );
+
+	return ret;
 }

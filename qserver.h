@@ -180,4 +180,18 @@ int qserver_send(struct qserver* server, const char* data, size_t len);
 
 int send_broadcast( struct qserver *server, const char *pkt, size_t pktlen);
 
+/**
+ * Registers the send of a request packet.
+ *
+ * This updates n_requests, n_packets, packet_time1 and decrements n_retries
+ */
+void register_send( struct qserver *server );
+
+/**
+ * Sends a packet to the server either direct or via broadcast.
+ *
+ * Once sent calls register_send to register the send of the packet
+ */
+int send_packet( struct qserver* server, const char* data, size_t len );
+
 #endif

@@ -24,7 +24,6 @@
 
 void send_ts2_request_packet( struct qserver *server )
 {
-	int rc;
 	char buf[256];
 
 	int serverport = get_param_i_value( server, "port", 0 );
@@ -42,32 +41,8 @@ void send_ts2_request_packet( struct qserver *server )
 		sprintf( buf, "si %d\nquit\n", serverport );
 		server->saved_data.pkt_index = 1;
 	}
-	debug( 2, "[TS2] send '%s'", buf );
-	if ( server->flags & FLAG_BROADCAST)
-	{
-		rc = send_broadcast( server, buf, strlen( buf ) );
-	}
-	else
-	{
-		rc = send( server->fd, buf, strlen( buf ), 0 );
-	}
 
-	if ( rc == SOCKET_ERROR)
-	{
-		perror( "send" );
-	}
-
-	if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-	}
-	else
-	{
-		server->n_retries++;
-	}
-	server->retry1--;
-	server->n_packets++;
+	send_packet( server, buf, strlen( buf ) );
 }
 
 
