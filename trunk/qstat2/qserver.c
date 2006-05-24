@@ -134,13 +134,13 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 		if ( ret == SOCKET_ERROR )
 		{
 			unsigned int ipaddr = ntohl(server->ipaddr) ;
-			fprintf( stderr, "Error on %d.%d.%d.%d, skipping ...\n",
+			fprintf( stderr, "Error on %d.%d.%d.%d\n",
 				(ipaddr>>24)&0xff,
 				(ipaddr>>16)&0xff,
 				(ipaddr>>8)&0xff,
 				ipaddr&0xff
 			);
-			perror( "send");
+			perror( "send" );
 		}
     }
 
