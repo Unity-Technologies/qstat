@@ -78,6 +78,18 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		memcpy( &pkt_id, ptr, 4 );
 		ptr += 4;
 		server->challenge = atoi( ptr );
+
+		// Correct the stats due to two phase protocol
+		server->retry1++;
+		server->n_packets--;
+		if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
+		{
+			server->n_requests--;
+		}
+		else
+		{
+			server->n_retries--;
+		}
 		send_gs3_request_packet( server );
 		return;
 	}
@@ -91,9 +103,9 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	ptr++;
 
 	server->n_servers++;
-	if ( server->server_name == NULL)
+	if ( server->server_name == NULL )
 	{
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
 	}
 	else
 	{
@@ -543,9 +555,8 @@ int process_gs3_packet( struct qserver *server )
 
 void send_gs3_request_packet( struct qserver *server )
 {
-	int rc;
 	unsigned char *packet;
-	char query_buf[128] = {0};
+	char query_buf[128];
 	int len;
 
 	// In the old v3 protocol the doesnt seems to make a difference
@@ -555,7 +566,7 @@ void send_gs3_request_packet( struct qserver *server )
 		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
 		if ( server->challenge )
 		{
-			// also send challenge string
+			// we've recieved a challenge response, send the query + challenge id
 			len = sprintf(
 				query_buf,
 				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\xff\xff\xff\x01",
@@ -569,6 +580,7 @@ void send_gs3_request_packet( struct qserver *server )
 		}
 		else
 		{
+			// Either basic v3 protocol or challenge request
 			packet = server->type->player_packet;
 			len = server->type->player_len;
 		}
@@ -578,7 +590,7 @@ void send_gs3_request_packet( struct qserver *server )
 		server->flags |= TF_STATUS_QUERY;
 		if ( server->challenge )
 		{
-			// also send challenge string
+			// we've recieved a challenge response, send the query + challenge id
 			len = sprintf(
 				query_buf,
 				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\x06\x01\x06\x05\x08\x0a\x04%c%c",
@@ -594,34 +606,11 @@ void send_gs3_request_packet( struct qserver *server )
 		}
 		else
 		{
+			// Either basic v3 protocol or challenge request
 			packet = server->type->status_packet;
 			len = server->type->status_len;
 		}
 	}
 
-	if ( server->flags & FLAG_BROADCAST)
-	{
-		rc = send_broadcast( server, packet, len );
-	}
-	else
-	{
-		rc = send( server->fd, packet, len, 0 );
-	}
-
-	if ( rc == SOCKET_ERROR )
-	{
-		perror( "send" );
-	}
-
-	if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-	}
-	else
-	{
-		server->n_retries++;
-	}
-	server->retry1--;
-	server->n_packets++;
+	send_packet( server, packet, len );
 }

@@ -36,4 +36,6 @@ void malformed_packet(const struct qserver* server, const char* fmt, ...) GCC_FO
 int get_debug_level (void);
 void set_debug_level (int level);
 
+void print_packet( struct qserver *server, const char *buf, int buflen );
+
 #endif

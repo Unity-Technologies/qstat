@@ -22,8 +22,6 @@
 
 void send_gs2_request_packet( struct qserver *server )
 {
-	int rc;
-
 	// The below should work but seems to make no difference to what some
 	// servers send
 	if ( get_player_info )
@@ -37,31 +35,7 @@ void send_gs2_request_packet( struct qserver *server )
 		server->type->status_packet[9] = 0x00;
 	}
 
-	if ( server->flags & FLAG_BROADCAST)
-	{
-		rc = send_broadcast( server, server->type->status_packet, server->type->status_len );
-	}
-	else
-	{
-		rc = send( server->fd, server->type->status_packet, server->type->status_len, 0 );
-	}
-
-	if ( rc == SOCKET_ERROR )
-	{
-		perror( "send" );
-	}
-
-	if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-	}
-	else
-	{
-		server->n_retries++;
-	}
-	server->retry1--;
-	server->n_packets++;
+	send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 
@@ -90,7 +64,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	server->n_servers++;
 	if ( server->server_name == NULL)
 	{
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1);
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
 	}
 	else
 	{

@@ -107,7 +107,7 @@ void dump_packet(const char* buf, int buflen)
 }
 
 void
-print_packet( struct qserver *server, char *buf, int buflen)
+print_packet( struct qserver *server, const char *buf, int buflen)
 {
 	static char *hex= "0123456789abcdef";
 	unsigned char *p= (unsigned char*)buf;
