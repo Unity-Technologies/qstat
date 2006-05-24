@@ -4539,16 +4539,7 @@ send_packets()
 void
 send_bfris_request_packet( struct qserver *server)
 {
-
-  if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
-    gettimeofday( &server->packet_time1, NULL);
-    server->n_requests++;
-  }
-  else
-    server->n_retries++;
-
-  server->retry1--;
-  server->n_packets++;
+	register_send( server );
 }
 
 
@@ -4557,32 +4548,13 @@ send_bfris_request_packet( struct qserver *server)
 void
 send_qserver_request_packet( struct qserver *server)
 {
-    int rc;
-    if ( server->flags & FLAG_BROADCAST)
-	rc= send_broadcast( server, server->type->status_packet,
-		server->type->status_len);
-    else
-	rc= send( server->fd, server->type->status_packet,
-		server->type->status_len, 0);
 
-    if ( rc == SOCKET_ERROR)  {
-	unsigned int ipaddr= ntohl(server->ipaddr);
-	fprintf( stderr,
-		"Error on %d.%d.%d.%d, skipping ...\n",
-		(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-		(ipaddr>>8)&0xff, ipaddr&0xff);
-	perror( "send");
-	cleanup_qserver( server, 1);
-	return;
+	int rc = send_packet( server, server->type->status_packet, server->type->status_len );
+
+    if ( rc == SOCKET_ERROR )
+	{
+		cleanup_qserver( server, 1 );
     }
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
 }
 
 /* First packet for a QuakeWorld server
@@ -4630,33 +4602,7 @@ send_qwserver_request_packet( struct qserver *server)
 void
 send_ut2003_request_packet( struct qserver *server)
 {
-    int rc;
-
-    if ( server->flags & FLAG_BROADCAST)
-    {
-		rc= send_broadcast( server, server->type->status_packet, server->type->status_len);
-	}
-    else
-    {
-		rc= send( server->fd, server->type->status_packet, server->type->status_len, 0);
-	}
-
-    if ( rc == SOCKET_ERROR)
-    {
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
-    {
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-    {
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+    send_packet( server, server->type->status_packet, server->type->status_len );
     server->next_player_info = NO_PLAYER_INFO;
 }
 
@@ -4664,33 +4610,7 @@ send_ut2003_request_packet( struct qserver *server)
 void
 send_hl2_request_packet( struct qserver *server)
 {
-    int rc;
-
-    if ( server->flags & FLAG_BROADCAST)
-    {
-		rc= send_broadcast( server, server->type->status_packet, server->type->status_len);
-	}
-    else
-    {
-		rc= send( server->fd, server->type->status_packet, server->type->status_len, 0);
-	}
-
-    if ( rc == SOCKET_ERROR)
-    {
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
-    {
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-    {
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 /* First packet for an Unreal master
@@ -4698,21 +4618,7 @@ send_hl2_request_packet( struct qserver *server)
 void
 send_unrealmaster_request_packet( struct qserver *server)
 {
-    int rc;
-
-    rc= send( server->fd, server->type->status_packet,
-	server->type->status_len, 0);
-
-    if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
+    send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 static const char* steam_region[] =
@@ -4936,41 +4842,13 @@ send_qwmaster_request_packet( struct qserver *server)
 }
 
 void
-send_tribes_request_packet( struct qserver *server)
+send_tribes_request_packet( struct qserver *server )
 {
-    int rc;
-
-	if ( server->flags & FLAG_BROADCAST && server->server_name == NULL)
-	{
-		rc= send_broadcast( server, server->type->player_packet,
-		server->type->player_len);
-	}
-	else
-	{
-		rc= send( server->fd, server->type->player_packet,
-		server->type->player_len, 0);
-    }
-
-    if ( rc == SOCKET_ERROR)
-	{
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-	{
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, server->type->player_packet, server->type->player_len );
 }
 
 void
-send_tribes2_request_packet( struct qserver *server)
+send_tribes2_request_packet( struct qserver *server )
 {
     int rc;
 
@@ -4986,88 +4864,32 @@ send_tribes2_request_packet( struct qserver *server)
 
     if ( rc == SOCKET_ERROR)
 	perror( "send");
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
+
+	register_send( server );
 }
 
 void
 send_ghostrecon_request_packet( struct qserver *server)
 {
-    int rc;
-
-    rc= send( server->fd, server->type->status_packet,
-	server->type->status_len, 0);
-
-    if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 void
 send_eye_request_packet( struct qserver *server)
 {
-    int rc;
-
-    if ( server->flags & FLAG_BROADCAST)
-	rc= send_broadcast( server, server->type->status_packet,
-		server->type->status_len);
-    else
-	rc= send( server->fd, server->type->status_packet,
-		server->type->status_len, 0);
-
-    if ( rc == SOCKET_ERROR)
-	perror( "send");
-    if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)  {
-	gettimeofday( &server->packet_time1, NULL);
-	server->n_requests++;
-    }
-    else
-	server->n_retries++;
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 void
 send_ravenshield_request_packet( struct qserver *server)
 {
-    int rc = send( server->fd, server->type->status_packet,
-	server->type->status_len, 0);
-
-    if ( rc == SOCKET_ERROR)
-	{
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-	{
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 void
 send_savage_request_packet( struct qserver *server)
 {
-	int len, rc;
+	int len;
 	unsigned char* pkt;
 
 	if ( get_player_info )
@@ -5080,30 +4902,14 @@ send_savage_request_packet( struct qserver *server)
 		pkt = server->type->status_packet;
 		len = server->type->status_len;
 	}
-    rc = send( server->fd, pkt, len, 0);
 
-    if ( rc == SOCKET_ERROR)
-	{
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-	{
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+	send_packet( server, pkt, len );
 }
 
 void
 send_farcry_request_packet( struct qserver *server)
 {
-	int len, rc;
+	int len;
 	unsigned char* pkt;
 
 	if ( get_player_info )
@@ -5116,24 +4922,8 @@ send_farcry_request_packet( struct qserver *server)
 		pkt = server->type->status_packet;
 		len = server->type->status_len;
 	}
-    rc = send( server->fd, pkt, len, 0);
 
-    if ( rc == SOCKET_ERROR)
-	{
-		perror( "send");
-	}
-
-    if ( server->retry1 == n_retries)
-	{
-		gettimeofday( &server->packet_time1, NULL);
-		server->n_requests++;
-    }
-    else
-	{
-		server->n_retries++;
-	}
-    server->retry1--;
-    server->n_packets++;
+    send_packet( server, pkt, len );
 }
 
 void

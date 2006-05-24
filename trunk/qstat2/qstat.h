@@ -2806,8 +2806,6 @@ void send_packets();
 struct qserver * find_server_by_address( unsigned int ipaddr, unsigned short port);
 void add_server_to_hash( struct qserver *server);
 
-void print_packet( struct qserver *server, char *buf, int buflen);
-
 #define NO_FLAGS 0
 #define NO_VALUE_COPY 1
 #define CHECK_DUPLICATE_RULES 2

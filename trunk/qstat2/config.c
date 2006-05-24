@@ -938,8 +938,6 @@ get_token()
     return &token_buf[0];
 }
 
-extern void print_packet( struct qserver *server, char *buf, int buflen);
-
 STATIC char *
 next_value()
 {
@@ -1032,10 +1030,6 @@ printf( "parse_value <%.*s>\n", len, source);
     value_len= end - value;
     memcpy( token_buf, value, value_len);
     token_buf[value_len]= '\0';
-
-/*
-print_packet(NULL, token_buf, value_len);
-*/
 
     free(value);
     return &token_buf[0];
