@@ -6000,8 +6000,14 @@ player_info:
 	    pkt++;
 	    if ( *pkt == '\0')
 		break;
-	    if(!strncmp(pkt, "\\challenge\\", 11)) // qfusion
+	    if(!strncmp(pkt, "\\challenge\\", 11))
+		{
+			// qfusion
+			// This doesnt support getstatus looking at warsow source:
+			// server/sv_main.c: SV_ConnectionlessPacket
+			server->next_rule = NO_SERVER_RULES;
 		    break;
+		}
 	    rc= sscanf( pkt, "%d %n", &frags, &len);
 	    if ( rc == 1 && pkt[len] != '"')  {
 		pkt+= len;
