@@ -450,7 +450,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		++num_players;
 	}
 
-	if(end - ptr == 4)
+	if(end - ptr >= 4)
 	{
 		snprintf(tmp, sizeof(tmp), "0x%X", swap_long_from_little(ptr));
 		add_rule( server, "osmask", tmp, NO_FLAGS );
@@ -461,6 +461,13 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	{
 		malformed_packet(server, "osmask missing");
 	}
+
+#if 0
+	if(end - ptr)
+	{
+		malformed_packet(server, "%ld byes left", end-ptr);
+	}
+#endif
 
 	server->num_players = num_players;
 

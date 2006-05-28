@@ -120,9 +120,9 @@ error:
 void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
-	unsigned char* pkt = rawpkt;
+	char* pkt = rawpkt;
 	char buf[16];
-	unsigned char* str;
+	char* str;
 	unsigned cnt;
 
 	if(server->server_name == NULL)
@@ -290,10 +290,10 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if( pktlen < 7 ) goto out_too_short;
 
 		// num players
-		server->num_players = pkt[0];
+		server->num_players = (unsigned char)pkt[0];
 
 		// max players
-		server->max_players = pkt[1];
+		server->max_players = (unsigned char)pkt[1];
 
 		// version
 		sprintf( buf, "%hhu", pkt[2] );
@@ -435,8 +435,8 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if(pktlen < 9) goto out_too_short;
 
 		// pkt[0], pkt[1] steam id unused
-		server->num_players = pkt[2];
-		server->max_players = pkt[3];
+		server->num_players = (unsigned char)pkt[2];
+		server->max_players = (unsigned char)pkt[3];
 		// pkt[4] number of bots
 		add_rule(server, "dedicated", pkt[5]?"1":"0", 0);
 		if(pkt[6] == 'l')
@@ -456,13 +456,13 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if(pkt[7])
 		{
-			snprintf(buf, sizeof(buf), "%u", (unsigned)pkt[7]);
+			snprintf(buf, sizeof(buf), "%hhu", (unsigned char)pkt[7]);
 			add_rule(server, "password", buf, 0);
 		}
 
 		if(pkt[8])
 		{
-			snprintf(buf, sizeof(buf), "%u", (unsigned)pkt[8]);
+			snprintf(buf, sizeof(buf), "%hhu", (unsigned char)pkt[8]);
 			add_rule(server, "secure", buf, 0);
 		}
 
@@ -488,7 +488,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if(pktlen < 2) goto out_too_short;
 
-		cnt = pkt[0] + (pkt[1]<<8);
+		cnt = (unsigned char)pkt[0] + ((unsigned char)pkt[1]<<8);
 		pktlen -= 2;
 		pkt += 2;
 
@@ -530,7 +530,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if(pktlen < 1) goto out_too_short;
 
-		cnt = pkt[0];
+		cnt = (unsigned char)pkt[0];
 		pktlen -= 1;
 		pkt += 1;
 
