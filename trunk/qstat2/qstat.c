@@ -227,8 +227,8 @@ int server_compare( struct qserver *one, struct qserver *two);
 int player_compare( struct player *one, struct player *two);
 int type_option_compare( server_type *one, server_type *two );
 int type_string_compare( server_type *one, server_type *two );
-int u2xmp_html_color( short color, char *dest, int *font_tag );
-int ut2k4_html_color( char *color, char *dest, int *font_tag );
+STATIC int u2xmp_html_color( short color, char *dest, int *font_tag );
+STATIC int ut2k4_html_color( const unsigned char *color, char *dest, int *font_tag );
 
 int show_errors= 0;
 static int noserverdups = 1;
@@ -3006,7 +3006,7 @@ void do_work(void)
 						sizeof(buffer[buffill].data),
 						0,
 						(struct sockaddr*)&buffer[buffill].addr,
-						&addrlen);
+						(void*)&addrlen);
 
 			if ( pktlen == SOCKET_ERROR)
 			{
@@ -4890,7 +4890,7 @@ void
 send_savage_request_packet( struct qserver *server)
 {
 	int len;
-	unsigned char* pkt;
+	char* pkt;
 
 	if ( get_player_info )
 	{
@@ -4910,7 +4910,7 @@ void
 send_farcry_request_packet( struct qserver *server)
 {
 	int len;
-	unsigned char* pkt;
+	char* pkt;
 
 	if ( get_player_info )
 	{
@@ -6921,7 +6921,7 @@ change_server_port( struct qserver *server, unsigned short port, int force )
 
 			// Update the servers hostname as required
 			sprintf( arg, "%d.%d.%d.%d:%hu", ipaddr>>24, (ipaddr>>16)&0xff, (ipaddr>>8)&0xff, ipaddr&0xff, port );
-			if ( 0 != strcmp( server->arg, server->host_name ) != 0 )
+			if ( 0 != strcmp( server->arg, server->host_name ))
 			{
 				// hostname isnt the query arg
 				char *colon = strchr( server->host_name, ':' );
@@ -6986,16 +6986,16 @@ dup_nstring( const char *pkt, const char *end, char **next)
 }
 
 STATIC char *
-dup_n1string( unsigned char *pkt, char *end, char **next)
+dup_n1string( char *pkt, char *end, char **next)
 {
     unsigned len;
 
-    if(!pkt || pkt >= (unsigned char*)end)
+    if(!pkt || pkt >= end)
 	return NULL;
 
-    len = pkt[0]-1;
+    len = (unsigned char)pkt[0]-1;
     pkt++;
-    if ( pkt + len > (unsigned char*)end)
+    if ( pkt + len > end)
 	return NULL;
 
     *next= pkt+len;
@@ -10864,15 +10864,15 @@ int u2xmp_html_color( short color, char *dest, int *font_tag )
 	return 0;
 }
 
-int ut2k4_html_color( char *color, char *dest, int *font_tag )
+int ut2k4_html_color( const unsigned char *color, char *dest, int *font_tag )
 {
 	if ( 1 == html_names )
 	{
 		int len = sprintf( dest, "%s<font color=\"#%02hhx%02hhx%02hhx\">",
 			*font_tag ? "</font>" : "",
-			(unsigned char)color[0],
-			(unsigned char)color[1],
-			(unsigned char)color[2]
+			color[0],
+			color[1],
+			color[2]
 		);
 		*font_tag = 1;
 

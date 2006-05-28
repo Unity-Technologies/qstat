@@ -383,7 +383,7 @@ static int ut2004_send_query(struct qserver* server)
 
 	b = put_string(b, "mutator", &left);
 	l = flen+1;
-	b = put_bytes(b, &l, 1, &left);
+	b = put_bytes(b, (char*)&l, 1, &left);
 	b = put_bytes(b, r, flen, &left);
 	b = put_bytes(b, "", 1, &left);
 	b = put_bytes(b, &neg, 1, &left);
@@ -406,7 +406,7 @@ static int ut2004_send_query(struct qserver* server)
 
 void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
-    unsigned char* state = &server->master_query_tag[0];
+    unsigned char* state = (unsigned char*)&server->master_query_tag[0];
 
     md5_state_t md5;
 
@@ -441,14 +441,14 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 		debug(2, "challenge: %s", challenge);
 
 		md5_init(&md5);
-		md5_append(&md5, cdkey, CD_KEY_LENGTH);
-		md5_finish(&md5, sum);
+		md5_append(&md5, (unsigned char*)cdkey, CD_KEY_LENGTH);
+		md5_finish(&md5, (unsigned char*)sum);
 		bin2hex(sum, 16, response+RESPONSE_OFFSET_CDKEY);
 
 		md5_init(&md5);
-		md5_append(&md5, cdkey, CD_KEY_LENGTH);
-		md5_append(&md5, challenge, strlen(challenge));
-		md5_finish(&md5, sum);
+		md5_append(&md5, (unsigned char*)cdkey, CD_KEY_LENGTH);
+		md5_append(&md5, (unsigned char*)challenge, strlen(challenge));
+		md5_finish(&md5, (unsigned char*)sum);
 		bin2hex(sum, 16, response+RESPONSE_OFFSET_CHALLENGE);
 
 		qserver_send(server, response, sizeof(response));
@@ -552,7 +552,7 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 		    if(!recordlen || recordlen > MAX_LISTING_RECORD_LEN)
 		    {
 			malformed_packet(server,
-				"record lengthx %x out of range, position %d", recordlen, p-rawpkt);
+				"record lengthx %x out of range, position %d", recordlen, (int)(p-rawpkt));
 			goto cleanup_out;
 		    }
 
@@ -581,7 +581,7 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 		    if(!recordlen || recordlen > MAX_LISTING_RECORD_LEN)
 		    {
 			malformed_packet(server,
-				"record length %x out of range, position %d", recordlen, p-rawpkt);
+				"record length %x out of range, position %d", recordlen, (int)(p-rawpkt));
 			goto cleanup_out;
 		    }
 		    // recordlen itself is four bytes

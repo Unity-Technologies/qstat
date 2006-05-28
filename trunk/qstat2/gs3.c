@@ -182,7 +182,7 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 {
-	unsigned char *pkt = rawpkt;
+	char *pkt = rawpkt;
 	debug( 1, "status packet" );
 
 	// Server name
@@ -555,7 +555,7 @@ int process_gs3_packet( struct qserver *server )
 
 void send_gs3_request_packet( struct qserver *server )
 {
-	unsigned char *packet;
+	char *packet;
 	char query_buf[128];
 	int len;
 
