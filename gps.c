@@ -200,12 +200,13 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 			sscanf( value, "%d.%d", &id_major, &id_minor);
 			if ( server->saved_data.pkt_id == 0)
 			{
-				server->saved_data.pkt_id= id_major;
+				server->saved_data.pkt_id = id_major;
 			}
 			if ( id_major == server->saved_data.pkt_id)
 			{
 				if ( id_minor > 0)
 				{
+					// pkt_index is bitmask of packets recieved
 					server->saved_data.pkt_index |= 1 << (id_minor-1);
 				}
 				if ( final && id_minor > server->saved_data.pkt_max)
