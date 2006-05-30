@@ -2877,44 +2877,49 @@ static void add_pkt_from_file(const char* file)
 	pkt_dumps[pkt_dump_pos++] = file;
 }
 
-/** FIXME: support multiple packets */
 static void replay_pkt_dumps()
 {
 	struct qserver* server = servers;
 	char* pkt = NULL;
 	int fd;
 	int bytes_read = 0; // should be ssize_t but for ease with win32
+	int i;
 	struct stat statbuf;
 	gettimeofday( &packet_recv_time, NULL);
 
-	if((fd = open(pkt_dumps[0], O_RDONLY)) == -1)
+	for ( i = 0; i < pkt_dump_pos; i++ )
 	{
-		goto err;
-	}
-	if( fstat( fd, &statbuf) == -1 )
-	{
-		goto err;
-	}
-	pkt = malloc( statbuf.st_size );
-	if ( NULL == pkt )
-	{
-		goto err;
-	}
-	bytes_read = read( fd, pkt, statbuf.st_size );
-	if ( bytes_read != statbuf.st_size )
-	{
-		fprintf( stderr, "Failed to read entire packet from disk got %d of %ld bytes\n", bytes_read, (long)statbuf.st_size );
-		goto err;
-	}
+		if((fd = open(pkt_dumps[i], O_RDONLY)) == -1)
+		{
+			goto err;
+		}
+		if( fstat( fd, &statbuf) == -1 )
+		{
+			goto err;
+		}
+		pkt = malloc( statbuf.st_size );
+		if ( NULL == pkt )
+		{
+			goto err;
+		}
+		bytes_read = read( fd, pkt, statbuf.st_size );
+		if ( bytes_read != statbuf.st_size )
+		{
+			fprintf( stderr, "Failed to read entire packet from disk got %d of %ld bytes\n", bytes_read, (long)statbuf.st_size );
+			goto err;
+		}
 
-	server->type->packet_func( server, pkt, statbuf.st_size);
-
+		server->type->packet_func( server, pkt, statbuf.st_size);
+		close(fd);
+		fd = 0;
+	}
 	goto out;
 
 err:
 	perror(__FUNCTION__);
-out:
 	close(fd);
+out:
+	fd = 0; // NOP
 }
 #endif // ENABLE_DUMP
 
