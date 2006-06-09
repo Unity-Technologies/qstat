@@ -459,20 +459,11 @@ void deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 	debug( 2, "pkt_max %d\n", server->saved_data.pkt_max );
 	debug( 2, "pkt_index %x\n", server->saved_data.pkt_index );
 
-	if ( final && server->saved_data.pkt_id == 0)
-	{
-		cleanup_qserver( server, 1);
-	}
-
-	if ( server->saved_data.pkt_max)
-	{
-		if ( server->saved_data.pkt_index >= ((1<<(server->saved_data.pkt_max))-1) )
-		{
-			cleanup_qserver( server, 1);
-		}
-	}
-
-	if ( server->num_players < 0 && id_minor >= 3)
+	if (
+		( final && server->saved_data.pkt_id == 0 ) ||
+		( server->saved_data.pkt_max && server->saved_data.pkt_index >= ((1<<(server->saved_data.pkt_max))-1) ) ||
+		( server->num_players < 0 && id_minor >= 3)
+	)
 	{
 		cleanup_qserver( server, 1);
 	}
