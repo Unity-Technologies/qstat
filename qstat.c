@@ -6072,6 +6072,19 @@ player_info:
 	    }
 	    pkt= end+1;
 
+	    //WarSoW team number
+	    if ( *pkt != '\n') {
+		int team;
+		rc= sscanf( pkt, "%d%n", &team, &len);
+		if ( rc == 1)  {
+		    pkt+= len;
+		    if ( player)  {
+			player->team= team;
+			server->flags|= FLAG_PLAYER_TEAMS;
+		    }
+		}
+	    }
+
 	    if ( player != NULL)  {
 		player->skin= NULL;
 		player->shirt_color= -1;
