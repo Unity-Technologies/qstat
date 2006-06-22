@@ -179,8 +179,9 @@ typedef struct _server_type server_type;
 #define QUAKE4_MASTER (53|MASTER_SERVER)
 #define ARMYOPS_SERVER 54
 #define GAMESPY4_PROTOCOL_SERVER 55
+#define PREY_SERVER 56
 
-#define LAST_BUILTIN_SERVER  55
+#define LAST_BUILTIN_SERVER  56
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -2280,7 +2281,7 @@ server_type builtin_types[] = {
     "stm",			/* type_string */
     "-stm",			/* type_option */ /* ## also "-qw" */
     "Steam Master",		/* game_name */
-    HL_SERVER,			/* master */
+    A2S_SERVER,			/* master */
     STEAM_MASTER_DEFAULT_PORT,	/* default_port */
     0,				/* port_offset */
     TF_SINGLE_QUERY|TF_OUTFILE|TF_QUERY_ARG|TF_MASTER_STEAM, /* flags */
@@ -2579,6 +2580,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_gs3_packet,	/* packet_func */
+},
+{
+    /* PREY */
+    PREY_SERVER,					/* id */
+    "PREYS",							/* type_prefix */
+    "preys",							/* type_string */
+    "-preys",						/* type_option */
+    "PREY",						/* game_name */
+    0,								/* master */
+    PREY_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "fs_game",						/* game_rule */
+    "PREY",						/* template_var */
+    (char*) &doom3_serverinfo,		/* status_packet */
+    sizeof( doom3_serverinfo),		/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_doom3_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_doom3_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_doom3_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_qwserver_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_prey_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */

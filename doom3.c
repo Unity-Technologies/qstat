@@ -244,7 +244,7 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
 static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
 
-static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, int q4)
+static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -253,9 +253,6 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
 	char tmp[32];
-	unsigned expect_version = 1;
-
-	if(q4) expect_version = 2;
 
 	server->n_servers++;
 	if ( server->server_name == NULL)
@@ -287,9 +284,9 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)",
 		challenge, tmp, protocolver);
 
-	if(protocolver >> 16 != expect_version)
+	if( protocolver >> 16 != version )
 	{
-		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, expect_version);
+		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, version );
 		cleanup_qserver( server, 1);
 		return;
 	}
@@ -430,7 +427,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		++ptr;
 		player->name = strdup( val );
 
-		if(q4)
+		if( 2 == version )
 		{
 			val = ptr;
 			ptr = memchr(ptr, '\0', end-ptr);
@@ -477,10 +474,15 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 
 void deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-	_deal_with_doom3_packet(server, rawpkt, pktlen, 0);
+	_deal_with_doom3_packet( server, rawpkt, pktlen, 1 );
 }
 
 void deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-	_deal_with_doom3_packet(server, rawpkt, pktlen, 1);
+	_deal_with_doom3_packet( server, rawpkt, pktlen, 2 );
+}
+
+void deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
+{
+	_deal_with_doom3_packet( server, rawpkt, pktlen, 4 );
 }
