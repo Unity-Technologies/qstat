@@ -281,15 +281,18 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	ptr += 4;
 
 	snprintf(tmp, sizeof(tmp), "%u.%u", protocolver >> 16, protocolver & 0xFFFF);
-	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)",
-		challenge, tmp, protocolver);
+	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)", challenge, tmp, protocolver);
 
+// Commented out until we have a better way to specify the expected version
+// This is due to prey demo requiring version 4 yet prey retail version 3
+/*
 	if( protocolver >> 16 != version )
 	{
 		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, version );
 		cleanup_qserver( server, 1);
 		return;
 	}
+*/
 
 	server->protocol_version = protocolver;
 	add_rule( server, "protocol", tmp, NO_FLAGS );
@@ -482,7 +485,12 @@ void deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
 	_deal_with_doom3_packet( server, rawpkt, pktlen, 2 );
 }
 
-void deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
+void deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	_deal_with_doom3_packet( server, rawpkt, pktlen, 4 );
+}
+
+void deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
+{
+	_deal_with_doom3_packet( server, rawpkt, pktlen, 3 );
 }
