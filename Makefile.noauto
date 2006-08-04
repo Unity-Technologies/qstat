@@ -39,7 +39,7 @@ windows: $(OBJ)
 
 windows_debug: $(SRC)
 	rm -f *.pdb
-	$(CC) $(CFLAGS) /Zi /ML $(SRC) /Feqstat.exe wsock32.lib /link /fixed:no /incremental:no /pdbtype:con
+	$(CC) $(CFLAGS) /Zi /ML $(SRC) /Feqstat.exe wsock32.lib /link /fixed:no /incremental:no
 
 os2: $(SRC)
 	$(CC) /Q /W0 /C+ $(SRC)

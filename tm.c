@@ -10,8 +10,8 @@
  */
 
 #include <sys/types.h>
-#include <arpa/inet.h>
 #ifndef _WIN32
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
 #include <stdlib.h>
