@@ -1049,6 +1049,20 @@ display_ts2_player_info( struct qserver *server)
 }
 
 void
+display_tm_player_info( struct qserver *server)
+{
+    struct player *player;
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+    {
+	    fprintf( OF, "\t%6s %s\n",
+			ping_time(player->ping),
+			xform_name( player->name, server)
+		);
+    }
+}
+
+void
 display_doom3_player_info( struct qserver *server)
 {
     struct player *player;
@@ -1630,6 +1644,25 @@ raw_display_armyops_player_info( struct qserver *server)
 
 void
 raw_display_ts2_player_info( struct qserver *server)
+{
+    static const char *fmt= "%s" "%s%d" "%s%s" "%s%s";
+    struct player *player;
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+    {
+	    fprintf( OF, fmt,
+			xform_name( player->name, server),
+			RD, player->ping,
+			RD, player->skin ? player->skin : "",
+			RD, play_time( player->connect_time, 1 )
+		);
+		fputs( "\n", OF);
+    }
+}
+
+void
+raw_display_tm_player_info( struct qserver *server)
 {
     static const char *fmt= "%s" "%s%d" "%s%s" "%s%s";
     struct player *player;
@@ -2376,6 +2409,33 @@ xml_display_armyops_player_info( struct qserver *server)
 
 void
 xml_display_ts2_player_info( struct qserver *server)
+{
+    struct player *player;
+
+    fprintf( OF, "\t\t<players>\n");
+
+    player= server->players;
+    for ( ; player != NULL; player= player->next)
+	{
+		fprintf( OF, "\t\t\t<player>\n");
+
+		fprintf( OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name( player->name, server)));
+		fprintf( OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+
+		if ( player->connect_time )
+		{
+		    fprintf( OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time( player->connect_time,1)));
+		}
+
+		xml_display_player_info_info(player);
+		fprintf( OF, "\t\t\t</player>\n");
+    }
+
+    fprintf( OF, "\t\t</players>\n");
+}
+
+void
+xml_display_tm_player_info( struct qserver *server)
 {
     struct player *player;
 
@@ -10614,7 +10674,7 @@ static char *sof_colors[32] = {
 char *
 xform_name( char *string, struct qserver *server)
 {
-	static char _buf1[1024], _buf2[1024];
+	static char _buf1[2048], _buf2[2048];
 	static char *_q= &_buf1[0];
 	unsigned char *s= (unsigned char*) string;
 	char *q;
@@ -10645,7 +10705,6 @@ xform_name( char *string, struct qserver *server)
 		*q= '\0';
 		return _q;
 	}
-
 	if ( server->type->flags & TF_QUAKE3_NAMES)
 	{
 		for ( ; *s; s++)
@@ -10797,6 +10856,113 @@ xform_name( char *string, struct qserver *server)
 					*q++= ' ';
 				}
 			}
+		}
+		*q = '\0';
+	}
+	else if ( server->type->flags & TF_TM_NAMES )
+	{
+		int open = 0;
+		for ( ; *s; s++)
+		{
+			if ( *s == '$' )
+			{
+				s++;
+				switch ( *s )
+				{
+				case 'i':
+				case 'I':
+					// italic
+					if ( 1 == html_names )
+					{
+						strcat( q, "<span style=\"font-style:italic\">" );
+						q += 32;
+						open++;
+					}
+					break;
+				case 's':
+				case 'S':
+					// shadowed
+					break;
+				case 'w':
+				case 'W':
+					// wide
+					break;
+				case 'n':
+				case 'N':
+					// narrow
+					break;
+				case 'm':
+				case 'M':
+					// normal
+					if ( 1 == html_names )
+					{
+						strcat( q, "<span style=\"font-style:normal\">" );
+						q += 32;
+						open++;
+					}
+					break;
+				case 'g':
+				case 'G':
+					// default color
+					strcat( q, "<span style=\"color:black\">" );
+					q += 26;
+					open++;
+					break;
+				case 'z':
+				case 'Z':
+					// reset all
+					while ( open )
+					{
+						strcat( q, "</span>" );
+						q += 7;
+						open--;
+					}
+					open = 0;
+					break;
+				case 't':
+				case 'T':
+					// capitalise
+					if ( 1 == html_names )
+					{
+						strcat( q, "<span style=\"text-transform:capitalize\">" );
+						q += 40;
+						open++;
+					}
+					break;
+				case '$':
+					// literal $
+					*q++ = '$';
+					break;
+				default:
+					// color
+					if ( 1 == html_names )
+					{
+						sprintf( q, "<span style=\"color:%c%c%c%c%c%c\">", *s, *s, *(s+1), *(s+1), *(s+2), *(s+2) );
+						q += 27;
+						open++;
+					}
+					if ( *(s+1) )
+					{
+						s++;
+					}
+					if ( *(s+1) )
+					{
+						s++;
+					}
+					break;
+				}
+			}
+			else
+			{
+				*q++ = *s;
+			}
+		}
+
+		while ( open )
+		{
+			strcat( q, "</span>" );
+			q += 7;
+			open--;
 		}
 		*q = '\0';
 	}

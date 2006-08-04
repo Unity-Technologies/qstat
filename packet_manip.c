@@ -180,6 +180,7 @@ int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int 
 				cdata->pkt_max = pkt_max;
 			}
 		}
+		debug( 4, "calced max = %d", pkt_max );
 
 		// allocate a new packet data and prepend to the list
 		sdata = (SavedData*) calloc( 1, sizeof(SavedData) );
