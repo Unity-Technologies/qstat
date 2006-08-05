@@ -226,3 +226,17 @@ SavedData* get_packet_fragment( int index )
 
 	return segments[pkt_id_index][index];
 }
+
+unsigned long combined_length( struct qserver *server, int pkt_id )
+{
+    SavedData *sdata = &server->saved_data;
+	unsigned long len = 0;
+	for ( ; sdata != NULL; sdata = sdata->next )
+    {
+		if ( pkt_id == sdata->pkt_id )
+		{
+			len += sdata->datalen;
+		}
+	}
+	return len;
+}
