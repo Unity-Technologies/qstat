@@ -32,6 +32,8 @@ void send_tm_request_packet( struct qserver *server )
 	if ( ! server->protocol_version )
 	{
 		// No seen the version yet wait
+		// register_send here to ensure that timeouts function correctly
+		register_send( server );
 		return;
 	}
 
@@ -54,8 +56,8 @@ void send_tm_request_packet( struct qserver *server )
 	memcpy( buf+4, &server->challenge, 4 );
 
 	// prep the details we need for multi packet responses
-	server->saved_data.pkt_id = 0; // used to indicate what method we are processing
-	server->saved_data.pkt_max = 1; // we expect at least 1 packet response
+	// we expect at least 1 packet response
+	server->saved_data.pkt_max = 1;
 
 	send_packet( server, buf, len + 8 );
 }
@@ -68,7 +70,8 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 	char fullname[256];
 	struct player *player = NULL;
 	int pkt_max = server->saved_data.pkt_max;
-	int not_last = 1;
+	unsigned long total_len, expected_len;
+	int method_response = 1;
 	debug( 2, "processing..." );
 
 	s = rawpkt;
@@ -88,13 +91,17 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 	else if ( 8 <= pktlen && 0 == memcmp( rawpkt+4, &server->challenge, 4 ) )
 	{
 		// first 4 bytes = the length
+		// Note: We use pkt_id to store the length of the expected packet
+		// this could cause loss but very unlikely
+		unsigned long len;
+		memcpy( &len, rawpkt, 4 );
+
 		// second 4 bytes = handle identifier we sent in the request
-		server->saved_data.pkt_id++;
 		if ( 8 == pktlen )
 		{
 			// split packet
 			// we have at least one more packet coming
-			if ( ! add_packet( server, 0, 0, 2, pktlen, rawpkt, 1 ) )
+			if ( ! add_packet( server, len, 0, 2, pktlen, rawpkt, 1 ) )
 			{
 				// fatal error e.g. out of memory
 				return;
@@ -103,22 +110,36 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 		}
 		else
 		{
+			// ensure the length is stored
+			server->saved_data.pkt_id = (int)len;
 			s += 8;
 		}
 	}
 
-	not_last = strncmp( rawpkt + pktlen - 19, "</methodResponse>", 17 );
-	if ( 0 != strncmp( s, "<?xml", 5 ) || 0 != not_last )
+	total_len = combined_length( server, server->saved_data.pkt_id );
+	expected_len = server->saved_data.pkt_id; 
+	if ( total_len < expected_len + 8 )
 	{
-		// we dont have a complete response yet combine
-		int new_max = ( not_last ) ? pkt_max + 1 : pkt_max;
-		if ( ! add_packet( server, 0, pkt_max - 1, new_max, pktlen, rawpkt, 1 ) )
+		// we dont have a complete response add the packet
+		int last, new_max;
+		if ( total_len + pktlen >= expected_len + 8 )
+		{
+			last = 1;
+			new_max = pkt_max;
+		}
+		else
+		{
+			last = 0;
+			new_max = pkt_max + 1;
+		}
+
+		if ( ! add_packet( server, server->saved_data.pkt_id, pkt_max - 1, new_max, pktlen, rawpkt, 1 ) )
 		{
 			// fatal error e.g. out of memory
 			return;
 		}
 
-		if ( ! not_last )
+		if ( last )
 		{
 			// we are the last packet run combine to call us back
 			combine_packets( server );
@@ -196,15 +217,15 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 				debug( 4, "%s = %s\n", key, value );
 			}
 		}
-		else if ( 0 == strncmp( s, "</struct>", 9 ) && 3 > server->saved_data.pkt_id )
+		else if ( 0 == strncmp( s, "</struct>", 9 ) && 3 > method_response )
 		{
 			// end of method response
-			server->saved_data.pkt_id++;
+			method_response++;
 		}
 
 		if ( NULL != value )
 		{
-			switch( server->saved_data.pkt_id )
+			switch( method_response )
 			{
 			case 1:
 				// GetServerOptions response
@@ -240,6 +261,7 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 				if ( 0 == strcmp( "Login", key ) )
 				{
 					player = add_player( server, server->n_player_info );
+					server->num_players++;
 				}
 				else if ( NULL != player )
 				{
