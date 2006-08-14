@@ -70,7 +70,7 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 	char fullname[256];
 	struct player *player = NULL;
 	int pkt_max = server->saved_data.pkt_max;
-	unsigned long total_len, expected_len;
+	unsigned total_len, expected_len;
 	int method_response = 1;
 	debug( 2, "processing..." );
 
