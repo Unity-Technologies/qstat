@@ -283,12 +283,14 @@ int process_gs3_packet( struct qserver *server )
 			else if( 0 == strcmp( var, "game_id" ) )
 			{
 				server->game = strdup( val );
+				add_rule( server, var, val, NO_FLAGS );
 			}
 			else if( 0 == strcmp( var, "gamever" ) )
 			{
 				// format:
 				// v1.0
 				server->protocol_version = atoi( val+1 );
+				add_rule( server, var, val, NO_FLAGS );
 			}
 			else if( 0 == strcmp( var, "mapname" ) )
 			{
@@ -306,6 +308,7 @@ int process_gs3_packet( struct qserver *server )
 			else if( 0 == strcmp( var, "hostport" ) )
 			{
 				change_server_port( server, atoi( val ), 0 );
+				add_rule( server, var, val, NO_FLAGS );
 			}
 			else
 			{
