@@ -173,6 +173,8 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		return;
 	}
 
+	int isArmyGame[2] = {-1,-1};
+
 	while ( 1 == type && ptr < end )
 	{
 		// first we have the headers null seperated
@@ -204,6 +206,17 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			ptr++;
 		}
 		debug( 2, "player header[%d] = '%s'", no_headers-1, head );
+
+
+		// Detect if this is an army game by checking for two header
+		if ( 0 == strcmp( head, "kia_" ) )
+		{
+			isArmyGame[0] = 0;
+		}
+		else if ( 0 == strcmp( head, "honor_" ) )
+		{
+			isArmyGame[1] = 0;
+		}
 	}
 
 	if ( 2 != type )
@@ -232,6 +245,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		else
 		{
 			struct player *player = add_player( server, total_players );
+			int armyscore[4];
 			int i;
 			for ( i = 0; i < no_headers; i++ )
 			{
@@ -282,11 +296,46 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 						header[len-1] = '\0';
 					}
 					player_add_info( player, header, val, NO_FLAGS );
+
 				}
 
 				debug( 2, "Player[%d][%s]=%s\n", total_players, headers[i], val );
+
+				// Army Game
+				if ( 0 == strcmp( header, "goal" ) )
+				{
+					armyscore[0] = atoi( val );
+				}
+				else if ( 0 == strcmp( header, "enemy" ) )
+				{
+					armyscore[1] = atoi( val );
+				}
+				else if ( 0 == strcmp( header, "leader" ) )
+				{
+					armyscore[2] = atoi( val );
+				}
+				else if ( 0 == strcmp( header, "roe" ) )
+				{
+					armyscore[3] = atoi( val );
+				}
+
+				if ( i == no_headers-1 )
+				{
+					// If we are army game, then create a more 'valid score' although 
+					// 'unoffical' score
+					if (0 == isArmyGame[0] && 0 == isArmyGame[1] )
+					{
+						// (goal+enemy+leader)-roe
+						
+						int agscore = (armyscore[0] + armyscore[1] + armyscore[2]) - armyscore[3];
+						debug( 3, "ArmyGame Score Fix: %d|%d|%d|%d = %d", armyscore[0], armyscore[1], armyscore[2], armyscore[3], agscore );
+						player->score = agscore ;
+					}
+				}
+				// ---- 
 			}
 			total_players++;
+			
 		}
 
 		if ( total_players > no_players )
