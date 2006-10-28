@@ -6,7 +6,10 @@ INSTERT DATE HERE
 Summary of New Features
 -----------------------
 new protocols:
-   Warsow [-warsows]
+   Warsow [-warsows, -warsowm]
+   Prey [-preys, -preym]
+   TrackMania [-tm]
+   Tremulous [-tremulous, -tremulousm]
 
 add -nx and -nnx options that enable resp. disable name transformation
 calculate player score for AMS servers
