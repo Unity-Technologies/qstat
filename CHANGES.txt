@@ -1,7 +1,7 @@
 QStat version 2.11
 
 ** UPDATED for 2.11 **
-INSTERT DATE HERE
+November 04, 2006
 
 Summary of New Features
 -----------------------
