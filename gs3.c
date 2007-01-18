@@ -296,6 +296,11 @@ int process_gs3_packet( struct qserver *server )
 			{
 				server->map_name = strdup( val );
 			}
+			else if( 0 == strcmp( var, "map" ) )
+			{
+				// BF2MC compatibility
+				server->map_name = strdup( val );
+			}
 			else if( 0 == strcmp( var, "maxplayers" ) )
 			{
 				server->max_players = atoi( val );
