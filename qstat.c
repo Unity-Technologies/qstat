@@ -657,10 +657,11 @@ standard_display_server( struct qserver *server)
 	default:
 	    break;
 	}
-	fprintf( OF, "%s%-21s %2d/%2d %*s %6d / %1d  %*s %s\n",
+	fprintf( OF, "%s%-21s %2d/%-2d %2d/%-2d %*s %6d / %1d  %*s %s\n",
 	    prefix,
 	    (hostname_lookup) ? server->host_name : server->arg,
 	    server->num_players, server->max_players,
+	    server->num_spectators, server->max_spectators,
 	    map_name_width, (server->map_name) ? server->map_name : "?",
 	    server->n_requests ? server->ping_total/server->n_requests : 999,
 	    server->n_retries,
@@ -1214,7 +1215,7 @@ raw_display_server( struct qserver *server)
 		RD, server->error);
     }
     else if ( server->type->flags & TF_RAW_STYLE_QUAKE)  {
-        fprintf( OF, "%s" "%.*s%.*s" "%s%s" "%s%s" "%s%s" "%s%d" "%s%s" "%s%d" "%s%d" "%s%d" "%s%d" "%s%s",
+        fprintf( OF, "%s" "%.*s%.*s" "%s%s" "%s%s" "%s%s" "%s%d" "%s%s" "%s%d" "%s%d" "%s%d" "%s%d" "%s%d" "%s%d" "%s%s",
 		prefix,
 		raw_arg, RD, raw_arg, server->arg,
 		RD, (hostname_lookup) ? server->host_name : server->arg,
@@ -1224,6 +1225,8 @@ raw_display_server( struct qserver *server)
 		RD, server->map_name,
 		RD, server->max_players,
 		RD, server->num_players,
+		RD, server->max_spectators,
+		RD, server->num_spectators,
 		RD, ping_time,
 		RD, server->n_retries,
 		show_game_in_raw ? RD : "", show_game_in_raw ? get_qw_game(server) : ""
@@ -1799,6 +1802,10 @@ xml_display_server( struct qserver *server)
 			server->num_players);
 		fprintf( OF, "\t\t<maxplayers>%d</maxplayers>\n",
 			server->max_players);
+		fprintf( OF, "\t\t<numspectators>%d</numspectators>\n",
+			server->num_spectators);
+		fprintf( OF, "\t\t<maxspectators>%d</maxspectators>\n",
+			server->max_spectators);
 
 		if ( !(server->type->flags & TF_RAW_STYLE_TRIBES))
 		{
@@ -4160,6 +4167,7 @@ init_qserver( struct qserver *server, server_type* type)
     server->map_name= NULL;
     server->game= NULL;
     server->num_players= 0;
+    server->num_spectators= 0;
     server->fd= -1;
     if ( server->flags & FLAG_BROADCAST)  {
 	server->retry1= 1;
@@ -5858,7 +5866,7 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 void
 deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-    char *key, *value, *end;
+    char *key, *value, *end, *users;
     struct player *player= NULL, **last_player= &server->players;
     int len, rc, complete= 0;
     int number, frags, connect_time, ping;
@@ -5867,6 +5875,7 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
     if ( server->type->id == HW_SERVER)
 	pkt= &rawpkt[6];
 
+    *(users= strchr( pkt, '\n')) = '\0';
     while ( *pkt && pkt-rawpkt < pktlen)  {
 	if ( *pkt == '\\')  {
 	    pkt++;
@@ -5878,7 +5887,7 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    pkt+= strlen(pkt)+1;
 	    end= strchr( pkt, '\\');
 	    if ( end == NULL)
-		end= strchr( pkt, '\n');
+		end= users;
 	    value= (char*) malloc(end-pkt+1);
 	    memcpy( value, pkt, end-pkt);
 	    value[end-pkt]= '\0';
@@ -5891,6 +5900,10 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		server->max_players= atoi(value);
 		free( value);
 	    }
+	    else if  ( strcmp( key, "maxspectators") == 0)  {
+		server->max_spectators= atoi(value);
+		free( value);
+	    }
 	    else if ( get_server_rules || strncmp( key, "*game", 5) == 0)  {
 		add_rule( server, key, value, NO_VALUE_COPY);
 		if ( strcmp( key, "*gamedir") == 0)  {
@@ -5899,7 +5912,13 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		}
 	    }
 	}
-	else if ( *pkt == '\n')  {
+	else
+	    pkt++;
+	complete= 1;
+    }
+    *pkt = '\n';
+    while ( *pkt && pkt-rawpkt < pktlen)  {
+	if ( *pkt == '\n')  {
 	    pkt++;
 	    if ( pkt-rawpkt>=pktlen || *pkt == '\0')
 		break;
@@ -5924,7 +5943,7 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		player->number= number;
 		player->frags= frags;
 		player->connect_time= connect_time * 60;
-		player->ping= ping;
+		player->ping= ping > 0 ? ping : -ping;
 	    }
 	    else
 		player= NULL;
@@ -5932,7 +5951,8 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 	    pkt+= len;
 
 	    if ( *pkt != '"') break;
-	    pkt++;
+	    pkt+= ping > 0 ? 1 : 4;	// if 4 then no "\s\" in spectators name
+					// protocol "under construction"
 	    end= strchr( pkt, '"');
 	    if ( end == NULL) break;
 	    if ( player != NULL)  {
@@ -5963,7 +5983,10 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		sscanf( pkt, "%*d %*d%n", &len);
 	    pkt+= len;
 
+	    if (ping > 0)
 	    server->num_players++;
+	    else
+		server->num_spectators++;
 	}
 	else
 	    pkt++;
@@ -9875,10 +9898,10 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	add_uchar_rule( server, "u7", pkt[7]);
 	add_uchar_rule( server, "u8", pkt[8]);
 
-	add_uchar_rule( server, "randpowerup", !(pkt[4]&1)); /* randomize powerup spawn */
-	add_uchar_rule( server, "acccollisions", (pkt[5]&4) > 0); /* accurate collision detection */
-	add_uchar_rule( server, "brightships", (pkt[5]&16) > 0); /* bright player ships */
-	add_uchar_rule( server, "mouselook", (pkt[6]&1) > 0); /* mouselook enabled */
+	add_uchar_rule( server, "randpowerup", (unsigned char)!(pkt[4]&1)); /* randomize powerup spawn */
+	add_uchar_rule( server, "acccollisions", (unsigned char)((pkt[5]&4) > 0)); /* accurate collision detection */
+	add_uchar_rule( server, "brightships", (unsigned char)((pkt[5]&16) > 0)); /* bright player ships */
+	add_uchar_rule( server, "mouselook", (unsigned char)((pkt[6]&1) > 0)); /* mouselook enabled */
 	sprintf( buf, "%s%s", (pkt[4]&16)?"PP":"CS", (pkt[6]&1)?"-ML":"");
 	add_rule( server, "servertype", buf, NO_FLAGS);
 
@@ -9886,9 +9909,9 @@ deal_with_descent3_packet( struct qserver *server, char *rawpkt, int pktlen)
 	add_rule( server, "difficulty", buf, NO_FLAGS);
 
 	/* unknown/undecoded fields after known flags removed */
-	add_uchar_rule( server, "x4", pkt[4] & ~(1+16));
-	add_uchar_rule( server, "x5", pkt[5] & ~(4+16));
-	add_uchar_rule( server, "x6", pkt[6] & ~1);
+	add_uchar_rule( server, "x4", (unsigned char)(pkt[4] & ~(1+16)));
+	add_uchar_rule( server, "x5", (unsigned char)(pkt[5] & ~(4+16)));
+	add_uchar_rule( server, "x6", (unsigned char)(pkt[6] & ~1));
 
 	if ( get_player_info && server->num_players)  {
 	    server->next_player_info= 0;
@@ -11360,8 +11383,8 @@ sort_players( struct qserver *server)
 	return;
 
     array= (struct player **) malloc( sizeof(struct player *) *
-		server->num_players);
-    for ( np= 0; player != NULL && np < server->num_players; np++)  {
+		(server->num_players + server->num_spectators));
+    for ( np= 0; player != NULL && np < server->num_players + server->num_spectators; np++)  {
 	array[np]= player;
 	player= player->next;
     }

@@ -103,6 +103,8 @@ struct qserver {
     int max_players;
     int num_players;
     int protocol_version;
+	int max_spectators;
+	int num_spectators;
 
     SavedData saved_data;
 
