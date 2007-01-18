@@ -436,9 +436,9 @@ struct q_packet q_player = {Q_FLAG1,Q_FLAG2, 6, Q_CCREQ_PLAYER_INFO, ""};
 /* QUAKE WORLD */
 struct {
     char prefix[4];
-    char command[7];
+    char command[9];
 } qw_serverstatus =
-{ { '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', '\n' } };
+{ { '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', ' ', '7', '\n' } };
 
 /* QUAKE3 */
 struct {
