@@ -125,6 +125,11 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			server->map_name = strdup( val );
 		}
+		else if( 0 == strcmp( var, "map" ) )
+		{
+			// For BF2MC compatibility
+			server->map_name = strdup( val );
+		}
 		else if( 0 == strcmp( var, "maxplayers" ) )
 		{
 			server->max_players = atoi( val );

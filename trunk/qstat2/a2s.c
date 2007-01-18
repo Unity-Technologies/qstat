@@ -438,6 +438,9 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->num_players = (unsigned char)pkt[2];
 		server->max_players = (unsigned char)pkt[3];
 		// pkt[4] number of bots
+		sprintf( buf, "%hhu", pkt[4] );
+		add_rule( server, "bots", buf, 0 );
+
 		add_rule(server, "dedicated", pkt[5]?"1":"0", 0);
 		if(pkt[6] == 'l')
 		{
