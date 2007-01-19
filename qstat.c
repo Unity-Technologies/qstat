@@ -10644,6 +10644,22 @@ xml_escape( char *string)
 	    *b++= 'p';
 	    *b++= ';';
 	    continue;
+	case '\'':
+	    *b++= '&';
+	    *b++= 'a';
+	    *b++= 'p';
+	    *b++= 'o';
+	    *b++= 's';
+	    *b++= ';';
+	    continue;
+	case '"':
+	    *b++= '&';
+	    *b++= 'q';
+	    *b++= 'u';
+	    *b++= 'o';
+	    *b++= 't';
+	    *b++= ';';
+	    continue;
 	case '<':
 	    *b++= '&';
 	    *b++= 'l';
