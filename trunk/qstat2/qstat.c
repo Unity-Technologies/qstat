@@ -213,8 +213,7 @@ int no_port_offset = 0;
 #define UTF8NOTACHAR	0xFFFF
 #define UTF8MAXFROMUCS4	0x10FFFF
 
-
-
+int output_bom = 0;
 int xml_display= 0;
 int xml_encoding= ENCODING_LATIN_1;
 
@@ -1844,8 +1843,18 @@ xml_display_server( struct qserver *server)
 void
 xml_header()
 {
-	fprintf( OF, "<?xml version=\"1.0\" encoding=\"%s\"?>\n<qstat>\n",
-		xml_encoding == ENCODING_LATIN_1 ? "iso-8859-1" : "UTF-8");
+	if ( xml_encoding == ENCODING_LATIN_1 )
+	{
+		fprintf( OF, "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<qstat>\n" );
+	}
+	else if ( output_bom )
+	{
+		fprintf( OF, "%c%c%c<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n", 0xEF, 0xBB, 0xBF );
+	}
+	else
+	{
+		fprintf( OF, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n" );
+	}
 }
 
 void
@@ -2688,6 +2697,7 @@ usage( char *msg, char **argv, char *a1)
 	printf( "-noportoffset\tDont use builtin status port offsets ( assume query port was specified ).\n" );
 	printf( "-raw-arg\tWhen used with -raw, always display the server address as it appeared in a file or on the command-line.\n" );
 	printf( "-utf8\t\tUse the UTF-8 character encoding for XML output.\n" );
+	printf( "-bom\t\tOutput Byte-Order-Mark for XML output.\n" );
 #ifdef _WIN32
 	printf( "-noconsole\t\tFree the console\n" );
 #endif
@@ -3578,6 +3588,9 @@ main( int argc, char *argv[])
 	}
 	else if ( strcmp( argv[arg], "-allowserverdups") == 0)  {
 	    noserverdups = 0;
+	}
+	else if ( strcmp( argv[arg], "-bom") == 0)  {
+		output_bom = 1;
 	}
 #ifdef ENABLE_DUMP
 	else if ( strcmp( argv[arg], "-dump") == 0)  {
@@ -10624,9 +10637,9 @@ void put_long_little(unsigned val, char* buf)
 #define MAXSTRLEN 2048
 
 char *
-xml_escape( char *string)
+xml_escape( unsigned char *string)
 {
-    static char _buf[4][MAXSTRLEN+8];
+    static unsigned char _buf[4][MAXSTRLEN+8];
     static int _buf_index= 0;
     char *result, *b, *end;
     unsigned int c;
@@ -10681,14 +10694,24 @@ xml_escape( char *string)
 	default:
 	    break;
 	}
-	if ( ! name_xforms)  {
-	    *b++= c;
-	}
-	else if ( xml_encoding == ENCODING_LATIN_1)  {
-	    if ( isprint(c))
-		*b++= c;
-	    else
-		b+= sprintf( b, "&#%u;", c);
+
+	if ( xml_encoding == ENCODING_LATIN_1 )
+	{
+		if ( ! name_xforms )
+		{
+		    *b++= c;
+		}
+		else
+		{
+			if ( isprint(c))
+			{
+				*b++= c;
+			}
+			else
+			{
+				b+= sprintf( b, "&#%u;", c );
+			}
+		}
 	}
 	else if ( xml_encoding == ENCODING_UTF_8)
 	{
@@ -10731,7 +10754,6 @@ xml_escape( char *string)
 			if ( c > UTF8MAXFROMUCS4 )
 			{
 				error = 4;
-				fprintf( stderr, "Invalid UTF8 character: %d (four bytes)\n", c );
 			}
 
 		}
@@ -10764,7 +10786,7 @@ xml_escape( char *string)
 		if ( error )
 		{
 			int i;
-			fprintf( stderr, "UTF-8 encoding error for U+%x : ", c );
+			fprintf( stderr, "UTF-8 encoding error (%d) for U+%x, D+%d : ", error, c, c );
 			for ( i = 0; i < bytes; i++ )
 			{
 				fprintf( stderr, "0x%02x ", buf[i] );
