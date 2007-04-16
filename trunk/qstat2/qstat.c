@@ -209,6 +209,12 @@ int no_port_offset = 0;
 
 #define ENCODING_LATIN_1  1
 #define ENCODING_UTF_8    8
+#define UTF8BYTESWAPNOTACHAR	0xFFFE
+#define UTF8NOTACHAR	0xFFFF
+#define UTF8MAXFROMUCS4	0x10FFFF
+
+
+
 int xml_display= 0;
 int xml_encoding= ENCODING_LATIN_1;
 
@@ -10623,7 +10629,7 @@ xml_escape( char *string)
     static char _buf[4][MAXSTRLEN+8];
     static int _buf_index= 0;
     char *result, *b, *end;
-    unsigned char c;
+    unsigned int c;
 
     if ( string == NULL)
 	return "";
@@ -10684,13 +10690,96 @@ xml_escape( char *string)
 	    else
 		b+= sprintf( b, "&#%u;", c);
 	}
-	else if ( xml_encoding == ENCODING_UTF_8)  {
-	    if ( (c & 0x80) == 0)
-		*b++= c;
-	    else  {
-		*b++= 0xC0 | (0x03 & (c >> 6)) ;
-		*b++= 0x80 | (0x3F & c) ;
-	    }
+	else if ( xml_encoding == ENCODING_UTF_8)
+	{
+		unsigned char tempbuf[10] = {0};
+		unsigned char* buf = &tempbuf[0];
+		int bytes = 0;
+		int error = 0;
+
+		if ( c < 0x80 ) /* 0XXX XXXX one byte */
+		{
+			buf[0] = c;
+			bytes = 1;
+		}
+		else if ( c < 0x0800 ) /* 110X XXXX  two bytes */
+		{
+			buf[0] = 0xC0 | (0x03 & (c >> 6)) ;
+			buf[1] = 0x80 | (0x3F & c) ;
+			bytes = 2;
+		}
+		else if ( c < 0x10000 ) /* 1110 XXXX  three bytes */
+		{
+			buf[0] = 0xE0 | (c >> 12);
+			buf[1] = 0x80 | ((c >> 6) & 0x3F);
+			buf[2] = 0x80 | (c & 0x3F);
+
+			bytes = 3;
+			if ( c == UTF8BYTESWAPNOTACHAR || c == UTF8NOTACHAR )
+			{
+				error = 3;
+			}
+
+		}
+		else if ( c < 0x10FFFF ) /* 1111 0XXX  four bytes */
+		{
+			buf[0] = 0xF0 | (c >> 18);
+			buf[1] = 0x80 | ((c >> 12) & 0x3F);
+			buf[2] = 0x80 | ((c >> 6) & 0x3F);
+			buf[3] = 0x80 | (c & 0x3F);
+			bytes = 4;
+			if ( c > UTF8MAXFROMUCS4 )
+			{
+				error = 4;
+				fprintf( stderr, "Invalid UTF8 character: %d (four bytes)\n", c );
+			}
+
+		}
+		else if ( c < 0x4000000 )  /* 1111 10XX  five bytes */
+		{
+			buf[0] = 0xF8 | (c >> 24);
+			buf[1] = 0x80 | (c >> 18);
+			buf[2] = 0x80 | ((c >> 12) & 0x3F);
+			buf[3] = 0x80 | ((c >> 6) & 0x3F);
+			buf[4] = 0x80 | (c & 0x3F);
+			bytes = 5;
+			error = 5;
+		}
+		else if ( c < 0x80000000 )  /* 1111 110X  six bytes */
+		{
+			buf[0] = 0xFC | (c >> 30);
+			buf[1] = 0x80 | ((c >> 24) & 0x3F);
+			buf[2] = 0x80 | ((c >> 18) & 0x3F);
+			buf[3] = 0x80 | ((c >> 12) & 0x3F);
+			buf[4] = 0x80 | ((c >> 6) & 0x3F);
+			buf[5] = 0x80 | (c & 0x3F);
+			bytes = 6;
+			error = 6;
+		}
+		else
+		{
+			error = 7;
+		}
+
+		if ( error )
+		{
+			int i;
+			fprintf( stderr, "UTF-8 encoding error for U+%x : ", c );
+			for ( i = 0; i < bytes; i++ )
+			{
+				fprintf( stderr, "0x%02x ", buf[i] );
+			}
+			fprintf( stderr, "\n" );
+		}
+		else
+		{
+			int i;
+			for ( i = 0; i < bytes; ++i )
+			{
+				*b++ = buf[i];
+			}
+		}
+
 	}
     }
     *b= '\0';

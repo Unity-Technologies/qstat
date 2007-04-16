@@ -349,7 +349,7 @@ int process_gs3_packet( struct qserver *server )
 			// the next byte is the starting number
 			total_players = *ptr++;
 
-			if ( 0 == strcmp( header, "player_" ) )
+			if ( 0 == strcmp( header, "player_" ) || 0 == strcmp( header, "name_" ) )
 			{
 				header_type = PLAYER_NAME_HEADER;
 			}
