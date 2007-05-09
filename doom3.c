@@ -368,6 +368,22 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 #endif
 		else if( 0 == strcasecmp( key, "si_map" ) )
 		{
+			if ( 5 == version )
+			{
+				// ET:QW reports maps/<mapname>.entities
+				// so we strip that here if it exists
+				char *tmpp;
+				if ( 0 == strncmp( val, "maps/", 5 ) )
+				{
+					val += 5;
+				}
+
+				tmpp = strstr( val, ".entities" );	
+				if ( NULL != tmpp );
+				{
+					*tmpp = '\0';
+				}
+			}
 			server->map_name = strdup( val );
 		}
 		else if( 0 == strcasecmp( key, "si_maxplayers" ) )
