@@ -249,6 +249,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
 	int type = 0;
+	int size = 0;
 	unsigned num_players = 0;
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
@@ -277,11 +278,25 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	challenge = swap_long_from_little(ptr);
 	ptr += 4;
 
+	if ( 5 == version )
+	{
+		// Something else unknown but usually FFFFFFFF
+		ptr += 4;
+	}
+
 	protocolver = swap_long_from_little(ptr);
 	ptr += 4;
 
 	snprintf(tmp, sizeof(tmp), "%u.%u", protocolver >> 16, protocolver & 0xFFFF);
 	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)", challenge, tmp, protocolver);
+
+	if ( 5 == version )
+	{
+		// Size Long
+		size = swap_long_from_little(ptr);
+		debug( 2, "Size = %d", size );
+		ptr += 4;
+	}
 
 // Commented out until we have a better way to specify the expected version
 // This is due to prey demo requiring version 4 yet prey retail version 3
@@ -325,13 +340,14 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		}
 		vallen = ptr - val;
 		++ptr;
-		debug( 2, "key:%s=%s:", key, val);
 
-		if(keylen == 0 && vallen == 0)
+		if( keylen == 0 && vallen == 0 )
 		{
 			type = 1;
 			break; // end
 		}
+
+		debug( 2, "key:%s=%s:", key, val);
 
 		// Lets see what we've got
 		if ( 0 == strcasecmp( key, "si_name" ) )
@@ -382,6 +398,12 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 
 		if(player_id == MAX_DOOM3_ASYNC_CLIENTS)
 			break;
+debug( 2, "ID = %d\n", player_id );
+		if ( end - ptr == 4 )
+		{
+			// Just an osmask left
+			break;
+		}
 
 		/* id's are not steady
 		if(player_id != num_players)
@@ -442,10 +464,14 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 			}
 			++ptr;
 			player->tribe_tag = strdup( val );
+			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, clan %s",
+					num_players, player->name, prediction, rate, player_id, player->tribe_tag);
 		}
-
-		debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, clan %s",
-				num_players, player->name, prediction, rate, player_id, player->tribe_tag);
+		else
+		{
+			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
+					num_players, player->name, prediction, rate, player_id );
+		}
 
 		++num_players;
 	}
@@ -469,6 +495,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	}
 #endif
 
+	debug( 2, "Num players = %d", num_players );
 	server->num_players = num_players;
 
 	cleanup_qserver( server, 1 );
@@ -493,4 +520,9 @@ void deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktle
 void deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	_deal_with_doom3_packet( server, rawpkt, pktlen, 3 );
+}
+
+void deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
+{
+	_deal_with_doom3_packet( server, rawpkt, pktlen, 5 );
 }
