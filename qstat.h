@@ -183,8 +183,9 @@ typedef struct _server_type server_type;
 #define GAMESPY4_PROTOCOL_SERVER 55
 #define PREY_SERVER 56
 #define TM_PROTOCOL_SERVER 57
+#define ETQW_SERVER 58
 
-#define LAST_BUILTIN_SERVER  57
+#define LAST_BUILTIN_SERVER  58
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -2493,10 +2494,10 @@ server_type builtin_types[] = {
     QUAKE4_SERVER,					/* id */
     "Q4S",							/* type_prefix */
     "q4s",							/* type_string */
-    "-q4s",						/* type_option */
+    "-q4s",							/* type_option */
     "Quake 4",						/* game_name */
     0,								/* master */
-    QUAKE4_DEFAULT_PORT,				/* default_port */
+    QUAKE4_DEFAULT_PORT,			/* default_port */
     0,								/* port_offset */
     TF_QUAKE3_NAMES,				/* flags */
     "fs_game",						/* game_rule */
@@ -2520,7 +2521,7 @@ server_type builtin_types[] = {
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
-    deal_with_quake4_packet,			/* packet_func */
+    deal_with_quake4_packet,		/* packet_func */
 },
 {
     /* QUAKE 4 MASTER */
@@ -2657,6 +2658,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_tm_packet,			/* packet_func */
+},
+{
+    /* Enemy Territory : QuakeWars */
+    ETQW_SERVER,					/* id */
+    "ETQWS",						/* type_prefix */
+    "etqws",						/* type_string */
+    "-etqws",						/* type_option */
+    "QuakeWars",					/* game_name */
+    0,								/* master */
+    ETQW_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "fs_game",						/* game_rule */
+    "QUAKE4",						/* template_var */
+    (char*) &doom3_serverinfo,		/* status_packet */
+    sizeof( doom3_serverinfo),		/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_doom3_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_doom3_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_doom3_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_qwserver_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_etqw_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */

@@ -15,7 +15,7 @@ OBJ = $(SRC:.c=.obj)
 O   = $(SRC:.c=.o)
 
 SOLARIS_LIBS = -lsocket -lnsl
-WINDOWS_LIBS = /ML wsock32.lib
+WINDOWS_LIBS = wsock32.lib
 OS2_LIBS     = so32dll.lib tcp32dll.lib
 EMX_LIBS     = -lsocket
 
@@ -39,7 +39,7 @@ windows: $(OBJ)
 
 windows_debug: $(SRC)
 	rm -f *.pdb
-	$(CC) $(CFLAGS) /Zi /ML $(SRC) /Feqstat.exe wsock32.lib /link /fixed:no /incremental:no
+	$(CC) $(CFLAGS) /Zi $(SRC) /Feqstat.exe $(WINDOWS_LIBS) /link /fixed:no /incremental:no
 
 os2: $(SRC)
 	$(CC) /Q /W0 /C+ $(SRC)
