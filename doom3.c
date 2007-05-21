@@ -362,6 +362,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		else if( 0 == strcasecmp( key, "si_version" ) )
 		{
 			// format:
+x
 			// DOOM 1.0.1262.win-x86 Jul  8 2004 16:46:37
 			server->protocol_version = atoi( val+1 );
 		}
@@ -372,16 +373,15 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 			{
 				// ET:QW reports maps/<mapname>.entities
 				// so we strip that here if it exists
-				char *tmpp;
+				char *tmpp = strstr( val, ".entities" );	
+				if ( NULL != tmpp )
+				{
+					*tmpp = '\0';
+				}
+
 				if ( 0 == strncmp( val, "maps/", 5 ) )
 				{
 					val += 5;
-				}
-
-				tmpp = strstr( val, ".entities" );	
-				if ( NULL != tmpp );
-				{
-					*tmpp = '\0';
 				}
 			}
 			server->map_name = strdup( val );
