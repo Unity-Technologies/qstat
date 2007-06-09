@@ -250,6 +250,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	char *end = rawpkt + pktlen;
 	int type = 0;
 	int size = 0;
+	int tail_size = 4;
 	unsigned num_players = 0;
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
@@ -282,6 +283,8 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	{
 		// Something else unknown but usually FFFFFFFF
 		ptr += 4;
+		// osmask + ranked
+		tail_size++;
 	}
 
 	protocolver = swap_long_from_little(ptr);
@@ -404,7 +407,7 @@ x
 	}
 
 	// now each player details
-	while( ptr < end )
+	while( ptr < end - tail_size )
 	{
 		struct player *player;
 		char *val;
@@ -415,21 +418,8 @@ x
 		if(player_id == MAX_DOOM3_ASYNC_CLIENTS)
 			break;
 debug( 2, "ID = %d\n", player_id );
-		if ( end - ptr == 4 )
-		{
-			// Just an osmask left
-			break;
-		}
 
-		/* id's are not steady
-		if(player_id != num_players)
-		{
-			malformed_packet(server, "unexpected player id");
-			cleanup_qserver( server, 1);
-			return;
-		}
-		*/
-
+		// Note: id's are not steady
 		if ( ptr + 7 > end ) // 2 pred + 4 rate + empty player name ('\0')
 		{
 			// run off the end and shouldnt have
@@ -483,6 +473,13 @@ debug( 2, "ID = %d\n", player_id );
 			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, clan %s",
 					num_players, player->name, prediction, rate, player_id, player->tribe_tag);
 		}
+		else if ( 5 == version )
+		{
+			// Bot flag
+			player->type_flag = *ptr++;
+			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, bot %hhu",
+					num_players, player->name, prediction, rate, player_id, player->type_flag );
+		}
 		else
 		{
 			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
@@ -492,12 +489,18 @@ debug( 2, "ID = %d\n", player_id );
 		++num_players;
 	}
 
-	if(end - ptr >= 4)
+	if( end - ptr >= 4 )
 	{
 		snprintf(tmp, sizeof(tmp), "0x%X", swap_long_from_little(ptr));
 		add_rule( server, "osmask", tmp, NO_FLAGS );
 		debug( 2, "osmask %s", tmp);
 		ptr += 4;
+		if ( 5 == version )
+		{
+			// Ranked flag
+			snprintf( tmp, sizeof(tmp), "%hhu", *ptr++ );
+			add_rule( server, "ranked", tmp, NO_FLAGS );
+		}
 	}
 	else
 	{
