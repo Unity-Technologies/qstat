@@ -2343,6 +2343,15 @@ xml_display_doom3_player_info( struct qserver *server)
 		if ( player->skin)
 		    fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
 			xml_escape(player->skin));
+		if ( player->type_flag )
+		{
+		    fprintf( OF, "\t\t\t\t<type>bot</type>\n" );
+		}
+		else
+		{
+		    fprintf( OF, "\t\t\t\t<type>player</type>\n" );
+		}
+		
 		if ( player->connect_time)
 		    fprintf( OF, "\t\t\t\t<time>%s</time>\n",
 			xml_escape(play_time( player->connect_time,1)));
