@@ -3107,11 +3107,11 @@ void do_work(void)
 
 			if ( pktlen == SOCKET_ERROR)
 			{
-				if(errno == EAGAIN)
+				if( connection_would_block() )
 				{
 					malformed_packet(server, "EAGAIN on UDP socket, probably incorrect checksum");
 				}
-				else if ( connection_refused())
+				else if ( connection_refused() || connection_reset() )
 				{
 					server->server_name= DOWN;
 					num_servers_down++;
@@ -11298,6 +11298,25 @@ connection_refused()
     return WSAGetLastError() == WSAECONNABORTED;
 #else
     return errno == ECONNREFUSED;
+#endif
+}
+
+int
+connection_would_block()
+{
+#ifdef _WIN32
+	return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+	return errno == EAGAIN;
+#endif
+}
+
+int connection_reset()
+{
+#ifdef _WIN32
+	return WSAGetLastError() == WSAECONNRESET;
+#else
+	return errno == ECONNRESET;
 #endif
 }
 
