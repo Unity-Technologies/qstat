@@ -2908,6 +2908,8 @@ int rule_info_packet( struct qserver *server, struct q_packet *pkt, int datalen 
 int time_delta( struct timeval *later, struct timeval *past);
 char * strherror( int h_err);
 int connection_refused();
+int connection_would_block();
+int connection_reset();
 
 void add_file( char *filename);
 int add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg);
