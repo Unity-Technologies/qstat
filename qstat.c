@@ -3105,7 +3105,7 @@ void do_work(void)
 						(struct sockaddr*)&buffer[buffill].addr,
 						(void*)&addrlen);
 
-			if ( pktlen == SOCKET_ERROR)
+			if ( pktlen == SOCKET_ERROR || 0 == pktlen )
 			{
 				if( connection_would_block() )
 				{
