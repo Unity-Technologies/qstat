@@ -276,22 +276,26 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	}
 	ptr += sizeof(doom3_inforesponse);
 
-	challenge = swap_long_from_little(ptr);
-	ptr += 4;
-
 	if ( 5 == version )
 	{
-		// Something else unknown but usually FFFFFFFF
+		// TaskID
 		ptr += 4;
 		// osmask + ranked
 		tail_size++;
 	}
+
+	challenge = swap_long_from_little(ptr);
+	ptr += 4;
 
 	protocolver = swap_long_from_little(ptr);
 	ptr += 4;
 
 	snprintf(tmp, sizeof(tmp), "%u.%u", protocolver >> 16, protocolver & 0xFFFF);
 	debug(2, "challenge: 0x%08X, protocol: %s (0x%X)", challenge, tmp, protocolver);
+
+	server->protocol_version = protocolver;
+	add_rule( server, "protocol", tmp, NO_FLAGS );
+
 
 	if ( 5 == version )
 	{
@@ -311,9 +315,6 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		return;
 	}
 */
-
-	server->protocol_version = protocolver;
-	add_rule( server, "protocol", tmp, NO_FLAGS );
 
 	while ( ptr < end )
 	{
@@ -402,7 +403,7 @@ x
 		// no more info should be player headers here as we
 		// requested it
 		malformed_packet( server, "player info missing" );
-		cleanup_qserver( server, 1);
+		cleanup_qserver( server, 1 );
 		return;
 	}
 
@@ -412,15 +413,17 @@ x
 		struct player *player;
 		char *val;
 		unsigned char player_id = *ptr++;
-		short prediction = 0;
+		short ping = 0;
 		unsigned rate = 0;
 
-		if(player_id == MAX_DOOM3_ASYNC_CLIENTS)
+		if( MAX_DOOM3_ASYNC_CLIENTS == player_id )
+		{
 			break;
-debug( 2, "ID = %d\n", player_id );
+		}
+		debug( 2, "ID = %d\n", player_id );
 
 		// Note: id's are not steady
-		if ( ptr + 7 > end ) // 2 pred + 4 rate + empty player name ('\0')
+		if ( ptr + 7 > end ) // 2 ping + 4 rate + empty player name ('\0')
 		{
 			// run off the end and shouldnt have
 			malformed_packet( server, "player info too short" );
@@ -430,23 +433,32 @@ debug( 2, "ID = %d\n", player_id );
 
 		player = add_player( server, player_id );
 
+		// doesnt support score so set a sensible default
 		player->score = 0;
 		player->frags = 0;
 
-		prediction = swap_short_from_little(ptr);
+		// Ping
+		ping = swap_short_from_little(ptr);
+		player->ping = ping;
 		ptr += 2;
 
-		player->ping = prediction; // seems to be ping
-
+		// Rate
 		rate = swap_long_from_little(ptr);
-		ptr += 4;
-
 		{
 			char buf[16];
 			snprintf(buf, sizeof(buf), "%u", rate);
 			player_add_info(player, "rate", buf, NO_FLAGS);
 		}
+		ptr += 4;
 
+		if ( 851977 == protocolver && 0 != num_players ) // v13.9
+		{
+			// Fix the packet offset due to the single bit used for bot
+			// which realigns at the byte boundary for the player name
+			ptr++;
+		}
+
+		// Name
 		val = ptr;
 		ptr = memchr(ptr, '\0', end-ptr);
 		if ( !ptr )
@@ -455,8 +467,8 @@ debug( 2, "ID = %d\n", player_id );
 			cleanup_qserver( server, 1);
 			return;
 		}
-		++ptr;
 		player->name = strdup( val );
+		ptr++;
 
 		if( 2 == version )
 		{
@@ -468,22 +480,39 @@ debug( 2, "ID = %d\n", player_id );
 				cleanup_qserver( server, 1);
 				return;
 			}
-			++ptr;
 			player->tribe_tag = strdup( val );
-			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, clan %s",
-					num_players, player->name, prediction, rate, player_id, player->tribe_tag);
+			ptr++;
+			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
+					num_players, player->name, ping, rate, player_id, player->tribe_tag);
 		}
 		else if ( 5 == version )
 		{
 			// Bot flag
-			player->type_flag = *ptr++;
-			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu, bot %hhu",
-					num_players, player->name, prediction, rate, player_id, player->type_flag );
+			if ( 851977 == protocolver ) // v13.9
+			{
+				// Bot flag is a single bit so need to realign everything from here on in :(
+				int i;
+				unsigned char *tp = (unsigned char*)ptr;
+				player->type_flag = (*tp)<<7;
+
+				// alignment is reset at the end
+				for( i = 0; i < 8 && tp < end; i++ )
+				{
+					*tp = (*tp)>>1 | *(tp+1)<<7;
+					tp++;
+				}
+			}
+			else
+			{
+				player->type_flag = *ptr++;
+			}
+			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
+					num_players, player->name, ping, rate, player_id, player->type_flag );
 		}
 		else
 		{
-			debug( 2, "Player[%d] = %s, prediction %hu, rate %u, id %hhu",
-					num_players, player->name, prediction, rate, player_id );
+			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu",
+					num_players, player->name, ping, rate, player_id );
 		}
 
 		++num_players;
