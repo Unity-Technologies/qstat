@@ -451,7 +451,7 @@ x
 		}
 		ptr += 4;
 
-		if ( 851977 == protocolver && 0 != num_players ) // v13.9
+		if ( ( 851977 == protocolver || 851978 == protocolver ) && 0 != num_players ) // v13.9 or v13.10
 		{
 			// Fix the packet offset due to the single bit used for bot
 			// which realigns at the byte boundary for the player name
@@ -488,7 +488,7 @@ x
 		else if ( 5 == version )
 		{
 			// Bot flag
-			if ( 851977 == protocolver ) // v13.9
+			if ( 851977 == protocolver || 851978 == protocolver ) // v13.9 or v13.10
 			{
 				// Bot flag is a single bit so need to realign everything from here on in :(
 				int i;
@@ -496,7 +496,7 @@ x
 				player->type_flag = (*tp)<<7;
 
 				// alignment is reset at the end
-				for( i = 0; i < 8 && tp < end; i++ )
+				for( i = 0; i < 8 && tp < (unsigned char*)end; i++ )
 				{
 					*tp = (*tp)>>1 | *(tp+1)<<7;
 					tp++;
