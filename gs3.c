@@ -61,6 +61,43 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 
 	debug( 2, "packet..." );
 
+	if ( 7 == pktlen && 0x09 == *ptr )
+	{
+		// gs4 query sent to a gs3 server
+		// switch protocols and try again
+
+		// Correct the stats due to two phase protocol
+		int i;
+		debug( 3, "Attempting gs3 fallback from gs4" );
+		server_type *gs3_type = &builtin_types[49];
+		server->retry1++;
+		server->n_packets--;
+		if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
+		{
+			// Static coding failure do it the hard way
+			debug( 1, "gs3 static lookup failure, using dynamic lookup" );
+			for( i = 0; i < GAMESPY3_PROTOCOL_SERVER; i++ )
+			{
+				if ( GAMESPY3_PROTOCOL_SERVER == builtin_types[i].id )
+				{
+					// found it
+					gs3_type = &builtin_types[i];
+					i = GAMESPY3_PROTOCOL_SERVER;
+				}
+			}
+
+			if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
+			{
+				malformed_packet( server, "GS3 protocol not found" );
+				cleanup_qserver( server, 1 );
+				return;
+			}
+		}
+		server->type = gs3_type;
+		send_gs3_request_packet( server );
+		return;	
+	}
+
 	if ( pktlen < 12 )
 	{
 		// invalid packet?
