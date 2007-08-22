@@ -5853,8 +5853,7 @@ deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 	if ( get_player_info || get_server_rules)
 	    server->next_rule= "";
 	deal_with_q2_packet( server, rawpkt, pktlen, 0);
-	if ( (get_player_info || get_server_rules) &&
-			( server->flags & FLAG_BROADCAST || server->fd != -1)) {
+	if (get_player_info || get_server_rules) {
 	    send_rule_request_packet( server);
 	    server->retry1= n_retries-1;
 	}
