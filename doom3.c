@@ -524,11 +524,24 @@ x
 		add_rule( server, "osmask", tmp, NO_FLAGS );
 		debug( 2, "osmask %s", tmp);
 		ptr += 4;
-		if ( 5 == version )
+	
+		if ( 5 == version && end - ptr >= 1 )
 		{
 			// Ranked flag
 			snprintf( tmp, sizeof(tmp), "%hhu", *ptr++ );
 			add_rule( server, "ranked", tmp, NO_FLAGS );
+
+			if ( end - ptr >= 5 )
+			{
+				// Time Left
+				snprintf( tmp, sizeof(tmp), "%d", swap_long_from_little( ptr ) );
+				add_rule( server, "timeleft", tmp, NO_FLAGS );
+				ptr += 4;
+
+				// Game State
+				snprintf( tmp, sizeof(tmp), "%hhu", *ptr++ );
+				add_rule( server, "gamestate", tmp, NO_FLAGS );
+			}
 		}
 	}
 	else
