@@ -71,6 +71,7 @@ typedef struct _server_type server_type;
 #include "gps.h"
 #include "gs2.h"
 #include "gs3.h"
+#include "haze.h"
 #include "ts2.h"
 #include "tm.h"
 
@@ -184,8 +185,9 @@ typedef struct _server_type server_type;
 #define PREY_SERVER 56
 #define TM_PROTOCOL_SERVER 57
 #define ETQW_SERVER 58
+#define HAZE_SERVER 59
 
-#define LAST_BUILTIN_SERVER  58
+#define LAST_BUILTIN_SERVER  59
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -251,6 +253,7 @@ void display_doom3_player_info( struct qserver *server);
 void display_hl2_player_info( struct qserver *server);
 void display_ts2_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
+void display_haze_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -275,6 +278,7 @@ void raw_display_doom3_player_info( struct qserver *server);
 void raw_display_hl2_player_info( struct qserver *server);
 void raw_display_ts2_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
+void raw_display_haze_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -301,6 +305,7 @@ void xml_display_doom3_player_info( struct qserver *server);
 void xml_display_hl2_player_info( struct qserver *server);
 void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
+void xml_display_haze_player_info( struct qserver *server);
 char *xml_escape( unsigned char*);
 char *str_replace( char *, char *, char *);
 
@@ -437,9 +442,9 @@ struct q_packet q_player = {Q_FLAG1,Q_FLAG2, 6, Q_CCREQ_PLAYER_INFO, ""};
 /* QUAKE WORLD */
 struct {
     char prefix[4];
-    char command[9];
+    char command[10];
 } qw_serverstatus =
-{ { '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', ' ', '7', '\n' } };
+{ { '\377', '\377', '\377', '\377' }, { 's', 't', 'a', 't', 'u', 's', ' ', '2', '3', '\n' } };
 
 /* QUAKE3 */
 struct {
@@ -693,6 +698,39 @@ unsigned char gs3_challenge[] = {
 	0xfe,0xfd,0x09,
 	0x10,0x20,0x30,0x40
 };
+
+// Format:
+// 1 - 8: Query Request
+// 9 - 12: Query Header
+// 13: Query ID
+
+// Query ID is made up of the following
+// 0x01: Basic Info
+// 0x02: Game Rules
+// 0x03: Player Information
+// 0x04: Team Information
+unsigned char haze_status_query[] = {
+	'f', 'r', 'd', 'q', 'u', 'e', 'r', 'y',
+	0x10,0x20,0x30,0x40,
+	0x0A
+};
+
+// Format:
+// 1 - 8: Query Request
+// 9 - 12: Query Header
+// 13: Query ID
+
+// Query ID is made up of the following
+// 0x01: Basic Info
+// 0x02: Game Rules
+// 0x03: Player Information
+// 0x04: Team Information
+unsigned char haze_player_query[] = {
+	'f', 'r', 'd', 'q', 'u', 'e', 'r', 'y',
+	0x10,0x20,0x30,0x40,
+	0x03
+};
+
 
 
 // Steam
@@ -2695,6 +2733,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_etqw_packet,			/* packet_func */
+},
+{
+    /* HAZE PROTOCOL */
+    HAZE_SERVER,	/* id */
+    "HAZES",			/* type_prefix */
+    "hazes",			/* type_string */
+    "-hazes",			/* type_option */
+    "Haze Protocol",	/* game_name */
+    0,				/* master */
+    0,				/* default_port */
+    0,				/* port_offset */
+    TF_SINGLE_QUERY,		/* flags */
+    "gametype",			/* game_rule */
+    "HAZE",		/* template_var */
+    (char*) &haze_status_query,	/* status_packet */
+    sizeof( haze_status_query),	/* status_len */
+    (char*) &haze_player_query,	/* player_packet */
+    sizeof( haze_player_query),	/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_haze_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_haze_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_haze_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_haze_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_haze_packet,	/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
