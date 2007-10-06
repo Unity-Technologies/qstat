@@ -768,13 +768,13 @@ display_qw_player_info( struct qserver *server)
     char fmt[128];
     struct player *player;
 
-    strcpy( fmt, "\t#%-6d %3d frags %6s@%-5s %8s");
+    strcpy( fmt, "\t#%-6d %5d frags %6s@%-5s %8s");
 
     if ( color_names)
 	strcat( fmt, "%9s:%-9s ");
     else
 	strcat( fmt, "%2s:%-2s ");
-    strcat( fmt, "%s\n");
+	strcat( fmt, "%12s %s\n");
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
@@ -786,7 +786,8 @@ display_qw_player_info( struct qserver *server)
 		player->skin ? player->skin : "",
 		quake_color(player->shirt_color),
 		quake_color(player->pants_color),
-		xform_name( player->name, server));
+		xform_name( player->name, server),
+		xform_name( player->team_name, server));
     }
 }
 
@@ -1004,6 +1005,13 @@ calculate_armyops_score( struct player *player)
 		score += kill_score;
 
 	return score;
+}
+
+void
+display_haze_player_info( struct qserver *server)
+{
+	// ATM this looks like gs2 player info
+	display_gs2_player_info( server );
 }
 
 void
@@ -1343,7 +1351,7 @@ raw_display_qw_player_info( struct qserver *server)
     struct player *player;
 
     strcpy( fmt, "%d" "%s%s" "%s%d" "%s%s" "%s%s" "%s%s");
-    strcat( fmt, "%s%d" "%s%s");
+    strcat( fmt, "%s%d" "%s%s" "%s%s");
 
     player= server->players;
     for ( ; player != NULL; player= player->next)  {
@@ -1355,7 +1363,8 @@ raw_display_qw_player_info( struct qserver *server)
 		RD, quake_color(player->shirt_color),
 		RD, quake_color(player->pants_color),
 		RD, player->ping,
-		RD, player->skin ? player->skin : ""
+		RD, player->skin ? player->skin : "",
+		RD, player->team_name ? player->team_name : ""
 	);
 	fputs( "\n", OF);
     }
@@ -1604,6 +1613,13 @@ raw_display_hl2_player_info( struct qserver *server )
 {
 	// ATM this looks like halflife player info
 	raw_display_halflife_player_info( server );
+}
+
+void
+raw_display_haze_player_info( struct qserver *server)
+{
+	// ATM this looks like gs2 player info
+	raw_display_gs2_player_info( server );
 }
 
 void
@@ -1960,6 +1976,9 @@ xml_display_qw_player_info( struct qserver *server)
 			player->ping);
 		fprintf( OF, "\t\t\t\t<skin>%s</skin>\n",
 			player->skin ? xml_escape(player->skin) : "");
+		fprintf( OF, "\t\t\t\t<team>%s</team>\n",
+			player->team_name ? xml_escape(player->team_name) : "");
+
 
 		fprintf( OF, "\t\t\t</player>\n");
 	}
@@ -2369,6 +2388,13 @@ xml_display_hl2_player_info( struct qserver *server )
 {
 	// ATM this looks like halflife player info
 	xml_display_halflife_player_info( server );
+}
+
+void
+xml_display_haze_player_info( struct qserver *server)
+{
+	// ATM this looks like gs2 player info
+	xml_display_gs2_player_info( server );
 }
 
 void
@@ -6010,10 +6036,34 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 		sscanf( pkt, "%*d %*d%n", &len);
 	    pkt+= len;
 
+		if ( pkt + 3 < rawpkt + pktlen && *pkt == ' ' ) // mvdsv is at last rev 377, 23.06.2006
+		{
+			pkt++;
+
+			if ( *pkt != '"' )
+			{
+				break;
+			}
+			pkt++;
+			end = strchr( pkt, '"' );
+			if ( end == NULL )
+			{
+				break;
+			}
+
+			if ( player != NULL )
+			{
+				player->team_name = (char*)malloc( end-pkt+1 );
+				memcpy( player->team_name, pkt, end-pkt );
+				player->team_name[end-pkt] = '\0';
+			}
+			pkt = end + 1;
+		}
+
 	    if (ping > 0)
-	    server->num_players++;
+			server->num_players++;
 	    else
-		server->num_spectators++;
+			server->num_spectators++;
 	}
 	else
 	    pkt++;
