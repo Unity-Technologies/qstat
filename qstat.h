@@ -732,7 +732,6 @@ unsigned char haze_player_query[] = {
 };
 
 
-
 // Steam
 // Format:
 // 1. Request type ( 1 byte )
@@ -3001,6 +3000,7 @@ void add_server_to_hash( struct qserver *server);
 #define CHECK_DUPLICATE_RULES 2
 #define NO_KEY_COPY 4
 #define COMBINE_VALUES 8
+#define OVERWITE_DUPLICATES 16
 
 struct player* get_player_by_number( struct qserver *server, int player_number );
 struct rule* add_rule( struct qserver *server, char *key, char *value,	int flags) ;

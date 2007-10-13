@@ -6898,6 +6898,28 @@ struct info *
 player_add_info( struct player *player, char *key, char *value, int flags)
 {
     struct info *info;
+	if ( flags & OVERWITE_DUPLICATES )
+	{
+		for ( info = player->info; info; info = info->next )
+		{
+			if ( 0 == strcmp( info->name, key ) )
+			{
+				// We should be able to free this
+				free( info->value );
+				if ( flags & NO_VALUE_COPY)
+				{
+					info->value = value;
+				}
+				else
+				{
+					info->value = strdup(value);
+				}
+
+				return info;
+			}
+		}
+	}
+
     if ( flags & CHECK_DUPLICATE_RULES )
 	{
 		for ( info = player->info; info; info = info->next )
@@ -6926,6 +6948,7 @@ player_add_info( struct player *player, char *key, char *value, int flags)
 				// We should be able to free this
 				free( info->value );
 				info->value = full_value;
+
 
 				return info;
 			}
@@ -6969,6 +6992,28 @@ struct rule *
 add_rule( struct qserver *server, char *key, char *value, int flags)
 {
     struct rule *rule;
+	if ( flags & OVERWITE_DUPLICATES )
+	{
+		for ( rule = server->rules; rule; rule = rule->next )
+		{
+			if ( 0 == strcmp( rule->name, key ) )
+			{
+				// We should be able to free this
+				free( rule->value );
+				if ( flags & NO_VALUE_COPY)
+				{
+					rule->value = value;
+				}
+				else
+				{
+					rule->value = strdup(value);
+				}
+
+				return rule;
+			}
+		}
+	}
+
     if ( flags & CHECK_DUPLICATE_RULES )
 	{
 		for ( rule = server->rules; rule; rule = rule->next )
@@ -7119,7 +7164,7 @@ change_server_port( struct qserver *server, unsigned short port, int force )
 
 			// Add a rule noting the previous query port
 			sprintf( arg, "%hu", server->port );
-			add_rule( server, "_queryport", arg, NO_FLAGS);
+			add_rule( server, "_queryport", arg, NO_FLAGS );
 
 			// Update the servers port
 			server->port = port;
@@ -7127,7 +7172,7 @@ change_server_port( struct qserver *server, unsigned short port, int force )
 
 		// Add a rule noting the servers hostport
 		sprintf( arg, "%hu", port );
-		add_rule( server, "hostport", arg, NO_FLAGS);
+		add_rule( server, "hostport", arg, OVERWITE_DUPLICATES );
 	}
 }
 
