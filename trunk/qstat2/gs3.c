@@ -350,7 +350,16 @@ int process_gs3_packet( struct qserver *server )
 			else if( 0 == strcmp( var, "hostport" ) )
 			{
 				change_server_port( server, atoi( val ), 0 );
-				add_rule( server, var, val, NO_FLAGS );
+			}
+			else if ( 0 == strcmp( var, "p1073741825" ) )
+			{
+				// UT3 demo compatibility
+				server->map_name = strdup( val );
+			}
+			else if ( 0 == strcmp( var, "p1073741826" ) )
+			{
+				// UT3 demo compatibility
+				add_rule( server, "gametype", val, OVERWITE_DUPLICATES );
 			}
 			else
 			{
