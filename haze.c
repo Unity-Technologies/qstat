@@ -21,6 +21,13 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
+
+// Format:
+// 1 - 8: Challenge Request / Response
+unsigned char haze_challenge[] = {
+    'f', 'r', 'd', 'c', '_', '_', '_', '_'
+};
+
 int process_haze_packet( struct qserver *server );
 
 // Player headers
@@ -55,29 +62,24 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	unsigned int pkt_id;
-	int pkt_index;
-	unsigned char flag;
-	unsigned int pkti, final;
+	unsigned short len;
+	unsigned char pkt_max, pkt_index;
 
 	debug( 2, "packet..." );
 
-	if ( pktlen < 12 )
+	if ( pktlen < 8 )
 	{
-		// invalid packet?
+		// invalid packet
 		malformed_packet( server, "too short" );
 		cleanup_qserver( server, 1 );
 		return;
 	}
 
-	if ( 0x09 == *ptr )
+	if ( 0 == strncmp( ptr, "frdcr", 5 ) )
 	{
 		// challenge response
-		// Could check the header here should
-		// match the 4 byte id sent
-		ptr++;
-		memcpy( &pkt_id, ptr, 4 );
-		ptr += 4;
-		server->challenge = atoi( ptr );
+		ptr += 8;
+		server->challenge = 1;
 
 		// Correct the stats due to two phase protocol
 		server->retry1++;
@@ -94,13 +96,13 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 		return;
 	}
 
-	if ( 0x00 != *ptr )
+	if ( pktlen < 12 )
 	{
-		malformed_packet( server, "bad initial byte '%hhx'", *ptr );
+		// invalid packet
+		malformed_packet( server, "too short" );
 		cleanup_qserver( server, 1 );
 		return;
 	}
-	ptr++;
 
 	server->n_servers++;
 	if ( server->server_name == NULL )
@@ -112,47 +114,31 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 		gettimeofday( &server->packet_time1, NULL);
 	}
 
+	// Query version ID
+	ptr += 4;
+
 	// Could check the header here should
 	// match the 4 byte id sent
 	memcpy( &pkt_id, ptr, 4 );
 	ptr += 4;
 
-	// Next we have the splitnum details
-	if ( 0 != strncmp( ptr, "splitnum", 8 ) )
+
+	// Max plackets
+	pkt_max = ((unsigned char)*ptr);
+	ptr++;
+
+	// Packet ID
+	pkt_index = ((unsigned char)*ptr);
+	ptr++;
+
+	// Query Length
+	memcpy( &len, ptr, 2 );
+	ptr += 2;
+
+	debug( 1, "pkt_index = %d, pkt_max = %d, len = %d", pkt_index, pkt_max, len );
+	if ( 1 != pkt_max )
 	{
-		if ( server->flags & TF_STATUS_QUERY )
-		{
-			// we have the status response
-			deal_with_haze_status( server, ptr, pktlen - ( ptr - rawpkt )  );
-			return;
-		}
-		else
-		{
-			malformed_packet( server, "missing splitnum" );
-			cleanup_qserver( server, 1 );
-			return;
-		}
-	}
-	ptr += 9;
-
-	pkt_index = ((unsigned char)*ptr) & 127;
-	final = ((unsigned char)*ptr) >> 7;
-	flag = *ptr++;
-	pkti = *ptr++;
-
-	debug( 1, "splitnum: flag = 0x%hhx, index = %d, final = %d, %d", flag, pkt_index, final, pkti );
-	if ( 0xFF != flag )
-	{
-		// not a single packet response or a callback
-		int pkt_max = pkt_index + 1;
-
-		if ( ! final )
-		{
-			// Guess that we have more to come
-			pkt_max++;
-			debug( 2, "more to come 0x%hxx 0x%hhx 0x%hhx", rawpkt[pktlen-3], rawpkt[pktlen-2], rawpkt[pktlen-1] );
-		}
-
+		// not a single packet response or callback
 		debug( 2, "pkt_max %d", pkt_max );
 
 		if ( 0 == pkt_index )
@@ -160,7 +146,7 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// to prevent reprocessing when we get the call back
 			// override the packet flag so it looks like a single
 			// packet response
-			rawpkt[14] = 0xFF;
+			rawpkt[9] = 1;
 		}
 
 		// add the packet recalcing maxes
@@ -184,6 +170,7 @@ void deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *pkt = rawpkt;
 	debug( 1, "status packet" );
+
 
 	// Server name
 	server->server_name = strdup( pkt );
@@ -232,16 +219,16 @@ int process_haze_packet( struct qserver *server )
 		debug( 2, "processing fragment[%d]...", fragment->pkt_index );
 
 		// check we have a full header
-		if ( pktlen < 16 )
+		if ( pktlen < 12 )
 		{
-			// invalid packet?
+			// invalid packet
 			malformed_packet( server, "too short" );
 			cleanup_qserver( server, 1 );
 			return 0;
 		}
 
 		// skip over the header
-		ptr += 16;
+		ptr += 12;
 
 		while ( 0 == state && ptr < end )
 		{
@@ -251,12 +238,11 @@ int process_haze_packet( struct qserver *server )
 			char *var, *val;
 			int var_len, val_len;
 
-			if ( 0x00 == ptr[0] && 0x01 == ptr[1] )
+			if ( ptr+4 < end && 0x00 == ptr[0] && 0x01 == ptr[1] && 0x00 == ptr[2] && 0x00 == ptr[3] )
 			{
-				// not quite sure of the significance of these bytes
-				// but we use them as a check for end of section
-				state = 1;
-				ptr += 2;
+				// end of rules
+				state++;
+				ptr += 4;
 				break;
 			}
 
@@ -276,7 +262,7 @@ int process_haze_packet( struct qserver *server )
 			ptr += val_len + 1;
 			debug( 2, "var:%s (%d)=%s (%d)\n", var, var_len, val, val_len );
 			// Lets see what we've got
-			if ( 0 == strcmp( var, "hostname" ) )
+			if ( 0 == strcmp( var, "servername" ) )
 			{
 				server->server_name = strdup( val );
 			}
@@ -566,58 +552,42 @@ void send_haze_request_packet( struct qserver *server )
 	char *packet;
 	char query_buf[128];
 	int len;
+	unsigned char required = HAZE_BASIC_INFO;
 
-	// In the old v3 protocol the doesnt seems to make a difference
-	// to what the servers sends but in the challenge version it definitely does
-	if ( get_player_info || get_server_rules )
+	if ( get_server_rules )
 	{
-		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
-		if ( server->challenge )
-		{
-			// we've recieved a challenge response, send the query + challenge id
-			len = sprintf(
-				query_buf,
-				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\xff\xff\xff\x01",
-				0x00,
-				(unsigned char)(server->challenge >> 24),
-				(unsigned char)(server->challenge >> 16),
-				(unsigned char)(server->challenge >> 8),
-				(unsigned char)(server->challenge >> 0)
-			);
-			packet = query_buf;
-		}
-		else
-		{
-			// Either basic v3 protocol or challenge request
-			packet = server->type->player_packet;
-			len = server->type->player_len;
-		}
+		required |= HAZE_GAME_RULES;
+		server->flags |= TF_PLAYER_QUERY;
+	}
+
+	if ( get_player_info )
+	{
+		required |= HAZE_PLAYER_INFO;
+		required |= HAZE_TEAM_INFO;
+		server->flags |= TF_RULES_QUERY;
+	}
+
+	server->flags |= TF_STATUS_QUERY;
+
+	if ( server->challenge )
+	{
+		// we've recieved a challenge response, send the query + challenge id
+		len = sprintf(
+			query_buf,
+			"frdquery%c%c%c%c%c",
+			(unsigned char)(server->challenge >> 24),
+			(unsigned char)(server->challenge >> 16),
+			(unsigned char)(server->challenge >> 8),
+			(unsigned char)(server->challenge >> 0),
+			required
+		);
+		packet = query_buf;
 	}
 	else
 	{
-		server->flags |= TF_STATUS_QUERY;
-		if ( server->challenge )
-		{
-			// we've recieved a challenge response, send the query + challenge id
-			len = sprintf(
-				query_buf,
-				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\x06\x01\x06\x05\x08\x0a\x04%c%c",
-				0x00,
-				(unsigned char)(server->challenge >> 24),
-				(unsigned char)(server->challenge >> 16),
-				(unsigned char)(server->challenge >> 8),
-				(unsigned char)(server->challenge >> 0),
-				0x00,
-				0x00
-			);
-			packet = query_buf;
-		}
-		else
-		{
-			// Either basic v3 protocol or challenge request
-			packet = server->type->status_packet;
-			len = server->type->status_len;
-		}
+		// Either basic v3 protocol or challenge request
+		packet = haze_challenge;
+		len = sizeof( haze_challenge );
 	}
 
 	send_packet( server, packet, len );
