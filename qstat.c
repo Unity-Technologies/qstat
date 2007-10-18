@@ -7031,7 +7031,7 @@ add_rule( struct qserver *server, char *key, char *value, int flags)
 		{
 			if ( 0 == strcmp( rule->name, key ) )
 			{
-				char *full_value = (char*)calloc( sizeof(char), strlen( rule->value ) + strlen( value ) + 2 );
+				char *full_value = (char*)calloc( sizeof(char), strlen( rule->value ) + strlen( value ) + strlen( multi_delimiter ) + 1 );
 				if ( NULL == full_value )
 				{
 					fprintf( stderr, "Failed to malloc combined value\n" );
