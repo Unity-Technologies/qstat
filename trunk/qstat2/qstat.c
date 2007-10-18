@@ -6086,188 +6086,230 @@ deal_with_q1qw_packet( struct qserver *server, char *rawpkt, int pktlen)
     cleanup_qserver( server, 0);
 }
 
-void
-deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen,
-	int check_duplicate_rules)
+void deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen, int check_duplicate_rules)
 {
     char *key, *value, *end;
-    struct player *player= NULL;
-    struct player **last_player= & server->players;
-    int len, rc, complete= 0;
-    int frags=0, ping=0, num_players= 0;
-    char *pkt= rawpkt;
+    struct player *player = NULL;
+    struct player **last_player = &server->players;
+    int len, rc, complete = 0;
+    int frags = 0, ping = 0, num_players = 0;
+    char *pkt = rawpkt;
 
-    while ( *pkt && pkt-rawpkt < pktlen)  {
-	if ( *pkt == '\\')  {
-	    pkt++;
-	    if ( *pkt == '\n' && server->type->id == SOF_SERVER)
-		goto player_info;
-	    end= strchr( pkt, '\\');
-	    if ( end == NULL)
-		break;
-	    *end= '\0';
-	    key= pkt;
-	    pkt+= strlen(pkt)+1;
-	    end= strpbrk( pkt, "\\\n");
-	    if(!end) {
-		    end= rawpkt+pktlen;
-	    }
-	    value= (char*) malloc(end-pkt+1);
-	    memcpy( value, pkt, end-pkt);
-	    value[end-pkt]= '\0';
-	    pkt= end;
-	    debug(3, "%s = %s", key, value);
-	    if ( server->server_name == NULL &&
-			(strcmp( key, "hostname") == 0 ||
-			strcmp( key, "sv_hostname") == 0))
-		server->server_name= value;
-	    else if  ( strcmp( key, "mapname") == 0 ||
-		    (strcmp( key, "map") == 0 && server->map_name == NULL))  {
-		if ( server->map_name != NULL)
-		    free( server->map_name);
-		server->map_name= value;
-	    }
-	    else if  ( strcmp( key, "maxclients") == 0 ||
-	    		strcmp( key, "sv_maxclients") == 0 ||
-			strcmp( key, "max") == 0)  {
-		server->max_players= atoi(value);
-		/* MOHAA Q3 protocol max players is always 0 */
-		if ( server->max_players == 0)
-		    server->max_players= -1;
-		free(value);
-	    }
-	    else if  ( strcmp( key, "clients") == 0 ||
-			strcmp( key, "players") == 0)  {
-		server->num_players= atoi(value);
-		free(value);
-	    }
-	    else if ( server->server_name == NULL &&
-			strcmp( key, "pure") == 0)  {
-		add_rule( server, key, value, NO_VALUE_COPY);
-	    }
-	    else if ( get_server_rules || strncmp( key, "game", 4) == 0)
+    while ( *pkt && pkt-rawpkt < pktlen)
+	{
+		if ( *pkt == '\\')
 		{
-			if ( add_rule( server, key, value, NO_VALUE_COPY|check_duplicate_rules) == NULL)
+			pkt++;
+			if ( *pkt == '\n' && server->type->id == SOF_SERVER)
 			{
-				free(value);      /* duplicate, so free value */
+				goto player_info;
 			}
-			if ( server->game == NULL && strcmp( key, server->type->game_rule) == 0)
+			end = strchr( pkt, '\\');
+			if ( end == NULL)
 			{
-				server->game= value;
-				server->flags |= FLAG_DO_NOT_FREE_GAME;
+				break;
 			}
-	    }
-	    else
-		free(value);
-	}
-	else if ( *pkt == '\n')  {
+			*end = '\0';
+			key = pkt;
+			pkt += strlen(pkt)+1;
+			end = strpbrk( pkt, "\\\n");
+			if( ! end )
+			{
+				end = rawpkt+pktlen;
+			}
+			value = (char*) malloc(end-pkt+1);
+			memcpy( value, pkt, end-pkt);
+			value[end-pkt] = '\0';
+			pkt = end;
+			debug(3, "%s = %s", key, value);
+			if ( server->server_name == NULL && (strcmp( key, "hostname") == 0 || strcmp( key, "sv_hostname") == 0))
+			{
+				server->server_name = value;
+			}
+			else if  ( strcmp( key, "mapname") == 0 || (strcmp( key, "map") == 0 && server->map_name == NULL))
+			{
+				if ( server->map_name != NULL)
+				{
+					free( server->map_name);
+				}
+				server->map_name = value;
+			}
+			else if  ( strcmp( key, "maxclients") == 0 || strcmp( key, "sv_maxclients") == 0 || strcmp( key, "max") == 0)
+			{
+				server->max_players = atoi(value);
+				/* MOHAA Q3 protocol max players is always 0 */
+				if ( server->max_players == 0)
+				{
+					server->max_players = -1;
+				}
+				free(value);
+			}
+			else if  ( strcmp( key, "clients") == 0 || strcmp( key, "players") == 0)
+			{
+				server->num_players = atoi(value);
+				free(value);
+			}
+			else if ( server->server_name == NULL && strcmp( key, "pure") == 0)
+			{
+				add_rule( server, key, value, NO_VALUE_COPY);
+			}
+			else if ( get_server_rules || strncmp( key, "game", 4) == 0)
+			{
+				if ( add_rule( server, key, value, NO_VALUE_COPY|check_duplicate_rules) == NULL)
+				{
+					free(value);      /* duplicate, so free value */
+				}
+				if ( server->game == NULL && strcmp( key, server->type->game_rule) == 0)
+				{
+					server->game = value;
+					server->flags |= FLAG_DO_NOT_FREE_GAME;
+				}
+			}
+			else
+			free(value);
+		}
+		else if ( *pkt == '\n')
+		{
 player_info:
-	    pkt++;
-	    if ( *pkt == '\0')
-		break;
-	    if(!strncmp(pkt, "\\challenge\\", 11))
-		{
-			// qfusion
-			// This doesnt support getstatus looking at warsow source:
-			// server/sv_main.c: SV_ConnectionlessPacket
-			server->next_rule = NO_SERVER_RULES;
-		    break;
+			pkt++;
+			if ( *pkt == '\0')
+			{
+				break;
+			}
+			if(!strncmp(pkt, "\\challenge\\", 11))
+			{
+				// qfusion
+				// This doesnt support getstatus looking at warsow source:
+				// server/sv_main.c: SV_ConnectionlessPacket
+				server->next_rule = NO_SERVER_RULES;
+				break;
+			}
+			rc= sscanf( pkt, "%d %n", &frags, &len);
+			if ( rc == 1 && pkt[len] != '"')
+			{
+				pkt += len;
+				rc = sscanf( pkt, "%d %n", &ping, &len);
+			}
+			else if ( rc == 1)
+			{
+				/* MOHAA Q3 protocol only provides player ping */
+				ping = frags;
+				frags = 0;
+			}
+			if ( rc != 1)
+			{
+				char *nl;	/* assume it's an error packet */
+				server->error = (char*)malloc( pktlen+1);
+				nl = strchr( pkt, '\n');
+				if ( nl != NULL)
+				{
+					strncpy( server->error, pkt, nl-pkt);
+				}
+				else
+				{
+					strcpy( server->error, pkt);
+				}
+				server->server_name = SERVERERROR;
+				complete = 1;
+				break;
+			}
+			if ( get_player_info)
+			{
+				player = (struct player *) calloc( 1, sizeof( struct player));
+				player->number = 0;
+				player->connect_time = -1;
+				player->frags = frags;
+				player->ping = ping;
+			}
+			else
+			{
+				player = NULL;
+			}
+
+			pkt += len;
+
+			if ( isdigit((unsigned char)*pkt))
+			{
+				/* probably an SOF2 1.01 server, includes team # */
+				int team;
+				rc = sscanf( pkt, "%d %n", &team, &len);
+				if ( rc == 1)
+				{
+					pkt += len;
+					if ( player)
+					{
+						player->team = team;
+						server->flags |= FLAG_PLAYER_TEAMS;
+					}
+				}
+			}
+
+			if ( *pkt != '"')
+			{
+				break;
+			}
+
+			pkt++;
+			end = strchr( pkt, '"');
+			if ( end == NULL)
+			{
+				break;
+			}
+			if ( player != NULL)
+			{
+				player->name = (char*) malloc(end-pkt+1);
+				memcpy( player->name, pkt, end-pkt);
+				player->name[end-pkt] = '\0';
+			}
+			pkt = end+1;
+
+			//WarSoW team number
+			if ( *pkt != '\n')
+			{
+				int team;
+				rc = sscanf( pkt, "%d%n", &team, &len);
+				if ( rc == 1)
+				{
+					pkt += len;
+					if ( player)
+					{
+						player->team = team;
+						server->flags |= FLAG_PLAYER_TEAMS;
+					}
+				}
+			}
+
+			if ( player != NULL)
+			{
+				player->skin = NULL;
+				player->shirt_color = -1;
+				player->pants_color = -1;
+				*last_player = player;
+				last_player = & player->next;
+			}
+			num_players++;
 		}
-	    rc= sscanf( pkt, "%d %n", &frags, &len);
-	    if ( rc == 1 && pkt[len] != '"')  {
-		pkt+= len;
-		rc= sscanf( pkt, "%d %n", &ping, &len);
-	    }
-	    else if ( rc == 1)  {
-		/* MOHAA Q3 protocol only provides player ping */
-		ping= frags;
-		frags= 0;
-	    }
-	    if ( rc != 1)  {
-		char *nl;	/* assume it's an error packet */
-		server->error= (char*)malloc( pktlen+1);
-	        nl= strchr( pkt, '\n');
-		if ( nl != NULL)
-		    strncpy( server->error, pkt, nl-pkt);
 		else
-		    strcpy( server->error, pkt);
-		server->server_name= SERVERERROR;
-		complete= 1;
-		break;
-	    }
-	    if ( get_player_info)  {
-		player= (struct player *) calloc( 1, sizeof( struct player));
-		player->number= 0;
-		player->connect_time= -1;
-		player->frags= frags;
-		player->ping= ping;
-	    }
-	    else
-		player= NULL;
-
-	    pkt+= len;
-
-	    if ( isdigit((unsigned char)*pkt))  {
-		/* probably an SOF2 1.01 server, includes team # */
-		int team;
-		rc= sscanf( pkt, "%d %n", &team, &len);
-		if ( rc == 1)  {
-		    pkt+= len;
-		    if ( player)  {
-			player->team= team;
-			server->flags|= FLAG_PLAYER_TEAMS;
-		    }
+		{
+			pkt++;
 		}
-	    }
-
-	    if ( *pkt != '"') break;
-
-	    pkt++;
-	    end= strchr( pkt, '"');
-	    if ( end == NULL) break;
-	    if ( player != NULL)  {
-		player->name= (char*) malloc(end-pkt+1);
-		memcpy( player->name, pkt, end-pkt);
-		player->name[end-pkt]= '\0';
-	    }
-	    pkt= end+1;
-
-	    //WarSoW team number
-	    if ( *pkt != '\n') {
-		int team;
-		rc= sscanf( pkt, "%d%n", &team, &len);
-		if ( rc == 1)  {
-		    pkt+= len;
-		    if ( player)  {
-			player->team= team;
-			server->flags|= FLAG_PLAYER_TEAMS;
-		    }
-		}
-	    }
-
-	    if ( player != NULL)  {
-		player->skin= NULL;
-		player->shirt_color= -1;
-		player->pants_color= -1;
-		*last_player= player;
-		last_player= & player->next;
-	    }
-	    num_players++;
-	}
-	else
-	    pkt++;
-	complete= 1;
+		complete = 1;
     }
 
     if ( server->num_players == 0 || num_players > server->num_players)
-	server->num_players= num_players;
+	{
+		server->num_players = num_players;
+	}
 
-    if ( !complete)  {
-	cleanup_qserver( server, 1);
-	return;
+    if ( !complete )
+	{
+		cleanup_qserver( server, 1);
+		return;
     }
     else if ( server->server_name == NULL)
-	server->server_name= strdup("");
+	{
+		server->server_name = strdup("");
+	}
 
     cleanup_qserver( server, 0);
 }
