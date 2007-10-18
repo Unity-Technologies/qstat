@@ -286,7 +286,7 @@ static int qserver_get_timeout(struct qserver* server, struct timeval* now);
 static int wait_for_timeout( unsigned int ms);
 static void finish_output();
 static void decode_stefmaster_packet( struct qserver *server, char *pkt, int pktlen);
-static void decode_q3master_packet( struct qserver *server, char *pkt, int pktlen);
+static void decode_q3master_packet( struct qserver *server, char *ikt, int pktlen);
 
 char * ut2003_strdup( const char *string, const char *end, char **next );
 int html_entity( const char c, char *dest );
@@ -647,45 +647,50 @@ standard_display_server( struct qserver *server)
 	return;
     }
 
-    if ( new_style)  {
-	char *game= get_qw_game( server);
-	int map_name_width= 8, game_width=0;
-	switch( server->type->id)  {
-	case QW_SERVER: case Q2_SERVER: case Q3_SERVER:
-	    game_width= 9; break;
-	case TRIBES2_SERVER:
-	    map_name_width= 14; game_width= 8; break;
-	case GHOSTRECON_SERVER:
-	    map_name_width= 15; game_width= 15; break;
-	case HL_SERVER:
-	    map_name_width= 12; break;
-	default:
-	    break;
+    if ( new_style)
+	{
+		char *game = get_qw_game( server);
+		int map_name_width= 8, game_width=0;
+		switch( server->type->id)
+		{
+		case QW_SERVER:
+		case Q2_SERVER:
+		case Q3_SERVER:
+			game_width= 9; break;
+		case TRIBES2_SERVER:
+			map_name_width= 14; game_width= 8; break;
+		case GHOSTRECON_SERVER:
+			map_name_width= 15; game_width= 15; break;
+		case HL_SERVER:
+			map_name_width= 12; break;
+		default:
+			break;
+		}
+		fprintf( OF, "%s%-21s %2d/%-2d %2d/%-2d %*s %6d / %1d  %*s %s\n",
+			prefix,
+			(hostname_lookup) ? server->host_name : server->arg,
+			server->num_players, server->max_players,
+			server->num_spectators, server->max_spectators,
+			map_name_width, (server->map_name) ? server->map_name : "?",
+			server->n_requests ? server->ping_total/server->n_requests : 999,
+			server->n_retries,
+			game_width, game,
+			xform_name(server->server_name, server));
+		if ( get_server_rules)
+			server->type->display_rule_func( server);
+		if ( get_player_info)
+			server->type->display_player_func( server);
 	}
-	fprintf( OF, "%s%-21s %2d/%-2d %2d/%-2d %*s %6d / %1d  %*s %s\n",
-	    prefix,
-	    (hostname_lookup) ? server->host_name : server->arg,
-	    server->num_players, server->max_players,
-	    server->num_spectators, server->max_spectators,
-	    map_name_width, (server->map_name) ? server->map_name : "?",
-	    server->n_requests ? server->ping_total/server->n_requests : 999,
-	    server->n_retries,
-	    game_width, game,
-	    xform_name(server->server_name, server));
-	if ( get_server_rules)
-	    server->type->display_rule_func( server);
-	if ( get_player_info)
-	    server->type->display_player_func( server);
-    }
-    else  {
-	char name[512];
-	sprintf( name, "\"%s\"", server->server_name);
-	fprintf( OF, "%-16s %10s map %s at %22s %d/%d players %d ms\n",
-	    (hostname_lookup) ? server->host_name : server->arg,
-	    name, server->map_name,
-	    server->address, server->num_players, server->max_players,
-	    server->n_requests ? server->ping_total/server->n_requests : 999);
-    }
+	else
+	{
+		char name[512];
+		sprintf( name, "\"%s\"", server->server_name);
+		fprintf( OF, "%-16s %10s map %s at %22s %d/%d players %d ms\n",
+			(hostname_lookup) ? server->host_name : server->arg,
+			name, server->map_name,
+			server->address, server->num_players, server->max_players,
+			server->n_requests ? server->ping_total/server->n_requests : 999);
+	}
 }
 
 void
@@ -1151,14 +1156,15 @@ char *
 get_qw_game( struct qserver *server)
 {
     struct rule *rule;
-    if ( server->type->game_rule == NULL || *server->type->game_rule == '\0')
+	char *game_rule = server->type->game_rule;
+    if ( game_rule == NULL || *game_rule == '\0')
 	{
 		return "";
 	}
     rule = server->rules;
     for ( ; rule != NULL; rule = rule->next)
 	{
-		if ( strcmp( rule->name, server->type->game_rule) == 0)
+		if ( strcmp( rule->name, game_rule) == 0)
 		{
 			if ( server->type->id == Q3_SERVER && strcmp( rule->value, "baseq3") == 0)
 			{
@@ -1170,7 +1176,7 @@ get_qw_game( struct qserver *server)
     rule= server->rules;
     for ( ; rule != NULL; rule = rule->next)
 	{
-		if ( strcmp( rule->name, "game" ) == 0)
+		if ( 0 == strcmp( rule->name, "game" ) || 0 == strcmp( rule->name, "fs_game" ) )
 		{
 			return rule->value;
 		}
@@ -5816,104 +5822,136 @@ void
 deal_with_qw_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
     if ( server->server_name == NULL)
-	server->ping_total+= time_delta( &packet_recv_time,
-		&server->packet_time1);
+	{
+		server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
+	}
 
     if ( ((rawpkt[0] != '\377' && rawpkt[0] != '\376') || rawpkt[1] != '\377' ||
-	    rawpkt[2] != '\377' || rawpkt[3] != '\377') && show_errors)  {
-	unsigned int ipaddr= ntohl(server->ipaddr);
-	fprintf( stderr,
-		"Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
-		(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-		(ipaddr>>8)&0xff, ipaddr&0xff, ntohs(server->port));
-	print_packet( server, rawpkt, pktlen);
+	    rawpkt[2] != '\377' || rawpkt[3] != '\377') && show_errors)
+	 {
+		unsigned int ipaddr= ntohl(server->ipaddr);
+		fprintf( stderr,
+			"Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
+			(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
+			(ipaddr>>8)&0xff, ipaddr&0xff, ntohs(server->port));
+		print_packet( server, rawpkt, pktlen);
     }
 
     rawpkt[pktlen]= '\0';
 
-    if ( rawpkt[4] == 'n')  {
-	if ( server->type->id != QW_SERVER)
-	    server->type= find_server_type_id( QW_SERVER);
-	deal_with_q1qw_packet( server, rawpkt, pktlen);
-	return;
+    if ( rawpkt[4] == 'n')
+	{
+		if ( server->type->id != QW_SERVER)
+		{
+			server->type= find_server_type_id( QW_SERVER);
+		}
+		deal_with_q1qw_packet( server, rawpkt, pktlen);
+		return;
     }
-    else if ( rawpkt[4] == '\377' && rawpkt[5] == 'n')  {
-	if ( server->type->id != HW_SERVER)
-	    server->type= find_server_type_id( HW_SERVER);
-	deal_with_q1qw_packet( server, rawpkt, pktlen);
-	return;
-    }
-    else if ( strncmp( &rawpkt[4], "print\n\\", 7) == 0)  {
-	deal_with_q2_packet( server, rawpkt+10, pktlen-10, 0);
-	return;
-    }
-    else if ( strncmp( &rawpkt[4], "print\n", 6) == 0)  {
-	/* work-around for occasional bug in Quake II status packets
-	*/
-	char *c, *p;
-	p= c= &rawpkt[10];
-	while ( *p != '\\' && (c= strchr( p, '\n')))
-	    p= c+1;
-	if ( *p == '\\' && c != NULL)  {
-	    deal_with_q2_packet( server, p, pktlen-(p-rawpkt), 0);
-	    return;
+    else if ( rawpkt[4] == '\377' && rawpkt[5] == 'n')
+	{
+		if ( server->type->id != HW_SERVER)
+		{
+			server->type= find_server_type_id( HW_SERVER);
+		}
+		deal_with_q1qw_packet( server, rawpkt, pktlen);
+		return;
 	}
+    else if ( strncmp( &rawpkt[4], "print\n\\", 7) == 0)
+	{
+		deal_with_q2_packet( server, rawpkt+10, pktlen-10, 0);
+		return;
+    }
+    else if ( strncmp( &rawpkt[4], "print\n", 6) == 0)
+	{
+		/* work-around for occasional bug in Quake II status packets
+		*/
+		char *c, *p;
+		p= c= &rawpkt[10];
+		while ( *p != '\\' && (c= strchr( p, '\n')))
+		{
+			p= c+1;
+		}
+		if ( *p == '\\' && c != NULL)
+		{
+			deal_with_q2_packet( server, p, pktlen-(p-rawpkt), 0);
+			return;
+		}
     }
     else if ( strncmp( &rawpkt[4], "infoResponse", 12) == 0 ||
-		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "infoResponse", 12) == 0) )  {
-	/* quake3 info response */
-	if ( rawpkt[4] == '\001')  {
-	    rawpkt++;
-	    pktlen--;
+		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "infoResponse", 12) == 0) )
+	{
+		/* quake3 info response */
+		if ( rawpkt[4] == '\001')
+		{
+			rawpkt++;
+			pktlen--;
+		}
+		rawpkt+= 12;
+		pktlen-= 12;
+		for ( ; pktlen && *rawpkt != '\\'; pktlen--, rawpkt++)
+			;
+		if ( !pktlen)
+		{
+			return;
+		}
+		if ( rawpkt[pktlen-1] == '"')
+		{
+			rawpkt[pktlen-1]= '\0';
+			pktlen--;
+		}
+		if ( get_player_info || get_server_rules)
+		{
+			server->next_rule= "";
+		}
+		deal_with_q2_packet( server, rawpkt, pktlen, 0);
+
+		// We used to have the flowing but thats not a valid thing
+		// to do as deal_with_q2_packet can free the server and
+		// hence this would trash our stack.
+		// Also with no easy way of telling with the current design
+		// we will just have to do with out this for the time being.
+		//if (get_player_info || get_server_rules)
+		//{
+		//	send_rule_request_packet( server);
+		//	server->retry1= n_retries-1;
+		//}
+		return;
 	}
-	rawpkt+= 12;
-	pktlen-= 12;
-	for ( ; pktlen && *rawpkt != '\\'; pktlen--, rawpkt++)
-	    ;
-	if ( !pktlen)
-	    return;
-	if ( rawpkt[pktlen-1] == '"')  {
-	    rawpkt[pktlen-1]= '\0';
-	    pktlen--;
-	}
-	if ( get_player_info || get_server_rules)
-	    server->next_rule= "";
-	deal_with_q2_packet( server, rawpkt, pktlen, 0);
-	if (get_player_info || get_server_rules) {
-	    send_rule_request_packet( server);
-	    server->retry1= n_retries-1;
-	}
-	return;
-    }
     else if ( strncmp( &rawpkt[4], "statusResponse\n", 15) == 0 ||
-		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "statusResponse\n", 15) == 0) )  {
-	/* quake3 status response */
-	server->next_rule= NO_SERVER_RULES;
-	server->retry1 = 0;
-	if ( rawpkt[4] == '\001')  {
-	    rawpkt++;
-	    pktlen--;
-	}
-    	deal_with_q2_packet( server, rawpkt + 19, pktlen - 19,
-		CHECK_DUPLICATE_RULES);
-	return;
+		(rawpkt[4] == '\001' && strncmp( &rawpkt[5], "statusResponse\n", 15) == 0) )
+	{
+		/* quake3 status response */
+		server->next_rule= NO_SERVER_RULES;
+		server->retry1 = 0;
+		if ( rawpkt[4] == '\001')
+		{
+			rawpkt++;
+			pktlen--;
+		}
+		deal_with_q2_packet( server, rawpkt + 19, pktlen - 19, CHECK_DUPLICATE_RULES);
+		return;
     }
-    else if ( strncmp( &rawpkt[4], "infostringresponse", 19) == 0)  {
-	deal_with_q2_packet( server, rawpkt+23, pktlen-23, 0);
-	return;
+    else if ( strncmp( &rawpkt[4], "infostringresponse", 19) == 0)
+	{
+		deal_with_q2_packet( server, rawpkt+23, pktlen-23, 0);
+		return;
     }
 
-    if ( show_errors)  {
-	unsigned int ipaddr= ntohl(server->ipaddr);
-	fprintf( stderr,
-		"Odd packet from server %d.%d.%d.%d:%hu, ignoring ...\n",
-		(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
-		(ipaddr>>8)&0xff, ipaddr&0xff, ntohs(server->port));
-	print_packet( server, rawpkt, pktlen);
-	cleanup_qserver( server, 1);
-    }
+    if ( show_errors)
+	{
+		unsigned int ipaddr= ntohl(server->ipaddr);
+		fprintf( stderr,
+			"Odd packet from server %d.%d.%d.%d:%hu, ignoring ...\n",
+			(ipaddr>>24)&0xff, (ipaddr>>16)&0xff,
+			(ipaddr>>8)&0xff, ipaddr&0xff, ntohs(server->port));
+		print_packet( server, rawpkt, pktlen);
+		cleanup_qserver( server, 1);
+	}
     else
-	cleanup_qserver( server, 0);
+	{
+		cleanup_qserver( server, 0);
+	}
 }
 
 void
@@ -6095,50 +6133,61 @@ void deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen, int 
     int frags = 0, ping = 0, num_players = 0;
     char *pkt = rawpkt;
 
-    while ( *pkt && pkt-rawpkt < pktlen)
+    while ( *pkt && pkt-rawpkt < pktlen )
 	{
-		if ( *pkt == '\\')
+		// we have variable, value pairs seperated by slash
+		if ( *pkt == '\\' )
 		{
 			pkt++;
-			if ( *pkt == '\n' && server->type->id == SOF_SERVER)
+			if ( *pkt == '\n' && server->type->id == SOF_SERVER )
 			{
 				goto player_info;
 			}
+
+			// Find the key
 			end = strchr( pkt, '\\');
-			if ( end == NULL)
+			if ( NULL == end )
 			{
 				break;
 			}
 			*end = '\0';
 			key = pkt;
-			pkt += strlen(pkt)+1;
+			pkt += strlen(key)+1;
+
+			// Find the value
 			end = strpbrk( pkt, "\\\n");
-			if( ! end )
+			if( NULL == end )
 			{
+				// Last value
 				end = rawpkt+pktlen;
 			}
-			value = (char*) malloc(end-pkt+1);
+
+			// Make a copy of the value
+			value = (char*)malloc( end-pkt+1 );
 			memcpy( value, pkt, end-pkt);
 			value[end-pkt] = '\0';
 			pkt = end;
 			debug(3, "%s = %s", key, value);
 			if ( server->server_name == NULL && (strcmp( key, "hostname") == 0 || strcmp( key, "sv_hostname") == 0))
 			{
+				// Server name
 				server->server_name = value;
 			}
 			else if  ( strcmp( key, "mapname") == 0 || (strcmp( key, "map") == 0 && server->map_name == NULL))
 			{
-				if ( server->map_name != NULL)
+				// Map name
+				if ( NULL != server->map_name )
 				{
-					free( server->map_name);
+					free( server->map_name );
 				}
 				server->map_name = value;
 			}
 			else if  ( strcmp( key, "maxclients") == 0 || strcmp( key, "sv_maxclients") == 0 || strcmp( key, "max") == 0)
 			{
+				// Max Players
 				server->max_players = atoi(value);
-				/* MOHAA Q3 protocol max players is always 0 */
-				if ( server->max_players == 0)
+				// MOHAA Q3 protocol max players is always 0
+				if ( 0 == server->max_players )
 				{
 					server->max_players = -1;
 				}
@@ -6146,6 +6195,7 @@ void deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen, int 
 			}
 			else if  ( strcmp( key, "clients") == 0 || strcmp( key, "players") == 0)
 			{
+				// Num Players
 				server->num_players = atoi(value);
 				free(value);
 			}
@@ -6155,36 +6205,52 @@ void deal_with_q2_packet( struct qserver *server, char *rawpkt, int pktlen, int 
 			}
 			else if ( get_server_rules || strncmp( key, "game", 4) == 0)
 			{
+				int dofree = 0;
 				if ( add_rule( server, key, value, NO_VALUE_COPY|check_duplicate_rules) == NULL)
 				{
-					free(value);      /* duplicate, so free value */
+					// duplicate, so free value
+					dofree = 1;
 				}
+
 				if ( server->game == NULL && strcmp( key, server->type->game_rule) == 0)
 				{
 					server->game = value;
-					server->flags |= FLAG_DO_NOT_FREE_GAME;
+					if ( 0 == dofree )
+					{
+						server->flags |= FLAG_DO_NOT_FREE_GAME;
+					}
+				}
+				else if ( 1 == dofree )
+				{
+					free(value);
 				}
 			}
 			else
-			free(value);
+			{
+				free(value);
+			}
 		}
-		else if ( *pkt == '\n')
+		else if ( *pkt == '\n' )
 		{
 player_info:
+			debug( 3, "player info" );
 			pkt++;
-			if ( *pkt == '\0')
+			if ( *pkt == '\0' )
 			{
 				break;
 			}
-			if(!strncmp(pkt, "\\challenge\\", 11))
+
+			if ( 0 == strncmp(pkt, "\\challenge\\", 11 ) )
 			{
 				// qfusion
 				// This doesnt support getstatus looking at warsow source:
 				// server/sv_main.c: SV_ConnectionlessPacket
 				server->next_rule = NO_SERVER_RULES;
+				debug( 3, "no more server rules" );
 				break;
 			}
-			rc= sscanf( pkt, "%d %n", &frags, &len);
+
+			rc = sscanf( pkt, "%d %n", &frags, &len);
 			if ( rc == 1 && pkt[len] != '"')
 			{
 				pkt += len;
@@ -6196,6 +6262,7 @@ player_info:
 				ping = frags;
 				frags = 0;
 			}
+
 			if ( rc != 1)
 			{
 				char *nl;	/* assume it's an error packet */
@@ -6213,6 +6280,7 @@ player_info:
 				complete = 1;
 				break;
 			}
+
 			if ( get_player_info)
 			{
 				player = (struct player *) calloc( 1, sizeof( struct player));
@@ -6301,17 +6369,17 @@ player_info:
 		server->num_players = num_players;
 	}
 
-    if ( !complete )
+    if ( ! complete )
 	{
-		cleanup_qserver( server, 1);
+		cleanup_qserver( server, 1 );
 		return;
     }
-    else if ( server->server_name == NULL)
+    else if ( server->server_name == NULL )
 	{
 		server->server_name = strdup("");
 	}
 
-    cleanup_qserver( server, 0);
+    cleanup_qserver( server, 0 );
 }
 
 void

@@ -361,6 +361,36 @@ int process_gs3_packet( struct qserver *server )
 				// UT3 demo compatibility
 				add_rule( server, "gametype", val, OVERWITE_DUPLICATES );
 			}
+			else if ( 0 == strcmp( var, "p268435705" ) )
+			{
+				// UT3 demo compatibility
+				add_rule( server, "timelimit", val, NO_FLAGS );
+			}
+			else if ( 0 == strcmp( var, "p1073741827" ) )
+			{
+				// UT3 demo compatibility
+				add_rule( server, "description", val, NO_FLAGS );
+				if ( server->server_name )
+				{
+					char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+					if ( name )
+					{
+						strcat( name, ": " );
+						strcat( name, val );
+						server->server_name = name;
+					}
+				}
+			}
+			else if ( 0 == strcmp( var, "p268435704" ) )
+			{
+				// UT3 demo compatibility
+				add_rule( server, "goalscore", val, NO_FLAGS );
+			}
+			else if ( 0 == strcmp( var, "s32779" ) )
+			{
+				// UT3 demo compatibility
+				add_rule( server, "gamemode", val, NO_FLAGS );
+			}
 			else
 			{
 				add_rule( server, var, val, NO_FLAGS );
