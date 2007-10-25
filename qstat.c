@@ -6455,6 +6455,11 @@ deal_with_qwmaster_packet( struct qserver *server, char *rawpkt, int pktlen)
 	{
 		rawpkt+= 4;	/* QW 1.5 */
 		pktlen-= 4;
+		if (rawpkt[0] == '\377' && rawpkt[1] == QW_SERVERS)
+		{
+			rawpkt++;	/* hwmaster */
+			pktlen--;
+		}
 	}
 
 	if ( rawpkt[0] == QW_SERVERS && rawpkt[1] == QW_NEWLINE)

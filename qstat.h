@@ -88,6 +88,7 @@ typedef struct _server_type server_type;
 #define QW_DEFAULT_PORT			27500
 #define QW_MASTER_DEFAULT_PORT		27000
 #define HW_DEFAULT_PORT			26950
+#define HW_MASTER_DEFAULT_PORT		26900
 #define UNREAL_DEFAULT_PORT		7777
 #define UNREAL_MASTER_DEFAULT_PORT	28900
 #define HALFLIFE_DEFAULT_PORT		27015
@@ -186,8 +187,9 @@ typedef struct _server_type server_type;
 #define TM_PROTOCOL_SERVER 57
 #define ETQW_SERVER 58
 #define HAZE_SERVER 59
+#define HW_MASTER (60 | MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  59
+#define LAST_BUILTIN_SERVER  60
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -517,6 +519,10 @@ char hl_details[12] =
 /* QUAKE WORLD MASTER */
 #define QW_GET_SERVERS    'c'
 char qw_masterquery[] = { QW_GET_SERVERS, '\n', '\0' };
+
+/* HEXENWORLD MASTER */
+#define HW_GET_SERVERS    'c'
+char hw_masterquery[] = { '\377', HW_GET_SERVERS, '\0' };
 
 /* QUAKE 2 MASTER */
 char q2_masterquery[] = { 'q', 'u', 'e', 'r', 'y', '\n', '\0' };
@@ -1937,6 +1943,40 @@ server_type builtin_types[] = {
     0,				/* rule_len */
     (char*) &qw_masterquery,	/* master_packet */
     sizeof( qw_masterquery),	/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_qwmaster_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_qwmaster_packet,	/* packet_func */
+},
+{
+    /* HEXEN2WORLD MASTER */
+    HW_MASTER,			/* id */
+    "HWM",			/* type_prefix */
+    "hwm",			/* type_string */
+    "-hwm",			/* type_option */ /* ## also "-qw" */
+    "HexenWorld Master",	/* game_name */
+    HW_SERVER,			/* master */
+    HW_MASTER_DEFAULT_PORT,	/* default_port */
+    0,				/* port_offset */
+    TF_SINGLE_QUERY|TF_OUTFILE,	/* flags */
+    "",				/* game_rule */
+    "HWMASTER",			/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    (char*) &hw_masterquery,	/* master_packet */
+    sizeof( hw_masterquery),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
     display_qwmaster,		/* display_player_func */
