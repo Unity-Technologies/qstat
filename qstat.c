@@ -2966,9 +2966,9 @@ void do_work(void)
 				}
 			}
 
-			debug(2, "connected: %d", connected);
+			debug(2, "connected, pre-packet_func: %d", connected);
 			server->type->packet_func(server, pkt, pktlen);
-			debug(2, "connected: %d", connected);
+			debug(2, "connected, post-packet_func: %d", connected);
 		}
 		buffill = 0;
 
@@ -4502,6 +4502,7 @@ int bind_sockets()
 				);
 
 				gettimeofday(&t_lastsend, NULL);
+				debug(2, "calling status_query_func for %p", server);
 				server->type->status_query_func(server);
 				connected++;
 				if (!waiting_for_masters)
@@ -4654,7 +4655,7 @@ void send_packets()
 		if (prev_n_sent == n_sent)
 		{
 			// we didnt send any additional queries
-			debug(2, "%d %d", time_delta(&now, &server->packet_time1), (interval *(n_retries + 1)));
+			debug(2, "no queries sent: %d %d", time_delta(&now, &server->packet_time1), (interval *(n_retries + 1)));
 			if (!server->retry1)
 			{
 				// no retries left
@@ -4670,6 +4671,8 @@ void send_packets()
 			}
 		}
 	}
+
+	debug(3, "done");
 }
 
 /* server starts sending data immediately, so we need not do anything */
@@ -5374,7 +5377,7 @@ void send_rule_request_packet(struct qserver *server)
 {
 	int rc, len;
 
-	debug(3, "%p", server);
+	debug(3, "send_rule_request_packet: %p", server);
 
 	/* Server created via broadcast, so bind it */
 	if (server->fd == -1)
@@ -5427,6 +5430,8 @@ void send_rule_request_packet(struct qserver *server)
 void send_player_request_packet(struct qserver *server)
 {
 	int rc;
+
+	debug( 3, "send_player_request_packet %p", server );
 
 	if (!server->type->player_packet)
 	{
@@ -6091,18 +6096,12 @@ void deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 		{
 			server->next_rule = "";
 		}
-		deal_with_q2_packet(server, rawpkt, pktlen, 0);
 
-		// We used to have the flowing but thats not a valid thing
-		// to do as deal_with_q2_packet can free the server and
-		// hence this would trash our stack.
-		// Also with no easy way of telling with the current design
-		// we will just have to do with out this for the time being.
-		//if (get_player_info || get_server_rules)
-		//{
-		//	send_rule_request_packet( server);
-		//	server->retry1= n_retries-1;
-		//}
+		if ( ! deal_with_q2_packet(server, rawpkt, pktlen, 0) && ( get_player_info || get_server_rules ) )
+		{
+			send_rule_request_packet( server);
+			server->retry1= n_retries-1;
+		}
 		return ;
 	}
 	else if (strncmp(&rawpkt[4], "statusResponse\n", 15) == 0 || (rawpkt[4] == '\001' && strncmp(&rawpkt[5], "statusResponse\n", 15) 	== 0))
@@ -6370,7 +6369,7 @@ void deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 	cleanup_qserver(server, 0);
 }
 
-void deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen, int check_duplicate_rules)
+int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen, int check_duplicate_rules)
 {
 	char *key, *value, *end;
 	struct player *player = NULL;
@@ -6616,15 +6615,14 @@ void deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen, int c
 
 	if (!complete)
 	{
-		cleanup_qserver(server, 1);
-		return ;
+		return cleanup_qserver(server, 1);
 	}
 	else if (server->server_name == NULL)
 	{
 		server->server_name = strdup("");
 	}
 
-	cleanup_qserver(server, 0);
+	return cleanup_qserver(server, 0);
 }
 
 void ack_descent3master_packet(struct qserver *server, char *curtok)
@@ -8277,12 +8275,16 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 		return cleanup_qserver(server, 1);
 	}
 
-	if (((rawpkt[0] != '\377' && rawpkt[0] != '\376') || rawpkt[1] != '\377' || rawpkt[2] != '\377' || rawpkt[3] != '\377') &&
-	show_errors)
+	if (((rawpkt[0] != '\377' && rawpkt[0] != '\376') || rawpkt[1] != '\377' || rawpkt[2] != '\377' || rawpkt[3] != '\377') && show_errors)
 	{
 		unsigned int ipaddr = ntohl(server->ipaddr);
-		fprintf(stderr, "Odd packet from server %d.%d.%d.%d:%hu, processing ...\n", (ipaddr >> 24) &0xff, (ipaddr >> 16) &0xff, (ipaddr
-	>> 8) &0xff, ipaddr &0xff, ntohs(server->port));
+		fprintf(stderr, "Odd packet from server %d.%d.%d.%d:%hu, processing ...\n",
+			(ipaddr >> 24) &0xff,
+			(ipaddr >> 16) &0xff,
+			(ipaddr >> 8) &0xff,
+			ipaddr &0xff,
+			ntohs(server->port)
+		);
 		print_packet(server, rawpkt, pktlen);
 	}
 

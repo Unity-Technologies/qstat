@@ -338,7 +338,7 @@ void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
-void deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen,
+int deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen,
 	int check_duplicate_rules);
 void deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen);
 void deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
