@@ -451,7 +451,6 @@ x
 		}
 		ptr += 4;
 
-fprintf( stderr, "ver=%d\n", protocolver );
 		if ( ( 851977 == protocolver || 851978 == protocolver ) && 0 != num_players ) // v13.9 or v13.10
 		{
 			// Fix the packet offset due to the single bit used for bot
