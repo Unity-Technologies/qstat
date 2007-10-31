@@ -451,6 +451,7 @@ x
 		}
 		ptr += 4;
 
+fprintf( stderr, "ver=%d\n", protocolver );
 		if ( ( 851977 == protocolver || 851978 == protocolver ) && 0 != num_players ) // v13.9 or v13.10
 		{
 			// Fix the packet offset due to the single bit used for bot
@@ -487,6 +488,25 @@ x
 		}
 		else if ( 5 == version )
 		{
+			if ( 655377 == protocolver )
+			{
+				// clantag position
+				ptr++;
+				// clantag
+				val = ptr;
+				ptr = memchr(ptr, '\0', end-ptr);
+				if ( !ptr )
+				{
+					malformed_packet( server, "player clan not null terminated" );
+					cleanup_qserver( server, 1);
+					return;
+				}
+				player->tribe_tag = strdup( val );
+				ptr++;
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
+						num_players, player->name, ping, rate, player_id, player->tribe_tag);
+			}
+
 			// Bot flag
 			if ( 851977 == protocolver || 851978 == protocolver ) // v13.9 or v13.10
 			{
