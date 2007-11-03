@@ -432,6 +432,12 @@ x
 		}
 
 		player = add_player( server, player_id );
+		if(!player)
+		{
+			malformed_packet( server, "duplicate player id" );
+			cleanup_qserver( server, 1 );
+			return;
+		}
 
 		// doesnt support score so set a sensible default
 		player->score = 0;
