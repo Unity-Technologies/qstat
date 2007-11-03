@@ -451,7 +451,7 @@ x
 		}
 		ptr += 4;
 
-		if ( ( 851977 == protocolver || 851978 == protocolver ) && 0 != num_players ) // v13.9 or v13.10
+		if ( ( 0xd0009 == protocolver || 0xd000a == protocolver ) && 0 != num_players ) // v13.9 or v13.10
 		{
 			// Fix the packet offset due to the single bit used for bot
 			// which realigns at the byte boundary for the player name
@@ -487,7 +487,7 @@ x
 		}
 		else if ( 5 == version )
 		{
-			if ( 655377 == protocolver )
+			if ( 0xa0011 == protocolver )
 			{
 				// clantag position
 				ptr++;
@@ -507,7 +507,7 @@ x
 			}
 
 			// Bot flag
-			if ( 851977 == protocolver || 851978 == protocolver ) // v13.9 or v13.10
+			if ( 0xd0009 == protocolver || 0xd000a == protocolver ) // v13.9 or v13.10
 			{
 				// Bot flag is a single bit so need to realign everything from here on in :(
 				int i;
