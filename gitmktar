@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# make snapshot tar archive from git-svn repo
+#
+DATE=`date +%Y%m%d%H%M`
+VERSION=2.11
+git archive --prefix=qstat-${VERSION}_$DATE/ HEAD| bzip2 > qstat-${VERSION}_$DATE.tar.bz2
