@@ -231,8 +231,76 @@ void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 	pkt += strlen( pkt ) + 1;
 
 	// map
-	server->map_name = strdup( pkt );
-	pkt += strlen( pkt ) + 1;
+	// UT3 retail compatibility
+	if ( 0 == strncmp( pkt, "OwningPlayerId", 13 ) )
+	{
+		char *end = pkt + strlen( pkt ) + 1;
+		char *var = pkt;
+		while ( NULL != var )
+		{
+			char *next;
+			char *val = strstr( var, "=" );
+			*val = '\0';
+			val++;
+			next = strstr( val, "," );
+			if ( NULL != next )
+			{
+				*next = '\0';
+				next++;
+			}
+
+			if ( 0 == strcmp( var, "mapname" ) )
+			{
+				server->map_name = strdup( val );
+			}
+			else if ( 0 == strcmp( var, "p1073741825" ) )
+			{
+				server->map_name = strdup( val );
+			}
+			else if ( 0 == strcmp( var, "p1073741826" ) )
+			{
+				add_rule( server, "gametype", val, OVERWITE_DUPLICATES );
+			}
+			else if ( 0 == strcmp( var, "p268435705" ) )
+			{
+				add_rule( server, "timelimit", val, OVERWITE_DUPLICATES );
+			}
+			else if ( 0 == strcmp( var, "p1073741827" ) )
+			{
+				add_rule( server, "description", val, OVERWITE_DUPLICATES );
+				if ( server->server_name )
+				{
+					char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+					if ( name )
+					{
+						strcat( name, ": " );
+						strcat( name, val );
+						server->server_name = name;
+					}
+				}
+			}
+			else if ( 0 == strcmp( var, "p268435704" ) )
+			{
+				add_rule( server, "goalscore", val, OVERWITE_DUPLICATES );
+			}
+			else if ( 0 == strcmp( var, "s32779" ) )
+			{
+				add_rule( server, "gamemode", val, OVERWITE_DUPLICATES );
+			}
+			else
+			{
+				add_rule( server, var, val, OVERWITE_DUPLICATES );
+			}
+
+			var = next;
+		}
+		pkt = end;
+	}
+	else
+	{
+		server->map_name = strdup( pkt );
+		pkt += strlen( pkt ) + 1;
+	}
 
 	// num players
 	server->num_players = atoi( pkt );
@@ -331,7 +399,71 @@ int process_gs3_packet( struct qserver *server )
 			}
 			else if( 0 == strcmp( var, "mapname" ) )
 			{
-				server->map_name = strdup( val );
+				// UT3 retail compatibility
+				if ( 0 == strncmp( val, "OwningPlayerId", 13 ) )
+				{
+					var = val;
+					while ( NULL != var )
+					{
+						char *next;
+						char *val = strstr( var, "=" );
+						*val = '\0';
+						val++;
+						next = strstr( val, "," );
+						if ( NULL != next )
+						{
+							*next = '\0';
+							next++;
+						}
+	
+						if ( 0 == strcmp( var, "mapname" ) )
+						{
+							server->map_name = strdup( val );
+						}
+						else if ( 0 == strcmp( var, "p1073741825" ) )
+						{
+							server->map_name = strdup( val );
+						}
+						else if ( 0 == strcmp( var, "p1073741826" ) )
+						{
+							add_rule( server, "gametype", val, OVERWITE_DUPLICATES );
+						}
+						else if ( 0 == strcmp( var, "p268435705" ) )
+						{
+							add_rule( server, "timelimit", val, OVERWITE_DUPLICATES );
+						}
+						else if ( 0 == strcmp( var, "p1073741827" ) )
+						{
+							if ( server->server_name )
+							{
+								char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+								if ( name )
+								{
+									strcat( name, ": " );
+									strcat( name, val );
+									server->server_name = name;
+								}
+							}
+						}
+						else if ( 0 == strcmp( var, "p268435704" ) )
+						{
+							add_rule( server, "goalscore", val, OVERWITE_DUPLICATES );
+						}
+						else if ( 0 == strcmp( var, "s32779" ) )
+						{
+							add_rule( server, "gamemode", val, OVERWITE_DUPLICATES );
+						}
+						else
+						{
+							add_rule( server, var, val, OVERWITE_DUPLICATES );
+						}
+						var = next;
+					}
+				}
+				else
+				{
+					server->map_name = strdup( val );
+				}
 			}
 			else if( 0 == strcmp( var, "map" ) )
 			{
@@ -364,12 +496,12 @@ int process_gs3_packet( struct qserver *server )
 			else if ( 0 == strcmp( var, "p268435705" ) )
 			{
 				// UT3 demo compatibility
-				add_rule( server, "timelimit", val, NO_FLAGS );
+				add_rule( server, "timelimit", val, OVERWITE_DUPLICATES );
 			}
 			else if ( 0 == strcmp( var, "p1073741827" ) )
 			{
 				// UT3 demo compatibility
-				add_rule( server, "description", val, NO_FLAGS );
+				add_rule( server, "description", val, OVERWITE_DUPLICATES );
 				if ( server->server_name )
 				{
 					char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
@@ -384,16 +516,16 @@ int process_gs3_packet( struct qserver *server )
 			else if ( 0 == strcmp( var, "p268435704" ) )
 			{
 				// UT3 demo compatibility
-				add_rule( server, "goalscore", val, NO_FLAGS );
+				add_rule( server, "goalscore", val, OVERWITE_DUPLICATES );
 			}
 			else if ( 0 == strcmp( var, "s32779" ) )
 			{
 				// UT3 demo compatibility
-				add_rule( server, "gamemode", val, NO_FLAGS );
+				add_rule( server, "gamemode", val, OVERWITE_DUPLICATES );
 			}
 			else
 			{
-				add_rule( server, var, val, NO_FLAGS );
+				add_rule( server, var, val, OVERWITE_DUPLICATES );
 			}
 		}
 

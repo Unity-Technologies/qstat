@@ -251,6 +251,8 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	int type = 0;
 	int size = 0;
 	int tail_size = 4;
+	int viewers = 0;
+	int tv = 0;
 	unsigned num_players = 0;
 	unsigned challenge = 0;
 	unsigned protocolver = 0;
@@ -390,9 +392,21 @@ x
 			}
 			server->map_name = strdup( val );
 		}
-		else if( 0 == strcasecmp( key, "si_maxplayers" ) )
+		else if ( 0 == strcasecmp( key, "si_maxplayers" ) )
 		{
 			server->max_players = atoi( val );
+		}
+		else if (  0 == strcasecmp( key, "ri_maxViewers" ) )
+		{
+			char max[20];
+			sprintf( max, "%d", server->max_players );
+			add_rule( server, "si_maxplayers", max, NO_FLAGS );
+			server->max_players = atoi( val );
+		}
+		else if (  0 == strcasecmp( key, "ri_numViewers" ) )
+		{
+			viewers = atoi( val );
+			tv = 1;
 		}
 
 		add_rule( server, key, val, NO_FLAGS );
@@ -581,8 +595,15 @@ x
 	}
 #endif
 
-	debug( 2, "Num players = %d", num_players );
-	server->num_players = num_players;
+	if ( 0 == tv )
+	{
+		debug( 2, "Num players = %d", num_players );
+		server->num_players = num_players;
+	}
+	else
+	{
+		server->num_players = viewers;
+	}
 
 	cleanup_qserver( server, 1 );
 	return;
