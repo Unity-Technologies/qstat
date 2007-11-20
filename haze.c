@@ -132,11 +132,18 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 	ptr++;
 
 	// Query Length
-	memcpy( &len, ptr, 2 );
+	//len = (unsigned short)ptr[0] | ((unsigned short)ptr[1] << 8);
+	//len = swap_short_from_little( ptr );
+	debug( 1, "%04hx, %04hx", (unsigned short)ptr[0], ((unsigned short)ptr[1] << 8) );
+	//len = (unsigned short)(unsigned short)ptr[0] | ((unsigned short)ptr[1] << 8);
+	// TODO: fix this crap
+	memcpy( &len, ptr+1, 1 );
+	//memcpy( &len+1, ptr, 1 );
+	//memcpy( &len, ptr, 2 );
 	ptr += 2;
 
 	debug( 1, "pkt_index = %d, pkt_max = %d, len = %d", pkt_index, pkt_max, len );
-	if ( 1 != pkt_max )
+	if ( 0 != pkt_max )
 	{
 		// not a single packet response or callback
 		debug( 2, "pkt_max %d", pkt_max );
@@ -146,7 +153,7 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 			// to prevent reprocessing when we get the call back
 			// override the packet flag so it looks like a single
 			// packet response
-			rawpkt[9] = 1;
+			rawpkt[8] = '\0';
 		}
 
 		// add the packet recalcing maxes
@@ -228,17 +235,19 @@ int process_haze_packet( struct qserver *server )
 		}
 
 		// skip over the header
+		//server->protocol_version = atoi( val+1 );
 		ptr += 12;
 
+		// 4 * null's signifies the end of a section
+
+		// Basic Info
 		while ( 0 == state && ptr < end )
 		{
-			// server info:
 			// name value pairs null seperated
-			// empty name && value signifies the end of section
 			char *var, *val;
 			int var_len, val_len;
 
-			if ( ptr+4 < end && 0x00 == ptr[0] && 0x01 == ptr[1] && 0x00 == ptr[2] && 0x00 == ptr[3] )
+			if ( ptr+4 <= end && 0x00 == ptr[0] && 0x00 == ptr[1] && 0x00 == ptr[2] && 0x00 == ptr[3] )
 			{
 				// end of rules
 				state++;
@@ -252,7 +261,7 @@ int process_haze_packet( struct qserver *server )
 
 			if ( ptr + 1 > end )
 			{
-				malformed_packet( server, "no rule value" );
+				malformed_packet( server, "no basic value" );
 				cleanup_qserver( server, 1);
 				return 0;
 			}
@@ -261,45 +270,24 @@ int process_haze_packet( struct qserver *server )
 			val_len = strlen( val );
 			ptr += val_len + 1;
 			debug( 2, "var:%s (%d)=%s (%d)\n", var, var_len, val, val_len );
+
 			// Lets see what we've got
-			if ( 0 == strcmp( var, "servername" ) )
+			if ( 0 == strcmp( var, "serverName" ) )
 			{
 				server->server_name = strdup( val );
 			}
-			else if( 0 == strcmp( var, "game_id" ) )
-			{
-				server->game = strdup( val );
-				add_rule( server, var, val, NO_FLAGS );
-			}
-			else if( 0 == strcmp( var, "gamever" ) )
-			{
-				// format:
-				// v1.0
-				server->protocol_version = atoi( val+1 );
-				add_rule( server, var, val, NO_FLAGS );
-			}
-			else if( 0 == strcmp( var, "mapname" ) )
-			{
-				server->map_name = strdup( val );
-			}
 			else if( 0 == strcmp( var, "map" ) )
 			{
-				// BF2MC compatibility
 				server->map_name = strdup( val );
 			}
-			else if( 0 == strcmp( var, "maxplayers" ) )
+			else if( 0 == strcmp( var, "maxPlayers" ) )
 			{
 				server->max_players = atoi( val );
 
 			}
-			else if( 0 == strcmp( var, "numplayers" ) )
+			else if( 0 == strcmp( var, "currentPlayers" ) )
 			{
 				server->num_players = no_players = atoi( val );
-			}
-			else if( 0 == strcmp( var, "hostport" ) )
-			{
-				change_server_port( server, atoi( val ), 0 );
-				add_rule( server, var, val, NO_FLAGS );
 			}
 			else
 			{
@@ -307,13 +295,56 @@ int process_haze_packet( struct qserver *server )
 			}
 		}
 
+		// rules
 		while ( 1 == state && ptr < end )
+		{
+			// name value pairs null seperated
+			char *var, *val;
+			int var_len, val_len;
+
+			if ( ptr+4 <= end && 0x00 == ptr[0] && 0x00 == ptr[1] && 0x00 == ptr[2] && 0x00 == ptr[3] )
+			{
+				// end of basic
+				state++;
+				ptr += 4;
+				break;
+			}
+			var = ptr;
+			var_len = strlen( var );
+			ptr += var_len + 1;
+
+			if ( ptr + 1 > end )
+			{
+				malformed_packet( server, "no basic value" );
+				cleanup_qserver( server, 1);
+				return 0;
+			}
+
+			val = ptr;
+			val_len = strlen( val );
+			ptr += val_len + 1;
+			debug( 2, "var:%s (%d)=%s (%d)\n", var, var_len, val, val_len );
+
+			// add the rule
+			add_rule( server, var, val, NO_FLAGS );
+		}
+
+		// players
+		while ( 2 == state && ptr < end )
 		{
 			// first we have the header
 			char *header = ptr;
 			int head_len = strlen( header );
 			int header_type;
 			ptr += head_len + 1;
+
+			if ( ptr+2 <= end && 0x00 == ptr[0] && 0x00 == ptr[1] )
+			{
+				// end of player headers
+				state++;
+				ptr += 2;
+				break;
+			}
 
 			if ( 0 == head_len )
 			{
@@ -332,6 +363,13 @@ int process_haze_packet( struct qserver *server )
 				return 0;
 			}
 
+		}
+
+		while ( 3 == state && ptr < end )
+		{
+			char *header = ptr;
+			int head_len = strlen( header );
+			int header_type;
 			// the next byte is the starting number
 			total_players = *ptr++;
 
@@ -459,7 +497,7 @@ int process_haze_packet( struct qserver *server )
 			}
 		}
 
-		if ( 2 == state )
+		if ( 3 == state )
 		{
 			no_teams = (unsigned char)*ptr;
 			ptr++;
@@ -468,7 +506,7 @@ int process_haze_packet( struct qserver *server )
 			state = 3;
 		}
 
-		while ( 3 == state && ptr < end )
+		while ( 4 == state && ptr < end )
 		{
 			// first we have the header
 			char *header = ptr;

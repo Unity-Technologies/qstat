@@ -1686,7 +1686,8 @@ void xml_display_server_rules(struct qserver *server)
 	for (; rule != NULL; rule = rule->next)
 	{
 		fprintf(OF, "\t\t\t<rule name=\"%s\">%s</rule>\n", xml_escape(rule->name), xml_escape(rule->value));
-	} fprintf(OF, "\t\t</rules>\n");
+	}
+	fprintf(OF, "\t\t</rules>\n");
 }
 
 void xml_display_q_player_info(struct qserver *server)
@@ -6438,6 +6439,16 @@ int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen, int ch
 				}
 				free(value);
 			}
+			else if ( 0 == strcmp( key, "ui_maxclients" ) )
+			{
+				// COD 4 reports the max_players as max - sv_privateClients, ui_maxclients holds the true max
+				// N.B. This correction will only work if the rules are requested
+				int max_players = atoi(value);
+				if ( max_players > server->max_players )
+				{
+					server->max_players = max_players;
+				}
+			}
 			else if (strcmp(key, "clients") == 0 || strcmp(key, "players") == 0)
 			{
 				// Num Players
@@ -7328,7 +7339,7 @@ int rule_info_packet(struct qserver *server, struct q_packet *pkt, int datalen)
 struct info *player_add_info(struct player *player, char *key, char *value, int flags)
 {
 	struct info *info;
-	if (flags &OVERWITE_DUPLICATES)
+	if ( flags & OVERWITE_DUPLICATES )
 	{
 		for (info = player->info; info; info = info->next)
 		{
@@ -7336,7 +7347,7 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 			{
 				// We should be able to free this
 				free(info->value);
-				if (flags &NO_VALUE_COPY)
+				if ( flags & NO_VALUE_COPY )
 				{
 					info->value = value;
 				}
@@ -7350,7 +7361,7 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 		}
 	}
 
-	if (flags &CHECK_DUPLICATE_RULES)
+	if ( flags & CHECK_DUPLICATE_RULES )
 	{
 		for (info = player->info; info; info = info->next)
 		{
@@ -7361,7 +7372,7 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 		}
 	}
 
-	if (flags &COMBINE_VALUES)
+	if ( flags & COMBINE_VALUES )
 	{
 		for (info = player->info; info; info = info->next)
 		{
@@ -7386,7 +7397,7 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 	}
 
 	info = (struct info*)malloc(sizeof(struct info));
-	if (flags &NO_KEY_COPY)
+	if ( flags & NO_KEY_COPY )
 	{
 		info->name = key;
 	}
@@ -7394,7 +7405,7 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 	{
 		info->name = strdup(key);
 	}
-	if (flags &NO_VALUE_COPY)
+	if ( flags & NO_VALUE_COPY )
 	{
 		info->value = value;
 	}
@@ -7421,15 +7432,15 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
 {
 	struct rule *rule;
-	if (flags &OVERWITE_DUPLICATES)
+	if ( flags & OVERWITE_DUPLICATES )
 	{
 		for (rule = server->rules; rule; rule = rule->next)
 		{
-			if (0 == strcmp(rule->name, key))
+			if ( 0 == strcmp( rule->name, key) )
 			{
 				// We should be able to free this
 				free(rule->value);
-				if (flags &NO_VALUE_COPY)
+				if ( flags & NO_VALUE_COPY )
 				{
 					rule->value = value;
 				}
@@ -7443,7 +7454,7 @@ struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
 		}
 	}
 
-	if (flags &CHECK_DUPLICATE_RULES)
+	if ( flags & CHECK_DUPLICATE_RULES )
 	{
 		for (rule = server->rules; rule; rule = rule->next)
 		{
@@ -7454,7 +7465,7 @@ struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
 		}
 	}
 
-	if (flags &COMBINE_VALUES)
+	if ( flags & COMBINE_VALUES )
 	{
 		for (rule = server->rules; rule; rule = rule->next)
 		{
@@ -7478,7 +7489,7 @@ struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
 	}
 
 	rule = (struct rule*)malloc(sizeof(struct rule));
-	if (flags &NO_KEY_COPY)
+	if ( flags & NO_KEY_COPY )
 	{
 		rule->name = key;
 	}
@@ -7486,7 +7497,8 @@ struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
 	{
 		rule->name = strdup(key);
 	}
-	if (flags &NO_VALUE_COPY)
+
+	if ( flags &NO_VALUE_COPY )
 	{
 		rule->value = value;
 	}
@@ -7565,27 +7577,13 @@ void change_server_port(struct qserver *server, unsigned short port, int force)
 	{
 		// valid port and changing
 		char arg[64];
+		unsigned int ipaddr = ntohl(server->ipaddr);
+
+		// Update the servers hostname as required
+		sprintf(arg, "%d.%d.%d.%d:%hu", ipaddr >> 24, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
 
 		if (show_game_port || force || server->flags &TF_SHOW_GAME_PORT)
 		{
-			unsigned int ipaddr = ntohl(server->ipaddr);
-
-			// Update the servers hostname as required
-			sprintf(arg, "%d.%d.%d.%d:%hu", ipaddr >> 24, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
-			if (0 != strcmp(server->arg, server->host_name))
-			{
-				// hostname isnt the query arg
-				char *colon = strchr(server->host_name, ':');
-				if (colon)
-				{
-					// dns hostname or hostname:port
-					char *hostname = malloc(strlen(server->host_name) + 6);
-					*colon = '\0';
-					sprintf(hostname, "%s:%hu", server->host_name, port);
-					free(server->host_name);
-					server->host_name = hostname;
-				}
-			}
 			// Update the server arg
 			free(server->arg);
 			server->arg = strdup(arg);
@@ -7596,6 +7594,21 @@ void change_server_port(struct qserver *server, unsigned short port, int force)
 
 			// Update the servers port
 			server->port = port;
+		}
+
+		if ( 0 != strcmp(server->arg, server->host_name) )
+		{
+			// hostname isnt the query arg
+			char *colon = strchr(server->host_name, ':');
+			// dns hostname or hostname:port
+			char *hostname = malloc(strlen(server->host_name) + 6);
+			if (colon)
+			{
+				*colon = '\0';
+			}
+			sprintf(hostname, "%s:%hu", server->host_name, port);
+			free(server->host_name);
+			server->host_name = hostname;
 		}
 
 		// Add a rule noting the servers hostport
