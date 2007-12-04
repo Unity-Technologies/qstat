@@ -507,7 +507,7 @@ x
 		}
 		else if ( 5 == version )
 		{
-			if ( 0xa0011 == protocolver )
+			if ( 0xa0000 == protocolver&0x0F0000 && 0xa0011 >= protocolver )
 			{
 				// clantag position
 				ptr++;
@@ -522,12 +522,13 @@ x
 				}
 				player->tribe_tag = strdup( val );
 				ptr++;
+
+				player->type_flag = *ptr++;
+
 				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
 						num_players, player->name, ping, rate, player_id, player->tribe_tag);
 			}
-
-			// Bot flag
-			if ( 0xd0009 == protocolver || 0xd000a == protocolver ) // v13.9 or v13.10
+			else if ( 0xd0009 == protocolver || 0xd000a == protocolver ) // v13.9 or v13.10
 			{
 				// Bot flag is a single bit so need to realign everything from here on in :(
 				int i;
@@ -544,9 +545,9 @@ x
 			else
 			{
 				player->type_flag = *ptr++;
-			}
-			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
 					num_players, player->name, ping, rate, player_id, player->type_flag );
+			}
 		}
 		else
 		{
