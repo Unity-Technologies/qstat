@@ -2,7 +2,7 @@
  * qstat 2.8
  * by Steve Jankowski
  *
- * Gamespy query protocol
+ * Teamspeak 2 query protocol
  * Copyright 2005 Steven Hartland
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms

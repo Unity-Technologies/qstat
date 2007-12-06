@@ -882,6 +882,22 @@ void display_ts2_player_info(struct qserver *server)
 	}
 }
 
+void display_wic_player_info(struct qserver *server)
+{
+	struct player *player;
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t#%-4d score %4d team %12s role %12s %s\n",
+			player->number,
+			player->score,
+			player->team_name,
+			player->tribe_tag ? player->tribe_tag : "",
+			xform_name(player->name, server)
+		);
+	}
+}
+
 void display_tm_player_info(struct qserver *server)
 {
 	struct player *player;
@@ -1511,6 +1527,24 @@ void raw_display_ts2_player_info(struct qserver *server)
 			player->ping, RD,
 			player->skin ? player->skin: "", RD,
 			play_time(player->connect_time, 1)
+		);
+		fputs("\n", OF);
+	}
+}
+
+void raw_display_wic_player_info(struct qserver *server)
+{
+	static const char *fmt = "%s""%s%d""%s%s""%s%s";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, fmt,
+			xform_name(player->name,server), RD,
+			player->score, RD,
+			player->team_name, RD,
+			player->tribe_tag ? player->tribe_tag : ""
 		);
 		fputs("\n", OF);
 	}
@@ -2202,6 +2236,34 @@ void xml_display_ts2_player_info(struct qserver *server)
 		{
 			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
 		}
+
+		xml_display_player_info_info(player);
+		fprintf(OF, "\t\t\t</player>\n");
+	}
+
+	fprintf(OF, "\t\t</players>\n");
+}
+
+void xml_display_wic_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	fprintf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t\t\t<player>\n");
+
+		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		fprintf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name);
+		fprintf(OF, "\t\t\t\t<bot>%d</bot>\n", player->type_flag );
+		if ( player->tribe_tag )
+		{
+			fprintf(OF, "\t\t\t\t<role>%s</role>\n", player->tribe_tag );
+		}
+
 
 		xml_display_player_info_info(player);
 		fprintf(OF, "\t\t\t</player>\n");
@@ -6753,8 +6815,6 @@ void deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 	}
 	else if (strncmp(rawpkt, "getserversResponse", 18) == 0)
 	{
-		static int q3m_debug = 0;
-
 		rawpkt += 18;
 		pktlen -= 18;
 
@@ -6767,10 +6827,7 @@ void deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 		rawpkt++;
 		pktlen--;
 
-		if (q3m_debug)
-		{
-			printf("q3m pktlen %d lastchar %x\n", pktlen, (unsigned int)rawpkt[pktlen - 1]);
-		}
+		debug( 2, "q3m pktlen %d lastchar %x\n", pktlen, (unsigned int)rawpkt[pktlen - 1]);
 
 		server->master_pkt = (char*)realloc(server->master_pkt, server->master_pkt_len + pktlen + 1);
 
@@ -6782,10 +6839,7 @@ void deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 		{
 			decode_q3master_packet(server, rawpkt, pktlen);
 		}
-		if (q3m_debug)
-		{
-			printf("q3m %d servers\n", server->n_servers);
-		}
+		debug( 2, "q3m %d servers\n", server->n_servers);
 
 		return ;
 	}
@@ -6868,10 +6922,13 @@ void decode_q3master_packet(struct qserver *server, char *pkt, int pktlen)
 
 	while (*p && p < &pkt[pktlen - 6])
 	{
+		// IP
 		memcpy(server->master_pkt + server->master_pkt_len, &p[0], 4);
+		// Port
 		memcpy(server->master_pkt + server->master_pkt_len + 4, &p[4], 2);
 		server->master_pkt_len += 6;
 		p += 6;
+		// Sometimes we get some bad IP's so we search for the entry terminator '\' to avoid issues with this
 		while (*p && *p == '\\')
 		{
 			p++;
