@@ -74,6 +74,7 @@ typedef struct _server_type server_type;
 #include "haze.h"
 #include "ts2.h"
 #include "tm.h"
+#include "wic.h"
 
 /*
  * Various magic numbers.
@@ -122,6 +123,7 @@ typedef struct _server_type server_type;
 #define HL2_MASTER_DEFAULT_PORT	27011
 #define TS2_DEFAULT_PORT 51234
 #define TM_DEFAULT_PORT 5000
+#define WIC_DEFAULT_PORT 5000 // Default is actually disabled
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -188,8 +190,9 @@ typedef struct _server_type server_type;
 #define ETQW_SERVER 58
 #define HAZE_SERVER 59
 #define HW_MASTER (60 | MASTER_SERVER)
+#define WIC_PROTOCOL_SERVER 61
 
-#define LAST_BUILTIN_SERVER  60
+#define LAST_BUILTIN_SERVER  61
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -256,6 +259,7 @@ void display_hl2_player_info( struct qserver *server);
 void display_ts2_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
 void display_haze_player_info( struct qserver *server);
+void display_wic_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -281,6 +285,7 @@ void raw_display_hl2_player_info( struct qserver *server);
 void raw_display_ts2_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
 void raw_display_haze_player_info( struct qserver *server);
+void raw_display_wic_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -308,6 +313,7 @@ void xml_display_hl2_player_info( struct qserver *server);
 void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
+void xml_display_wic_player_info( struct qserver *server);
 char *xml_escape( unsigned char*);
 char *str_replace( char *, char *, char *);
 
@@ -333,6 +339,7 @@ void send_doom3_request_packet( struct qserver *server);
 void send_hl2_request_packet( struct qserver *server);
 void send_ts2_request_packet( struct qserver *server);
 void send_tm_request_packet( struct qserver *server);
+void send_wic_request_packet( struct qserver *server);
 
 void deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
@@ -361,6 +368,7 @@ void deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_ts2_packet( struct qserver *server, char *pkt, int pktlen);
 void deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen);
+void deal_with_wic_packet( struct qserver *server, char *pkt, int pktlen);
 
 struct _server_type  {
     int id;
@@ -2806,6 +2814,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_haze_packet,	/* packet_func */
+},
+{
+    /* World in Confict PROTOCOL */
+    WIC_PROTOCOL_SERVER,			/* id */
+    "WICS",							/* type_prefix */
+    "wics",							/* type_string */
+    "-wics",						/* type_option */
+    "World in Conflict",			/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT|TF_QUERY_ARG_REQUIRED|TF_QUERY_ARG,	/* flags */
+    "N/A",							/* game_rule */
+    "WICPROTOCOL",					/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_wic_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_wic_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_wic_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_wic_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_wic_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
