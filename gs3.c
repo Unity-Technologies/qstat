@@ -143,6 +143,7 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( server->server_name == NULL )
 	{
 		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+debug( 1, "PING: %d\n", server->ping_total );
 	}
 	else
 	{
@@ -251,10 +252,18 @@ void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 
 			if ( 0 == strcmp( var, "mapname" ) )
 			{
+				if ( server->map_name )
+				{
+					free( server->map_name );
+				}
 				server->map_name = strdup( val );
 			}
 			else if ( 0 == strcmp( var, "p1073741825" ) )
 			{
+				if ( server->map_name )
+				{
+					free( server->map_name );
+				}
 				server->map_name = strdup( val );
 			}
 			else if ( 0 == strcmp( var, "p1073741826" ) )
@@ -268,16 +277,22 @@ void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 			else if ( 0 == strcmp( var, "p1073741827" ) )
 			{
 				add_rule( server, "description", val, OVERWITE_DUPLICATES );
-				if ( server->server_name )
+#ifndef UT3_PATCHED
+				if ( 0 != strlen( val ) )
 				{
-					char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
-					if ( name )
+					if ( server->server_name )
 					{
-						strcat( name, ": " );
-						strcat( name, val );
-						server->server_name = name;
+						char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+						if ( name )
+						{
+							strcat( name, ": " );
+							strcat( name, val );
+							server->server_name = name;
+						}
 					}
+					server->server_name = strdup( val );
 				}
+#endif
 			}
 			else if ( 0 == strcmp( var, "p268435704" ) )
 			{
@@ -418,10 +433,18 @@ int process_gs3_packet( struct qserver *server )
 	
 						if ( 0 == strcmp( var, "mapname" ) )
 						{
+							if ( server->map_name )
+							{
+								free( server->map_name );
+							}
 							server->map_name = strdup( val );
 						}
 						else if ( 0 == strcmp( var, "p1073741825" ) )
 						{
+							if ( server->map_name )
+							{
+								free( server->map_name );
+							}
 							server->map_name = strdup( val );
 						}
 						else if ( 0 == strcmp( var, "p1073741826" ) )
@@ -434,16 +457,22 @@ int process_gs3_packet( struct qserver *server )
 						}
 						else if ( 0 == strcmp( var, "p1073741827" ) )
 						{
-							if ( server->server_name )
+#ifndef UT3_PATCHED
+							if ( 0 != strlen( val ) )
 							{
-								char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
-								if ( name )
+								if ( server->server_name )
 								{
-									strcat( name, ": " );
-									strcat( name, val );
-									server->server_name = name;
+									char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+									if ( name )
+									{
+										strcat( name, ": " );
+										strcat( name, val );
+										server->server_name = name;
+									}
 								}
+								server->server_name = strdup( val );
 							}
+#endif
 						}
 						else if ( 0 == strcmp( var, "p268435704" ) )
 						{
@@ -486,6 +515,10 @@ int process_gs3_packet( struct qserver *server )
 			else if ( 0 == strcmp( var, "p1073741825" ) )
 			{
 				// UT3 demo compatibility
+				if ( server->map_name )
+				{
+					free( server->map_name );
+				}
 				server->map_name = strdup( val );
 			}
 			else if ( 0 == strcmp( var, "p1073741826" ) )
@@ -502,16 +535,22 @@ int process_gs3_packet( struct qserver *server )
 			{
 				// UT3 demo compatibility
 				add_rule( server, "description", val, OVERWITE_DUPLICATES );
-				if ( server->server_name )
+#ifndef UT3_PATCHED
+				if ( 0 != strlen( val ) )
 				{
-					char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
-					if ( name )
+					if ( server->server_name )
 					{
-						strcat( name, ": " );
-						strcat( name, val );
-						server->server_name = name;
+						char *name = (char*)realloc( server->server_name, strlen( server->server_name ) + strlen( val ) + 3 );
+						if ( name )
+						{
+							strcat( name, ": " );
+							strcat( name, val );
+							server->server_name = name;
+						}
 					}
+					server->server_name = strdup( val );
 				}
+#endif
 			}
 			else if ( 0 == strcmp( var, "p268435704" ) )
 			{
