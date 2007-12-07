@@ -52,16 +52,12 @@ void deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 	char *s, *end, *team = NULL;
 	int mode = server->n_servers, slot, score;
 	char name[256], role[256];
-	debug( 2, "processing..." );
 
-	if ( server->server_name == NULL)
-	{
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-	}
-	else
-	{
-		gettimeofday( &server->packet_time1, NULL);
-	}
+	debug( 2, "processing n_requests %d, retry1 %d, n_retries %d, delta %d", server->n_requests, server->retry1, n_retries, time_delta( &packet_recv_time, &server->packet_time1 ) );
+
+	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+	server->n_requests++;
+	gettimeofday( &server->packet_time1, NULL);
 
 	rawpkt[pktlen]= '\0';
 	end = &rawpkt[pktlen];
