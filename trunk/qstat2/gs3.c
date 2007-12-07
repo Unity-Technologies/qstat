@@ -59,7 +59,8 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	unsigned char flag;
 	unsigned int pkti, final;
 
-	debug( 2, "packet..." );
+	debug( 2, "packet n_requests %d, retry1 %d, n_retries %d, delta %d", server->n_requests, server->retry1, n_retries, time_delta( &packet_recv_time, &server->packet_time1 ) );
+	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
 
 	if ( 7 == pktlen && 0x09 == *ptr )
 	{
@@ -71,7 +72,6 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		server_type *gs3_type = &builtin_types[49];
 		debug( 3, "Attempting gs3 fallback from gs4" );
 		server->retry1++;
-		server->n_packets--;
 		if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
 		{
 			// Static coding failure do it the hard way
@@ -115,18 +115,8 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		memcpy( &pkt_id, ptr, 4 );
 		ptr += 4;
 		server->challenge = atoi( ptr );
-
-		// Correct the stats due to two phase protocol
 		server->retry1++;
-		server->n_packets--;
-		if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
-		{
-			server->n_requests--;
-		}
-		else
-		{
-			server->n_retries--;
-		}
+
 		send_gs3_request_packet( server );
 		return;
 	}
@@ -140,15 +130,6 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	ptr++;
 
 	server->n_servers++;
-	if ( server->server_name == NULL )
-	{
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-debug( 1, "PING: %d\n", server->ping_total );
-	}
-	else
-	{
-		gettimeofday( &server->packet_time1, NULL);
-	}
 
 	// Could check the header here should
 	// match the 4 byte id sent
