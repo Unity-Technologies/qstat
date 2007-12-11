@@ -6494,22 +6494,13 @@ int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen, int ch
 			{
 				// Max Players
 				server->max_players = atoi(value);
+				// Note: COD 4 infoResponse returns max as sv_maxclients - sv_privateClients where as statusResponse returns the true max
 				// MOHAA Q3 protocol max players is always 0
 				if (0 == server->max_players)
 				{
 					server->max_players = - 1;
 				}
 				free(value);
-			}
-			else if ( 0 == strcmp( key, "ui_maxclients" ) )
-			{
-				// COD 4 reports the max_players as max - sv_privateClients, ui_maxclients holds the true max
-				// N.B. This correction will only work if the rules are requested
-				int max_players = atoi(value);
-				if ( max_players > server->max_players )
-				{
-					server->max_players = max_players;
-				}
 			}
 			else if (strcmp(key, "clients") == 0 || strcmp(key, "players") == 0)
 			{
