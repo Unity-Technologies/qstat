@@ -284,13 +284,13 @@ void deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 			for (j = 0; j < MAX_VEHICLE_TYPES; ++j)
 			{
 				snprintf(buf, sizeof(buf), "%hu", swap_short_from_little(ptr));
-				player_add_info(player, vehicle_types[j], buf, 0);
+				player_add_info(player, (char*)vehicle_types[j], buf, 0);
 				ptr += 2;
 			}
 			for (j = 0; j < MAX_STATION_TYPES; ++j)
 			{
 				snprintf(buf, sizeof(buf), "%hu", swap_short_from_little(ptr));
-				player_add_info(player, station_types[j], buf, 0);
+				player_add_info(player, (char*)station_types[j], buf, 0);
 				ptr += 2;
 			}
 
@@ -319,8 +319,6 @@ void deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 			ptr += 4;
 		}
 		++ptr; // record terminated by zero byte
-
-		debug(3, "ptr-start %d, end-ptr %d", ptr-(unsigned char*)rawpkt, end-ptr);
 
 		server->next_rule = NO_SERVER_RULES; // we're done
 		server->next_player_info = server->num_players; // we're done
