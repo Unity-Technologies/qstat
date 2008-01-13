@@ -5578,6 +5578,7 @@ int cleanup_qserver(struct qserver *server, int force)
 	int close_it = force;
 	if (server->server_name == NULL)
 	{
+		debug(3, "server has no name, forcing close");
 		close_it = 1;
 		if (server->type->id &MASTER_SERVER && server->master_pkt != NULL)
 		{
@@ -5591,10 +5592,12 @@ int cleanup_qserver(struct qserver *server, int force)
 	}
 	else if (server->type->flags &TF_SINGLE_QUERY)
 	{
+		debug(3, "TF_SINGLE_QUERY, forcing close");
 		close_it = 1;
 	}
 	else if (server->next_rule == NO_SERVER_RULES && server->next_player_info >= server->num_players)
 	{
+		debug(3, "no server rules and next_player_info >= num_players, forcing close");
 		close_it = 1;
 	}
 
