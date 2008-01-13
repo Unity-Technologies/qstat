@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+// TODO: get rid of this and use send_packet instead, remove n_requests hack from a2s
 int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 {
     int ret = 0;
