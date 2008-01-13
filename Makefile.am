@@ -22,6 +22,7 @@ qstat_SOURCES = \
 	ts2.c ts2.h \
 	tm.c tm.h \
 	haze.c haze.h \
+	ottd.c ottd.h \
 	wic.c wic.h
 
 dist_configfiles_DATA = qstat.cfg

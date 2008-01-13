@@ -75,6 +75,7 @@ typedef struct _server_type server_type;
 #include "ts2.h"
 #include "tm.h"
 #include "wic.h"
+#include "ottd.h"
 
 /*
  * Various magic numbers.
@@ -191,8 +192,10 @@ typedef struct _server_type server_type;
 #define HAZE_SERVER 59
 #define HW_MASTER (60 | MASTER_SERVER)
 #define WIC_PROTOCOL_SERVER 61
+#define OTTD_SERVER 62
+#define OTTD_MASTER (63 | MASTER_SERVER)
 
-#define LAST_BUILTIN_SERVER  61
+#define LAST_BUILTIN_SERVER  63
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -802,6 +805,22 @@ unsigned char farcry_serverquery[] = {
 char ravenshield_serverquery[] = "REPORT";
 
 unsigned char ts2_status_query[] = "si";
+
+char ottd_master_query[] = {
+	0x04, 0x00,	// packet length
+	0x06,		// packet type
+	0x01		// packet version
+};
+
+char ottd_serverinfo[] = {
+	0x03, 0x00,	// packet length
+	0x00,		// packet type
+};
+
+char ottd_serverdetails[] = {
+	0x03, 0x00,	// packet length
+	0x02,		// packet type
+};
 
 server_type builtin_types[] = {
 {
@@ -2848,6 +2867,74 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_wic_packet,			/* packet_func */
+},
+{
+    /* openTTD */
+    OTTD_SERVER,			/* id */
+    "OTTDS",			/* type_prefix */
+    "ottds",			/* type_string */
+    "-ottds",			/* type_option */
+    "OpenTTD",			/* game_name */
+    0,				/* master */
+    3979,			/* default_port */
+    0,				/* port_offset */
+    0,				/* flags */
+    "",				/* game_rule */
+    "OPENTTD",			/* template_var */
+    (char*) &ottd_serverinfo,	/* status_packet */
+    sizeof( ottd_serverinfo),	/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    (char*) &ottd_serverdetails,/* rule_packet */
+    sizeof( ottd_serverdetails),   /* rule_len */
+    NULL,			/* master_packet */
+    0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
+    display_q2_player_info,	/* display_player_func */
+    display_server_rules,	/* display_rule_func */
+    raw_display_q2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,	/* display_raw_rule_func */
+    xml_display_gs2_player_info,/* display_xml_player_func */
+    xml_display_server_rules,	/* display_xml_rule_func */
+    send_ottd_request_packet,	/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_ottd_packet,	/* packet_func */
+},
+{
+    /* openTTD Master */
+    OTTD_MASTER,		/* id */
+    "OTTDM",			/* type_prefix */
+    "ottdm",			/* type_string */
+    "-ottdm",			/* type_option */
+    "openTTD Master",		/* game_name */
+    OTTD_SERVER,		/* master */
+    3978,			/* default_port */
+    0,				/* port_offset */
+    TF_OUTFILE | TF_QUERY_ARG,	/* flags */
+    "",				/* game_rule */
+    "OTTDMASTER",		/* template_var */
+    NULL,			/* status_packet */
+    0,				/* status_len */
+    NULL,			/* player_packet */
+    0,				/* player_len */
+    NULL,			/* rule_packet */
+    0,				/* rule_len */
+    ottd_master_query,	/* master_packet */
+    sizeof(ottd_master_query),/* master_len */
+    NULL,	/* master_protocol */
+    NULL,	/* master_query */
+    display_qwmaster,		/* display_player_func */
+    NULL,	/* display_rule_func */
+    NULL,	/* display_raw_player_func */
+    NULL,	/* display_raw_rule_func */
+    NULL,	/* display_xml_player_func */
+    NULL,	/* display_xml_rule_func */
+    send_ottdmaster_request_packet,/* status_query_func */
+    NULL,			/* rule_query_func */
+    NULL,			/* player_query_func */
+    deal_with_ottdmaster_packet,	/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
