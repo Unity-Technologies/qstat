@@ -507,7 +507,7 @@ x
 		}
 		else if ( 5 == version )
 		{
-			if ( 0xa0000 == protocolver&0x0F0000 && 0xa0011 >= protocolver )
+			if ( 0xa0011 <= protocolver )
 			{
 				// clantag position
 				ptr++;
@@ -522,13 +522,12 @@ x
 				}
 				player->tribe_tag = strdup( val );
 				ptr++;
-
-				player->type_flag = *ptr++;
-
 				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
 						num_players, player->name, ping, rate, player_id, player->tribe_tag);
 			}
-			else if ( 0xd0009 == protocolver || 0xd000a == protocolver ) // v13.9 or v13.10
+
+			// Bot flag
+			if ( 0xd0009 == protocolver || 0xd000a == protocolver ) // v13.9 or v13.10
 			{
 				// Bot flag is a single bit so need to realign everything from here on in :(
 				int i;
@@ -545,9 +544,9 @@ x
 			else
 			{
 				player->type_flag = *ptr++;
-				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
-					num_players, player->name, ping, rate, player_id, player->type_flag );
 			}
+			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
+					num_players, player->name, ping, rate, player_id, player->type_flag );
 		}
 		else
 		{
@@ -560,6 +559,7 @@ x
 
 	if( end - ptr >= 4 )
 	{
+		// OS Mask
 		snprintf(tmp, sizeof(tmp), "0x%X", swap_long_from_little(ptr));
 		add_rule( server, "osmask", tmp, NO_FLAGS );
 		debug( 2, "osmask %s", tmp);
@@ -581,6 +581,42 @@ x
 				// Game State
 				snprintf( tmp, sizeof(tmp), "%hhu", *ptr++ );
 				add_rule( server, "gamestate", tmp, NO_FLAGS );
+
+				if ( end - ptr >= 1 )
+				{
+					// Server Type
+					unsigned char servertype = *ptr++;
+					snprintf( tmp, sizeof(tmp), "%hhu", servertype );
+					add_rule( server, "servertype", tmp, NO_FLAGS );
+
+					switch ( servertype )
+					{
+					case 0: // Regular Server
+						// Interested Clients
+						snprintf( tmp, sizeof(tmp), "%hhu", *ptr++ );
+						add_rule( server, "interested_clients", tmp, NO_FLAGS );
+						break;
+
+					case 1: // TV Server
+						// Connected Clients
+						snprintf( tmp, sizeof(tmp), "%d", swap_long_from_little( ptr ) );
+						ptr+=4;
+						add_rule( server, "interested_clients", tmp, NO_FLAGS );
+
+						// Max Clients
+						snprintf( tmp, sizeof(tmp), "%d", swap_long_from_little( ptr ) );
+						ptr+=4;
+						add_rule( server, "interested_clients", tmp, NO_FLAGS );
+						break;
+
+					default:
+						// Unknown
+						if ( show_errors )
+						{
+							fprintf( stderr, "Unknown server type %d\n", servertype );
+						}
+					}
+				}
 			}
 		}
 	}
