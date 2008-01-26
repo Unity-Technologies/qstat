@@ -317,7 +317,7 @@ void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
-char *xml_escape( unsigned char*);
+char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
 void send_server_request_packet( struct qserver *server);

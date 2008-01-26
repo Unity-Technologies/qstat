@@ -24,7 +24,7 @@
 
 // Format:
 // 1 - 8: Challenge Request / Response
-unsigned char haze_challenge[] = {
+char haze_challenge[] = {
     'f', 'r', 'd', 'c', '_', '_', '_', '_'
 };
 
@@ -335,7 +335,6 @@ int process_haze_packet( struct qserver *server )
 			// first we have the header
 			char *header = ptr;
 			int head_len = strlen( header );
-			int header_type;
 			ptr += head_len + 1;
 
 			if ( ptr+2 <= end && 0x00 == ptr[0] && 0x00 == ptr[1] )
@@ -589,7 +588,7 @@ void send_haze_request_packet( struct qserver *server )
 {
 	char *packet;
 	char query_buf[128];
-	int len;
+	size_t len;
 	unsigned char required = HAZE_BASIC_INFO;
 
 	if ( get_server_rules )
