@@ -2333,7 +2333,7 @@ void xml_display_farcry_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 1)));
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -11603,11 +11603,11 @@ void put_long_little(unsigned val, char *buf)
 
 #define MAXSTRLEN 2048
 
-char *xml_escape(unsigned char *string)
+char *xml_escape(char *string)
 {
 	static unsigned char _buf[4][MAXSTRLEN + 8];
 	static int _buf_index = 0;
-	char *result, *b, *end;
+	unsigned char *result, *b, *end;
 	unsigned int c;
 
 	if (string == NULL)
@@ -11679,7 +11679,7 @@ char *xml_escape(unsigned char *string)
 				}
 				else
 				{
-					b += sprintf(b, "&#%u;", c);
+					b += sprintf( (char *)b, "&#%u;", c);
 				}
 			}
 		}
@@ -11784,7 +11784,7 @@ char *xml_escape(unsigned char *string)
 		}
 	}
 	*b = '\0';
-	return result;
+	return (char*)result;
 }
 
 

@@ -471,7 +471,7 @@ x
 		}
 		ptr += 4;
 
-		if ( ( 0xd0009 == protocolver || 0xd000a == protocolver ) && 0 != num_players ) // v13.9 or v13.10
+		if ( 5 == version && ( ( 0xd0009 == protocolver || 0xd000a == protocolver ) && 0 != num_players ) ) // v13.9 or v13.10
 		{
 			// Fix the packet offset due to the single bit used for bot
 			// which realigns at the byte boundary for the player name
@@ -507,10 +507,11 @@ x
 		}
 		else if ( 5 == version )
 		{
-			if ( 0xa0011 <= protocolver )
+			if ( 0xa0011 <= protocolver ) // clan tag since 10.17
 			{
 				// clantag position
 				ptr++;
+
 				// clantag
 				val = ptr;
 				ptr = memchr(ptr, '\0', end-ptr);
@@ -522,8 +523,6 @@ x
 				}
 				player->tribe_tag = strdup( val );
 				ptr++;
-				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
-						num_players, player->name, ping, rate, player_id, player->tribe_tag);
 			}
 
 			// Bot flag
@@ -545,8 +544,17 @@ x
 			{
 				player->type_flag = *ptr++;
 			}
-			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
+
+			if ( 0xa0011 <= protocolver ) // clan tag since 10.17
+			{
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu, clan %s",
+					num_players, player->name, ping, rate, player_id, player->type_flag, player->tribe_tag);
+			}
+			else
+			{
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
 					num_players, player->name, ping, rate, player_id, player->type_flag );
+			}
 		}
 		else
 		{
