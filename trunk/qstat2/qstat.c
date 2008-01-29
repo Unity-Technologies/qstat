@@ -3053,13 +3053,6 @@ void do_work(void)
 	free(buffer);
 }
 
-#ifndef _WIN32
-void sigpipe(int sig)
-{
-	fprintf(stderr, "SIG: %d\n", sig);
-}
-#endif
-
 int main(int argc, char *argv[])
 {
 	int arg, n_files, i;
@@ -3077,7 +3070,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 #else
-	signal(SIGPIPE, &sigpipe);
+	signal(SIGPIPE, SIG_IGN);
 #endif
 
 	types = &builtin_types[0];
