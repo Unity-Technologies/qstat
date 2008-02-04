@@ -2,6 +2,10 @@
 
 # make snapshot tar archive from git-svn repo
 #
-DATE=`date +%Y%m%d%H%M`
+NAME=qstat
 VERSION=2.11
-git archive --prefix=qstat-${VERSION}_$DATE/ HEAD| bzip2 > qstat-${VERSION}_$DATE.tar.bz2
+LAST_COMMIT=(`git-rev-list --timestamp HEAD^..HEAD`)
+DATE=`date +%Y%m%d%H%M -d "1970-01-01 00:00 UTC $LAST_COMMIT seconds"`
+fn=$NAME-${VERSION}_$DATE.tar.bz2
+git archive --prefix=$NAME-${VERSION}_$DATE/ HEAD | bzip2 > $fn
+echo "version ${VERSION}_$DATE -> $fn"
