@@ -12,21 +12,24 @@
 
 #include "qstat.h"
 
-// NOTE: Windows doesn't support debugging ATM
-#ifdef _WIN32
-	#define debug 0 &&
-#else
-	#ifdef DEBUG
-		#include <stdarg.h>
-		void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
-			GCC_FORMAT_PRINTF(5, 6);
-		#define debug(level,fmt,rem...) \
-		  if( level <= get_debug_level() ) \
-			_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
+
+#ifdef DEBUG
+	#include <stdarg.h>
+	#ifdef _WIN32
+		void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...);
+		#define debug(level,fmt,...) \
+			if( level <= get_debug_level() ) \
+				_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,__VA_ARGS__)
 	#else
-		#define debug(...)
-	#endif
-#endif
+		void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
+		GCC_FORMAT_PRINTF(5, 6);
+		#define debug(level,fmt,rem...) \
+			if( level <= get_debug_level() ) \
+				_debug(__FILE__,__LINE__,__FUNCTION__,level,fmt,##rem)
+	#endif // _WIN32
+#else
+	#define debug(...)
+#endif // DEBUG
 
 void dump_packet(const char* buf, int buflen);
 

@@ -15,6 +15,8 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/param.h>
+#else
+#include <stdarg.h>
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,14 +27,14 @@
 #include <stdarg.h>
 
 #ifdef DEBUG
+
 void _debug(const char* file, int line, const char* function, int level, const char* fmt, ...)
 {
 	va_list ap;
 	char buf[9];
-	time_t now;
+	time_t now = time( NULL );
 
-	now = time(NULL);
-	strftime(buf,9,"%T",localtime(&now));
+	strftime(buf,9,"%H:%M:%S", localtime( &now ) );
 
 	fprintf(stderr, "debug(%d) %s %s:%d %s() - ", level, buf, file, line, function);
 

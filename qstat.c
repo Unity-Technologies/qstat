@@ -25,6 +25,8 @@
 	#endif
 #endif
 
+#define RECV_BUF 204800
+
 char *qstat_version = VERSION;
 
 /* OS/2 defines */
@@ -2936,9 +2938,13 @@ void do_work(void)
 			if (server == NULL)
 			{
 				break;
-			} gettimeofday(&buffer[buffill].recv_time, NULL);
+			}
+
+			gettimeofday(&buffer[buffill].recv_time, NULL);
 
 			pktlen = recvfrom(server->fd, buffer[buffill].data, sizeof(buffer[buffill].data), 0, (struct sockaddr*) &buffer[buffill].addr, (void*) &addrlen);
+
+			debug( 2, "recvfrom: %d", pktlen );
 
 			if (pktlen == SOCKET_ERROR || 0 == pktlen)
 			{
@@ -2972,6 +2978,8 @@ void do_work(void)
 			++buffill;
 		}
 
+		debug( 2, "fill: %d < %d",  buffill, bufsize) ;
+
 		for (i = 0; i < buffill; ++i)
 		{
 			struct qserver *server = buffer[i].server;
@@ -2979,7 +2987,7 @@ void do_work(void)
 			pktlen = buffer[i].len;
 			memcpy(&packet_recv_time, &buffer[i].recv_time, sizeof(packet_recv_time));
 
-			if (get_debug_level() > 0)
+			if (get_debug_level() > 2)
 			{
 				print_packet(server, pkt, pktlen);
 			}
@@ -4376,6 +4384,8 @@ int bind_qserver(struct qserver *server)
 {
 	struct sockaddr_in addr;
 	static int one = 1;
+	int sockbuf = RECV_BUF;
+
 
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
@@ -4479,6 +4489,12 @@ int bind_qserver(struct qserver *server)
 	{
 		int one = 1;
 		setsockopt(server->fd, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
+	}
+
+	if ( server->type->id & MASTER_SERVER )
+	{
+		// Use a large buffer so we dont miss packets
+		setsockopt(server->fd, SOL_SOCKET, SO_RCVBUF, (void*)&sockbuf, sizeof(sockbuf));
 	}
 
 #ifndef _WIN32
@@ -5772,7 +5788,9 @@ struct qserver *get_next_ready_server()
 	while (select_cursor < max_connmap && (connmap[select_cursor] == NULL || !FD_ISSET(connmap[select_cursor]->fd, &select_read_fds)))
 	{
 		select_cursor++;
-	} if (select_cursor >= max_connmap)
+	}
+
+	if (select_cursor >= max_connmap)
 	{
 		return NULL;
 	}
@@ -6903,22 +6921,36 @@ void deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 void decode_q3master_packet(struct qserver *server, char *pkt, int pktlen)
 {
 	char *p;
+	char *end = pkt + pktlen;
+	char *last = end - 6;
 
 	pkt[pktlen] = 0;
 	p = pkt;
 
-	while (*p && p < &pkt[pktlen - 6])
+	while ( p < last )
 	{
-		// IP
-		memcpy(server->master_pkt + server->master_pkt_len, &p[0], 4);
-		// Port
-		memcpy(server->master_pkt + server->master_pkt_len + 4, &p[4], 2);
+		// IP & Port
+		memcpy(server->master_pkt + server->master_pkt_len, &p[0], 6);
 		server->master_pkt_len += 6;
 		p += 6;
 		// Sometimes we get some bad IP's so we search for the entry terminator '\' to avoid issues with this
-		while (*p && *p == '\\')
+		while ( p < end && *p != '\\' )
 		{
 			p++;
+		}
+
+		if ( p < end )
+		{
+			// Skip over the '\'
+			p++;
+		}
+
+		if ( *p && p + 3 == end && 0 == strncmp( "EOF", p, 3 ) )
+		{
+			// Last packet ID ( seen in COD4 )
+			server->n_servers = server->master_pkt_len / 6;
+			server->retry1 = 0; // received at least one packet so no need to retry
+			cleanup_qserver(server, 1);
 		}
 	}
 
