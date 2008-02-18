@@ -4443,7 +4443,10 @@ int bind_qserver(struct qserver *server)
 
 	if (server->flags &FLAG_BROADCAST)
 	{
-		setsockopt(server->fd, SOL_SOCKET, SO_BROADCAST, (char*) &one, sizeof(one));
+		if ( -1 == setsockopt(server->fd, SOL_SOCKET, SO_BROADCAST, (char*) &one, sizeof(one)) )
+		{
+			perror( "Failed to set broadcast" );
+		}
 	}
 
 	if (server->type->id != Q2_MASTER && !(server->flags &FLAG_BROADCAST))
@@ -4488,13 +4491,19 @@ int bind_qserver(struct qserver *server)
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
 		int one = 1;
-		setsockopt(server->fd, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
+		if ( -1 == setsockopt(server->fd, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one)) )
+		{
+			perror( "Failed to set TCP no delay" );
+		}
 	}
 
 	if ( server->type->id & MASTER_SERVER )
 	{
 		// Use a large buffer so we dont miss packets
-		setsockopt(server->fd, SOL_SOCKET, SO_RCVBUF, (void*)&sockbuf, sizeof(sockbuf));
+		if ( -1 == setsockopt(server->fd, SOL_SOCKET, SO_RCVBUF, (void*)&sockbuf, sizeof(sockbuf)) )
+		{
+			perror( "Failed to set socket buffer" );
+		}
 	}
 
 #ifndef _WIN32
