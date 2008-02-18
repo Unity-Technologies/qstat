@@ -462,14 +462,17 @@ x
 		player->ping = ping;
 		ptr += 2;
 
-		// Rate
-		rate = swap_long_from_little(ptr);
+		if ( 5 != version || 0xa0013 < protocolver )
 		{
-			char buf[16];
-			snprintf(buf, sizeof(buf), "%u", rate);
-			player_add_info(player, "rate", buf, NO_FLAGS);
+			// Rate
+			rate = swap_long_from_little(ptr);
+			{
+				char buf[16];
+				snprintf(buf, sizeof(buf), "%u", rate);
+				player_add_info(player, "rate", buf, NO_FLAGS);
+			}
+			ptr += 4;
 		}
-		ptr += 4;
 
 		if ( 5 == version && ( ( 0xd0009 == protocolver || 0xd000a == protocolver ) && 0 != num_players ) ) // v13.9 or v13.10
 		{
