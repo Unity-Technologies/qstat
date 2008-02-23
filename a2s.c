@@ -159,12 +159,12 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		// packetId
 		if ( 1 == status->type )
 		{
-			// HL2 format
+			// HL1 format
 			// The lower four bits represent the number of packets (2 to 15) and
 			// the upper four bits represent the current packet starting with 0
 			pkt_max = ((unsigned char)*pkt) & 15;
 			pkt_index = ((unsigned char)*pkt) >> 4;
-			debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
+			debug( 3, "packetid[1]: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
 			pkt++;
 			pktlen -= 9;
 		}
@@ -172,14 +172,15 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		{
 			// HL2 format
 			// The next two bytes are:
-			// 1. the max packets sent
-			// 2. the index of this packet starting from 0
+			// 1. the max packets sent ( byte )
+			// 2. the index of this packet starting from 0 ( byte )
+			// 3. Size of the split ( short )
 			if(pktlen < 10) goto out_too_short;
 			pkt_max = ((unsigned char)*pkt);
 			pkt_index = ((unsigned char)*(pkt+1));
-			debug( 3, "packetid: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
-			pkt+=2;
-			pktlen -= 10;
+			debug( 3, "packetid[2]: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
+			pkt+=4;
+			pktlen -= 12;
 		}
 		else
 		{
@@ -229,6 +230,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pktlen -= 4;
 
 	pktlen -= 1;
+	debug( 2, "A2S type = %hhd", *pkt );
 	switch(*pkt++)
 	{
 	case A2S_CHALLENGERESPONSE:
