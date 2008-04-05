@@ -68,6 +68,7 @@ typedef struct _server_type server_type;
 #include "ut2004.h"
 #include "doom3.h"
 #include "a2s.h"
+#include "fl.h"
 #include "gps.h"
 #include "gs2.h"
 #include "gs3.h"
@@ -125,6 +126,7 @@ typedef struct _server_type server_type;
 #define TS2_DEFAULT_PORT 51234
 #define TM_DEFAULT_PORT 5000
 #define WIC_DEFAULT_PORT 5000 // Default is actually disabled
+#define FL_DEFAULT_PORT 5478
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -194,8 +196,9 @@ typedef struct _server_type server_type;
 #define WIC_PROTOCOL_SERVER 61
 #define OTTD_SERVER 62
 #define OTTD_MASTER (63 | MASTER_SERVER)
+#define FL_SERVER	64
 
-#define LAST_BUILTIN_SERVER  63
+#define LAST_BUILTIN_SERVER  64
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -2935,6 +2938,40 @@ server_type builtin_types[] = {
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_ottdmaster_packet,	/* packet_func */
+},
+{
+    /* Frontlines-Fuel of War */
+    FL_SERVER,						/* id */
+    "FLS",							/* type_prefix */
+    "fls",							/* type_string */
+    "-fls",							/* type_option */
+    "Frontlines-Fuel of War",		/* game_name */
+    0,								/* master */
+    FL_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "gamedir",						/* game_rule */
+    "FLS",							/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_hl2_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_fl_request_packet,			/* status_query_func */
+    send_fl_rule_request_packet,	/* rule_query_func */
+	NULL,							/* player_query_func */
+    deal_with_fl_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
