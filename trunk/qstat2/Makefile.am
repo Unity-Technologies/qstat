@@ -23,7 +23,8 @@ qstat_SOURCES = \
 	tm.c tm.h \
 	haze.c haze.h \
 	ottd.c ottd.h \
-	wic.c wic.h
+	wic.c wic.h \
+	fl.c fl.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
