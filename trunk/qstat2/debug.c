@@ -109,7 +109,13 @@ void dump_packet(const char* buf, int buflen)
 }
 
 void
-print_packet( struct qserver *server, const char *buf, int buflen)
+print_packet( struct qserver *server, const char *buf, int buflen )
+{
+	output_packet( server, buf, buflen, 0 );
+}
+
+void
+output_packet( struct qserver *server, const char *buf, int buflen, int to )
 {
 	static char *hex= "0123456789abcdef";
 	unsigned char *p= (unsigned char*)buf;
@@ -117,27 +123,40 @@ print_packet( struct qserver *server, const char *buf, int buflen)
 	char line[256];
 
 	if ( server != NULL)
-	fprintf( stderr, "FROM %s len %d\n", server->arg, buflen );
-
-	for ( i= buflen; i ; offset+= 16)  {
-	memset( line, ' ', 256);
-	h= 0;
-	h+= sprintf( line, "%5d:", offset);
-	a= astart = h + 16*2 + 16/4 + 2;
-	for ( b=16; b && i; b--, i--, p++)  {
-		if ( (b & 3) == 0)
-		line[h++]= ' ';
-		line[h++]= hex[*p >> 4];
-		line[h++]= hex[*p & 0xf];
-		if ( isprint( *p))
-		line[a++]= *p;
-		else
-		line[a++]= '.';
-		if((a-astart)==8) line[a++] = ' ';
+	{
+		fprintf( stderr, "%s %s len %d\n", ( to ) ? "TO" : "FROM", server->arg, buflen );
 	}
-	line[a]= '\0';
-	fputs( line, stderr);
-	fputs( "\n", stderr);
+
+	for ( i= buflen; i ; offset+= 16)
+	{
+		memset( line, ' ', 256);
+		h= 0;
+		h+= sprintf( line, "%5d:", offset);
+		a= astart = h + 16*2 + 16/4 + 2;
+		for ( b=16; b && i; b--, i--, p++)
+		{
+			if ( (b & 3) == 0)
+			{
+				line[h++]= ' ';
+			}
+			line[h++]= hex[*p >> 4];
+			line[h++]= hex[*p & 0xf];
+			if ( isprint( *p))
+			{
+				line[a++]= *p;
+			}
+			else
+			{
+				line[a++]= '.';
+			}
+			if((a-astart)==8)
+			{
+				line[a++] = ' ';
+			}
+		}
+		line[a]= '\0';
+		fputs( line, stderr);
+		fputs( "\n", stderr);
 	}
 	fputs( "\n", stderr);
 }

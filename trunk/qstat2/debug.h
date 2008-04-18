@@ -40,5 +40,6 @@ int get_debug_level (void);
 void set_debug_level (int level);
 
 void print_packet( struct qserver *server, const char *buf, int buflen );
+void output_packet( struct qserver *server, const char *buf, int buflen, int to );
 
 #endif

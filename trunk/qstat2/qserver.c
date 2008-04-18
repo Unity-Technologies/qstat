@@ -25,26 +25,36 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 {
     int ret = 0;
 
-    if(data)
+    if( data )
     {
-	if ( server->flags & FLAG_BROADCAST)
-	    ret = send_broadcast(server, data, len);
-	else
-	    ret = send( server->fd, data, len, 0);
+		debug( 2, "[%s] send", server->type->type_prefix );
+		if( 4 <= get_debug_level() )
+		{
+			output_packet( server, data, len, 1 );
+		}
 
-	if ( ret == SOCKET_ERROR)
-	{
-	    perror( "send");
-	}
+		if ( server->flags & FLAG_BROADCAST)
+		{
+			ret = send_broadcast(server, data, len);
+		}
+		else
+		{
+			ret = send( server->fd, data, len, 0);
+		}
+
+		if ( ret == SOCKET_ERROR)
+		{
+			perror( "send");
+		}
     }
 
     if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST)
     {
-	gettimeofday( &server->packet_time1, NULL);
+		gettimeofday( &server->packet_time1, NULL);
     }
     else
     {
-	server->n_retries++;
+		server->n_retries++;
     }
 
     server->retry1--;
@@ -119,8 +129,9 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 	debug( 2, "[%s] send", server->type->type_prefix );
 	if( 4 <= get_debug_level() )
 	{
-		print_packet( server, data, len );
+		output_packet( server, data, len, 1 );
 	}
+
     if( data )
     {
 		if ( server->flags & FLAG_BROADCAST )
