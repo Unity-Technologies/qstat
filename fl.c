@@ -12,7 +12,12 @@
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#else
+#include <winsock.h>
 #endif
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -47,7 +52,7 @@ void send_fl_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
-	if( -1 == qserver_send_initial(server, FL_INFO, sizeof(FL_INFO)) )
+	if( -1 == qserver_send_initial(server, FL_INFO, sizeof(FL_INFO) - 1) )
 	{
 		cleanup_qserver(server, 1);
 		return;
@@ -55,26 +60,23 @@ void send_fl_request_packet(struct qserver *server)
 
 	status->sent_info = 1;
 	status->type = 0;
-
-	/*
-	TODO: uncomment when its supported
-	if(get_server_rules || get_player_info)
-	{
-		server->next_rule = ""; // trigger calling send_fl_rule_request_packet
-	}
-	*/
 }
 
 void send_fl_rule_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
-	// TODO: remove when its supported
-	goto error;
+	if ( 1 >= status->type )
+	{
+		// Not supported
+		cleanup_qserver(server, 1);
+		return;
+	}
 
 	if(!get_server_rules && !get_player_info)
 	{
-		goto error;
+		cleanup_qserver(server, 1);
+		return;
 	}
 
 	do
@@ -83,7 +85,10 @@ void send_fl_rule_request_packet(struct qserver *server)
 		{
 			debug(3, "sending challenge");
 			if(qserver_send_initial(server, FL_GETCHALLENGE, sizeof(FL_GETCHALLENGE)-1) == -1)
-				goto error;
+			{
+				cleanup_qserver(server, 1);
+				return;
+			}
 			status->sent_challenge = 1;
 			break;
 		}
@@ -93,7 +98,10 @@ void send_fl_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(FL_RULES)-1, &status->challenge, 4);
 			debug(3, "sending rule query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-				goto error;
+			{
+				cleanup_qserver(server, 1);
+				return;
+			}
 			status->sent_rules = 1;
 			break;
 		}
@@ -103,7 +111,10 @@ void send_fl_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(FL_PLAYER)-1, &status->challenge, 4);
 			debug(3, "sending player query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-				goto error;
+			{
+				cleanup_qserver(server, 1);
+				return;
+			}
 			status->sent_player = 1;
 			break;
 		}
@@ -117,9 +128,6 @@ void send_fl_rule_request_packet(struct qserver *server)
 	} while(1);
 
 	return;
-
-error:
-	cleanup_qserver(server, 1);
 }
 
 void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -139,54 +147,49 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	if(pktlen < 5) goto out_too_short;
 
-	if( 0 == memcmp(pkt, "\xFE\xFF\xFF\xFF", 4) )
+	if( 0 == memcmp(pkt, "\xFF\xFF\xFF\xFE", 4) )
 	{
 		// fragmented packet
 		unsigned char pkt_index, pkt_max;
-		unsigned int pkt_id = 1;
+		unsigned int pkt_id;
 		SavedData *sdata;
 
 		if(pktlen < 9) goto out_too_short;
 
-		pkt += 4;
-
 		// format:
-		// int sequenceNumber
-		// byte packetId
-		// packetId format:
-		// bits 0 - 3 = packets position in the sequence ( 0 .. N - 1 )
-		// bits 4 - 7 = total number of packets
+		// int Header
+		// int RequestId
+		// byte PacketNumber
+		// byte NumPackets
+		// Short SizeOfPacketSplits
 
-		// sequenceId
-		memcpy( &pkt_id, pkt, 4 );
-		debug( 3, "sequenceId: %d", pkt_id );
+		// Header
 		pkt += 4;
 
-		// packetId
-		if ( 1 == status->type )
-		{
-			// FL format
-			// The next two bytes are:
-			// 1. the max packets sent ( byte )
-			// 2. the index of this packet starting from 0 ( byte )
-			// 3. Size of the split ( short )
-			if(pktlen < 10) goto out_too_short;
-			pkt_max = ((unsigned char)*pkt);
-			pkt_index = ((unsigned char)*(pkt+1));
-			debug( 3, "packetid[2]: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
-			pkt+=4;
-			pktlen -= 12;
-		}
-		else
-		{
-			malformed_packet( server, "Unable to determine packet format" );
-			cleanup_qserver( server, 1 );
-			return;
-		}
+		// RequestId
+		pkt_id = ntohl( *(long *)pkt );
+		debug( 3, "RequestID: %d", pkt_id );
+		pkt += 4;
+
+		// The next two bytes are:
+		// 1. the max packets sent ( byte )
+		// 2. the index of this packet starting from 0 ( byte )
+		// 3. Size of the split ( short )
+		if(pktlen < 10) goto out_too_short;
+
+		// PacketNumber
+		pkt_index = ((unsigned char)*pkt);
+
+		// NumPackates
+		pkt_max = ((unsigned char)*(pkt+1));
+
+		// SizeOfPacketSplits
+		debug( 3, "packetid[2]: 0x%hhx => idx: %hhu, max: %hhu", *pkt, pkt_index, pkt_max );
+		pkt+=4;
+		pktlen -= 12;
 
 		// pkt_max is the total number of packets expected
 		// pkt_index is a bit mask of the packets received.
-
 		if ( server->saved_data.data == NULL )
 		{
 			sdata = &server->saved_data;
@@ -202,30 +205,32 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		sdata->pkt_max = pkt_max;
 		sdata->pkt_id = pkt_id;
 		sdata->datalen = pktlen;
-		sdata->data= (char*) malloc( sdata->datalen);
+		sdata->data= (char*)malloc( pktlen );
 		if ( NULL == sdata->data )
 		{
 			malformed_packet(server, "Out of memory");
 			cleanup_qserver( server, 1 );
 			return;
 		}
-		memcpy( sdata->data, pkt, sdata->datalen);
+
+		memcpy( sdata->data, pkt, sdata->datalen );
 
 		// combine_packets will call us recursively
 		combine_packets( server );
 		return;
 	}
-	else if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
+	else if ( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
 	{
 		malformed_packet(server, "invalid packet header");
-		goto out_error;
+		cleanup_qserver(server, 1);
+		return;
 	}
 
 	pkt += 4;
 	pktlen -= 4;
 
 	pktlen -= 1;
-	debug( 2, "FL type = %hhd", *pkt );
+	debug( 2, "FL type = 0x%x", *pkt );
 	switch(*pkt++)
 	{
 	case FL_CHALLENGERESPONSE:
@@ -246,10 +251,15 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	case FL_INFORESPONSE:
 		if(pktlen < 1) goto out_too_short;
-		status->type = 1;
+		status->type = *pkt;
+		if ( *pkt > 1 && ( get_server_rules || get_player_info ) )
+		{
+			 server->next_rule = ""; // trigger calling send_fl_rule_request_packet
+		}
 		snprintf(buf, sizeof(buf), "%hhX", *pkt);
 		add_rule(server, "protocol", buf, 0);
-		++pkt; --pktlen;
+		pktlen--;
+		pkt++;
 
 		// ServerName
 		str = memchr(pkt, '\0', pktlen);
@@ -365,10 +375,9 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		break;
 
 	case FL_RULESRESPONSE:
-
 		if(pktlen < 2) goto out_too_short;
 
-		cnt = (unsigned char)pkt[0] + ((unsigned char)pkt[1]<<8);
+		cnt = ((unsigned char)pkt[0] << 8 ) + ((unsigned char)pkt[1]);
 		pktlen -= 2;
 		pkt += 2;
 
@@ -422,9 +431,11 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 			const char* name;
 			struct player* p;
 
+			// Index
 			idx = *pkt++;
 			--pktlen;
 
+			// PlayerName
 			str = memchr(pkt, '\0', pktlen);
 			if(!str) break;
 			name = pkt;
@@ -437,12 +448,36 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 			p = add_player(server, server->n_player_info);
 			if(p)
 			{
+				union
+				{
+					int i;
+					float fl;
+				} temp;
+
 				p->name = strdup(name);
-				p->frags = swap_long_from_little(pkt);
-				p->connect_time = swap_float_from_little(pkt+4);
+
+				// Score
+				p->frags = ntohl( *(unsigned int *)pkt );
+
+				// TimeConnected
+				temp.i = ntohl( *(unsigned int *)(pkt+4) );
+				p->connect_time = temp.fl;
+
+				// Ping
+				p->ping = 0;
+				p->ping = ntohs( *(unsigned int *)(pkt+8) );
+				//((unsigned char*)&p->ping)[0] = pkt[9];
+				//((unsigned char*)&p->ping)[1] = pkt[8];
+		
+				// ProfileId
+				//p->profileid = ntohl( *(unsigned int *)pkt+10 );
+
+				// Team
+				p->team = *(pkt+14);
+//fprintf( stderr, "Player: '%s', Frags: %u, Time: %u, Ping: %hu, Team: %d\n", p->name, p->frags,  p->connect_time, p->ping, p->team );
 			}
-			pktlen -= 8;
-			pkt += 8;
+			pktlen -= 15;
+			pkt += 15;
 		}
 
 #if 0 // seems to be a rather normal condition
@@ -462,7 +497,8 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	default:
 		malformed_packet(server, "invalid packet id %hhx", *--pkt);
-		goto out_error;
+		cleanup_qserver(server, 1);
+		return;
 	}
 
 	if(
@@ -478,9 +514,6 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 out_too_short:
 	malformed_packet(server, "packet too short");
-
-out_error:
-	cleanup_qserver(server, 1);
 }
 
 // vim: sw=4 ts=8 noet
