@@ -157,6 +157,15 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 		gettimeofday( &server->packet_time1, NULL);
 	}
 
+	// Terminate the packet data 
+	tmpp = (char*)realloc( rawpkt, pktlen + 1 );
+	if ( NULL == tmpp )
+	{
+		debug( 0, "Failed to realloc memory for packet terminator\n" );
+		cleanup_qserver( server, 1);
+		return;
+	}
+	rawpkt = tmpp;
 	rawpkt[pktlen]= '\0';
 	end = &rawpkt[pktlen];
 
@@ -223,7 +232,7 @@ void deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 			method_response++;
 		}
 
-		if ( NULL != value )
+		if ( NULL != value && NULL != key )
 		{
 			switch( method_response )
 			{
