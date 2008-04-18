@@ -266,6 +266,7 @@ void display_ts2_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
 void display_haze_player_info( struct qserver *server);
 void display_wic_player_info( struct qserver *server);
+void display_fl_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -292,6 +293,7 @@ void raw_display_ts2_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
 void raw_display_haze_player_info( struct qserver *server);
 void raw_display_wic_player_info( struct qserver *server);
+void raw_display_fl_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -320,6 +322,7 @@ void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
+void xml_display_fl_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -2962,11 +2965,11 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_hl2_player_info,		/* display_player_func */
+    display_fl_player_info,		/* display_player_func */
     display_server_rules,			/* display_rule_func */
-    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_fl_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_fl_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_fl_request_packet,			/* status_query_func */
     send_fl_rule_request_packet,	/* rule_query_func */

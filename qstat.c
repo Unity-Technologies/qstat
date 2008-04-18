@@ -699,6 +699,17 @@ void display_halflife_player_info(struct qserver *server)
 	}
 }
 
+void display_fl_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t%3d frags %8s %8s %s\n", player->frags, ping_time(player->ping), play_time(player->connect_time, 1), xform_name(player->name, server));
+	}
+}
+
 void display_tribes_player_info(struct qserver *server)
 {
 	struct player *player;
@@ -1308,6 +1319,26 @@ void raw_display_halflife_player_info(struct qserver *server)
 	}
 }
 
+void raw_display_fl_player_info(struct qserver *server)
+{
+	static char fmt[24] = "%s""%s%d""%s%s""%s%d""%s%d";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(
+			OF, fmt,
+			xform_name(player->name, server), RD,
+			player->frags, RD,
+			play_time(player->connect_time, 1), RD,
+			player->ping, RD,
+			player->team
+		);
+		fputs("\n", OF);
+	}
+}
+
 void raw_display_tribes_player_info(struct qserver *server)
 {
 	static char fmt[24] = "%s""%s%d""%s%d""%s%d""%s%d";
@@ -1740,7 +1771,7 @@ void xml_display_q_player_info(struct qserver *server)
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<address>%s</address>\n", xml_escape(player->address));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		if (color_names)
 		{
@@ -1772,7 +1803,7 @@ void xml_display_qw_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		if (color_names)
 		{
@@ -1812,7 +1843,8 @@ void xml_display_q2_player_info(struct qserver *server)
 		if (server->flags &FLAG_PLAYER_TEAMS)
 		{
 			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
-		} fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		}
+		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -1897,7 +1929,30 @@ void xml_display_halflife_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+
+		fprintf(OF, "\t\t\t</player>\n");
+	}
+
+	fprintf(OF, "\t\t</players>\n");
+}
+
+void xml_display_fl_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	fprintf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t\t\t<player>\n");
+
+		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -2028,7 +2083,7 @@ void xml_display_ravenshield_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -2133,7 +2188,7 @@ void xml_display_doom3_player_info(struct qserver *server)
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
@@ -2236,7 +2291,7 @@ void xml_display_ts2_player_info(struct qserver *server)
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
@@ -2290,7 +2345,7 @@ void xml_display_tm_player_info(struct qserver *server)
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
@@ -2314,7 +2369,7 @@ void xml_display_savage_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -2335,7 +2390,7 @@ void xml_display_farcry_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 1)));
+		fprintf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
@@ -8577,7 +8632,8 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 			if (big_endian)
 			{
 				player->frags = swap_long(&player->frags);
-			} player->connect_time = swap_float_from_little(&temp);
+			}
+			player->connect_time = swap_float_from_little(&temp);
 			*last_player = player;
 			last_player = &player->next;
 		}
