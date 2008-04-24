@@ -104,7 +104,7 @@ send_broadcast( struct qserver *server, const char *pkt, size_t pktlen)
 		(struct sockaddr *) &addr, sizeof(addr));
 }
 
-void register_send( struct qserver *server )
+int register_send( struct qserver *server )
 {
     if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
 	{
@@ -120,6 +120,8 @@ void register_send( struct qserver *server )
 	gettimeofday( &server->packet_time1, NULL);
     server->retry1--;
     server->n_packets++;
+	
+	return 1;
 }
 
 int send_packet( struct qserver* server, const char* data, size_t len )

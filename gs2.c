@@ -20,7 +20,7 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
-void send_gs2_request_packet( struct qserver *server )
+int send_gs2_request_packet( struct qserver *server )
 {
 	// The below should work but seems to make no difference to what some
 	// servers send
@@ -35,13 +35,13 @@ void send_gs2_request_packet( struct qserver *server )
 		server->type->status_packet[9] = 0x00;
 	}
 
-	send_packet( server, server->type->status_packet, server->type->status_len );
+	return send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 
 // See the following for protocol details:
 // http://dev.kquery.com/index.php?article=42
-void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -57,8 +57,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( pktlen < 15 )
 	{
 		// invalid packet?
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	server->n_servers++;
@@ -95,8 +94,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				malformed_packet( server, "no player headers" );
 			}
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 		ptr += var_len + 1;
 
@@ -159,8 +157,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be player headers here as we
 		// requested it
 		malformed_packet( server, "no player headers" );
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	// player info header
@@ -174,8 +171,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( ptr >= end )
 	{
 		malformed_packet( server, "no player headers" );
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	while ( 1 == type && ptr < end )
@@ -193,8 +189,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				free( headers );
 			}
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		headers = tmpp;
@@ -216,8 +211,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be player info here as we
 		// requested it
 		malformed_packet( server, "no players" );
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	while( 2 == type && ptr < end )
@@ -230,8 +224,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( 0 != no_players )
 			{
 				malformed_packet( server, "no players" );
-				cleanup_qserver( server, 1);
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 		}
 		else
@@ -247,8 +240,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short player detail" );
-					cleanup_qserver( server, 1);
-					return;
+					return cleanup_qserver( server, FORCE );
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -297,8 +289,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( total_players > no_players )
 		{
 			malformed_packet( server, "to many players %d > %d", total_players, no_players );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// check for end of player info
@@ -307,8 +298,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( total_players != no_players )
 			{
 				malformed_packet( server, "bad number of players %d != %d", total_players, no_players );
-				cleanup_qserver( server, 1);
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 			type = 3;
 			ptr++;
@@ -320,8 +310,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be team info here as we
 		// requested it
 		malformed_packet( server, "no teams" );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	no_teams = (unsigned char)*ptr;
@@ -345,8 +334,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				free( headers );
 			}
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		headers = tmpp;
@@ -367,8 +355,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be team info here as we
 		// requested it
 		malformed_packet( server, "no teams" );
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	while( 4 == type && ptr < end )
@@ -383,8 +370,7 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( ptr >= end )
 			{
 				malformed_packet( server, "short team detail" );
-				cleanup_qserver( server, 1);
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 			val = ptr;
 			val_len = strlen( val );
@@ -403,11 +389,9 @@ void deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( total_teams > no_teams )
 		{
 			malformed_packet( server, "to many teams" );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 	}
 
-	cleanup_qserver( server, 1);
-	return;
+	return cleanup_qserver( server, FORCE );
 }

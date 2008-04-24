@@ -13,8 +13,8 @@
 #include "qserver.h"
 
 // Packet processing methods
-void deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen );
-void send_tm_request_packet( struct qserver *server );
+int deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen );
+int send_tm_request_packet( struct qserver *server );
 
 #endif
 

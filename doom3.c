@@ -131,7 +131,7 @@ static char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigne
 	return buf;
 }
 
-void send_doom3master_request_packet( struct qserver *server)
+int send_doom3master_request_packet( struct qserver *server)
 {
 	int rc = 0;
 	int packet_len = -1;
@@ -160,9 +160,11 @@ void send_doom3master_request_packet( struct qserver *server)
 	}
 	server->retry1--;
 	server->n_packets++;
+
+	return 1;
 }
 
-void send_quake4master_request_packet( struct qserver *server)
+int send_quake4master_request_packet( struct qserver *server)
 {
 	int rc = 0;
 	int packet_len = -1;
@@ -191,17 +193,17 @@ void send_quake4master_request_packet( struct qserver *server)
 	}
 	server->retry1--;
 	server->n_packets++;
+
+	return 1;
 }
 
 static const char doom3_masterresponse[] = "\xFF\xFFservers";
 
-void
-deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
 	char* pkt, *dest;
 	int len;
-	server->ping_total+= time_delta( &packet_recv_time,
-		&server->packet_time1);
+	server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
 
 	if ( pktlen < sizeof(doom3_masterresponse) + 6 // at least one server
 			|| (pktlen - sizeof(doom3_masterresponse)) % 6
@@ -210,8 +212,7 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 		server->server_name= SERVERERROR;
 		server->master_pkt_len = 0;
 		malformed_packet(server, "too short or invalid response");
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	server->retry1 = 0; // received at least one packet so no need to retry
@@ -239,12 +240,14 @@ deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 	server->n_servers= server->master_pkt_len / 6;
 
 	debug(2, "%d servers added", server->n_servers);
+
+	return 0;
 }
 
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
 static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
 
-static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
+static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -273,8 +276,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		memcmp( doom3_inforesponse, ptr, sizeof(doom3_inforesponse)) != 0 )
 	{
 		malformed_packet(server, "too short or invalid response");
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 	ptr += sizeof(doom3_inforesponse);
 
@@ -313,8 +315,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 	if( protocolver >> 16 != version )
 	{
 		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, version );
-		cleanup_qserver( server, 1);
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 */
 
@@ -331,8 +332,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		if ( !ptr )
 		{
 			malformed_packet( server, "no rule key" );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 		keylen = ptr - key;
 
@@ -341,8 +341,7 @@ static void _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int p
 		if ( !ptr )
 		{
 			malformed_packet( server, "no rule value" );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 		vallen = ptr - val;
 		++ptr;
@@ -417,8 +416,7 @@ x
 		// no more info should be player headers here as we
 		// requested it
 		malformed_packet( server, "player info missing" );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	// now each player details
@@ -441,16 +439,14 @@ x
 		{
 			// run off the end and shouldnt have
 			malformed_packet( server, "player info too short" );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		player = add_player( server, player_id );
 		if(!player)
 		{
 			malformed_packet( server, "duplicate player id" );
-			cleanup_qserver( server, 1 );
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// doesnt support score so set a sensible default
@@ -487,8 +483,7 @@ x
 		if ( !ptr )
 		{
 			malformed_packet( server, "player name not null terminated" );
-			cleanup_qserver( server, 1);
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 		player->name = strdup( val );
 		ptr++;
@@ -500,8 +495,7 @@ x
 			if ( !ptr )
 			{
 				malformed_packet( server, "player clan not null terminated" );
-				cleanup_qserver( server, 1);
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 			player->tribe_tag = strdup( val );
 			ptr++;
@@ -521,8 +515,7 @@ x
 				if ( !ptr )
 				{
 					malformed_packet( server, "player clan not null terminated" );
-					cleanup_qserver( server, 1);
-					return;
+					return cleanup_qserver( server, FORCE );
 				}
 				player->tribe_tag = strdup( val );
 				ptr++;
@@ -653,31 +646,30 @@ x
 		server->num_players = viewers;
 	}
 
-	cleanup_qserver( server, 1 );
-	return;
+	return cleanup_qserver( server, FORCE );
 }
 
-void deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-	_deal_with_doom3_packet( server, rawpkt, pktlen, 1 );
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 1 );
 }
 
-void deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
-	_deal_with_doom3_packet( server, rawpkt, pktlen, 2 );
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 2 );
 }
 
-void deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	_deal_with_doom3_packet( server, rawpkt, pktlen, 4 );
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 4 );
 }
 
-void deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	_deal_with_doom3_packet( server, rawpkt, pktlen, 3 );
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 3 );
 }
 
-void deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	_deal_with_doom3_packet( server, rawpkt, pktlen, 5 );
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 5 );
 }

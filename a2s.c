@@ -44,12 +44,14 @@ struct a2s_status
 	unsigned char type;
 };
 
-void send_a2s_request_packet(struct qserver *server)
+int send_a2s_request_packet(struct qserver *server)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 
 	if(qserver_send_initial(server, A2S_INFO, sizeof(A2S_INFO)) == -1)
-		goto error;
+	{
+		return cleanup_qserver(server, FORCE );
+	}
 
 	status->sent_info = 1;
 	status->type = 0;
@@ -57,28 +59,27 @@ void send_a2s_request_packet(struct qserver *server)
 	if(get_server_rules || get_player_info)
 		server->next_rule = ""; // trigger calling send_a2s_rule_request_packet
 
-	return;
-
-error:
-	cleanup_qserver(server, 1);
+	return 0;
 }
 
-void send_a2s_rule_request_packet(struct qserver *server)
+int send_a2s_rule_request_packet(struct qserver *server)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 
 	if(!get_server_rules && !get_player_info)
 	{
-		goto error;
+		return cleanup_qserver(server, FORCE );
 	}
 
-	do
+	while( 1 )
 	{
 		if(!status->have_challenge)
 		{
 			debug(3, "sending challenge");
 			if(qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) == -1)
-				goto error;
+			{
+				return cleanup_qserver(server, FORCE );
+			}
 			status->sent_challenge = 1;
 			break;
 		}
@@ -88,7 +89,9 @@ void send_a2s_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(A2S_RULES)-1, &status->challenge, 4);
 			debug(3, "sending rule query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-				goto error;
+			{
+				return cleanup_qserver(server, FORCE );
+			}
 			status->sent_rules = 1;
 			break;
 		}
@@ -98,7 +101,9 @@ void send_a2s_rule_request_packet(struct qserver *server)
 			memcpy(buf+sizeof(A2S_PLAYER)-1, &status->challenge, 4);
 			debug(3, "sending player query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
-				goto error;
+			{
+				return cleanup_qserver( server, FORCE );
+			}
 			status->sent_player = 1;
 			break;
 		}
@@ -109,15 +114,12 @@ void send_a2s_rule_request_packet(struct qserver *server)
 			status->have_challenge = 0;
 			status->have_rules = 0;
 		}
-	} while(1);
+	}
 
-	return;
-
-error:
-	cleanup_qserver(server, 1);
+	return 0;
 }
 
-void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 	char* pkt = rawpkt;
@@ -185,8 +187,7 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		else
 		{
 			malformed_packet( server, "Unable to determine packet format" );
-			cleanup_qserver( server, 1 );
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// pkt_max is the total number of packets expected
@@ -211,14 +212,12 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if ( NULL == sdata->data )
 		{
 			malformed_packet(server, "Out of memory");
-			cleanup_qserver( server, 1 );
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 		memcpy( sdata->data, pkt, sdata->datalen);
 
 		// combine_packets will call us recursively
-		combine_packets( server );
-		return;
+		return combine_packets( server );
 	}
 	else if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
 	{
@@ -598,14 +597,13 @@ void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->next_rule = NULL;
 	}
 
-	cleanup_qserver(server, 0);
-	return;
+	return cleanup_qserver( server, NO_FORCE );
 
 out_too_short:
 	malformed_packet(server, "packet too short");
 
 out_error:
-	cleanup_qserver(server, 1);
+	return cleanup_qserver(server, FORCE );
 }
 
 // vim: sw=4 ts=8 noet

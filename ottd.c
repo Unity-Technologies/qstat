@@ -36,7 +36,7 @@ static const char* station_types[] = {
 	"num_docks",
 };
 
-void deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	const char* reason = "invalid packet";
 	int ok = 1;
@@ -89,11 +89,14 @@ void deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktle
 	if(!ok)
 	{
 		malformed_packet(server, reason);
+		return cleanup_qserver( server, FORCE );
 	}
 
-	cleanup_qserver( server, !ok );
+	cleanup_qserver( server, NO_FORCE );
 
 	bind_sockets();
+
+	return 0;
 }
 
 #define xstr(s) str(s)
@@ -119,7 +122,7 @@ void deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktle
 #define INVALID_IF(cond) \
 	FAIL_IF(cond, "invalid packet")
 
-void deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	const char* reason = NULL;
 	unsigned char *ptr = (unsigned char*)rawpkt;
@@ -336,22 +339,22 @@ out:
 
 	server->retry1 = n_retries; // we're done with this packet, reset retry counter
 
-	cleanup_qserver( server, reason?1:0 );
-
-	debug(3, "done");
-
-	return;
+	return cleanup_qserver( server, reason ? FORCE : NO_FORCE );
 }
 
-void send_ottdmaster_request_packet(struct qserver *server)
+int send_ottdmaster_request_packet(struct qserver *server)
 {
-	qserver_send_initial(server, server->type->master_packet, server->type->master_len);
+	return qserver_send_initial(server, server->type->master_packet, server->type->master_len);
 }
 
-void send_ottd_request_packet(struct qserver *server)
+int send_ottd_request_packet(struct qserver *server)
 {
 	qserver_send_initial(server, server->type->status_packet, server->type->status_len);
 
 	if(get_server_rules || get_player_info)
+	{
 		server->next_rule = ""; // trigger calling send_a2s_rule_request_packet
+	}
+
+	return 1;
 }

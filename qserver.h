@@ -187,7 +187,7 @@ int send_broadcast( struct qserver *server, const char *pkt, size_t pktlen);
  *
  * This updates n_requests, n_packets, packet_time1 and decrements n_retries
  */
-void register_send( struct qserver *server );
+int register_send( struct qserver *server );
 
 /**
  * Sends a packet to the server either direct or via broadcast.

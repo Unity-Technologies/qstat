@@ -22,7 +22,7 @@
 #include "packet_manip.h"
 
 
-void send_wic_request_packet( struct qserver *server )
+int send_wic_request_packet( struct qserver *server )
 {
 	char buf[256];
 
@@ -43,11 +43,11 @@ void send_wic_request_packet( struct qserver *server )
 		server->saved_data.pkt_index = 1;
 	}
 
-	send_packet( server, buf, strlen( buf ) );
+	return send_packet( server, buf, strlen( buf ) );
 }
 
 
-void deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end, *team = NULL;
 	int mode = server->n_servers, slot, score;
@@ -112,8 +112,7 @@ void deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 			else if ( 0 == strcmp( "Exit confirmed.", s ) )
 			{
 				server->n_servers = mode;
-				cleanup_qserver( server, 1 );
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 		}
 		else if ( 1 == mode )
@@ -158,8 +157,7 @@ void deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 			else if ( 0 == strcmp( "Exit confirmed.", s ) )
 			{
 				server->n_servers = mode;
-				cleanup_qserver( server, 1 );
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 		}
 
@@ -179,6 +177,8 @@ void deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0 == server->saved_data.pkt_index )
 	{
 		server->map_name = strdup( "N/A" );
-		cleanup_qserver( server, 1 );
+		return cleanup_qserver( server, FORCE );
 	}
+
+	return 0;
 }

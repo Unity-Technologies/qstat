@@ -12,8 +12,8 @@
 
 #include "qserver.h"
 
-void send_a2s_request_packet(struct qserver *server);
-void send_a2s_rule_request_packet(struct qserver *server);
-void deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen);
+int send_a2s_request_packet(struct qserver *server);
+int send_a2s_rule_request_packet(struct qserver *server);
+int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen);
 
 #endif

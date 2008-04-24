@@ -105,12 +105,12 @@ enum ut2004_state {
     STATE_LISTING   = 0x03,
 };
 
-void send_ut2004master_request_packet(struct qserver *server)
+int send_ut2004master_request_packet(struct qserver *server)
 {
+	int ret;
     if(server->n_packets)
     {
-	cleanup_qserver(server, 1);
-	return;
+		return cleanup_qserver(server, FORCE );
     }
 
     if(!*cdkey)
@@ -120,8 +120,7 @@ void send_ut2004master_request_packet(struct qserver *server)
 	{
 	    debug(0, "Error: missing cdkey parameter");
 	    server->server_name = SYSERROR;
-	    cleanup_qserver(server, 1);
-	    return;
+	    return cleanup_qserver(server, FORCE );
 	}
 
 	if(*param == '/')
@@ -131,9 +130,11 @@ void send_ut2004master_request_packet(struct qserver *server)
 	    {
 		debug(0, "Error: can't key from %s", param);
 		server->server_name = SYSERROR;
-		cleanup_qserver(server, 1);
-		if(fp) fclose(fp);
-		return;
+		if(fp)
+		{
+			fclose(fp);
+		}
+		return cleanup_qserver(server, FORCE );
 	    }
 	    fclose(fp);
 	}
@@ -151,12 +152,11 @@ void send_ut2004master_request_packet(struct qserver *server)
 	{
 	    debug(0, "Error: invalid cdkey parameter");
 	    server->server_name = SYSERROR;
-	    cleanup_qserver(server, 1);
-	    return;
+	    return cleanup_qserver(server, FORCE );
 	}
     }
 
-    qserver_send(server, NULL, 0);
+    ret = qserver_send(server, NULL, 0);
 
 #if 0
     // XXX since we do not send but rather expect a reply directly after
@@ -166,6 +166,7 @@ void send_ut2004master_request_packet(struct qserver *server)
 #endif
 
     server->master_query_tag[0] = STATE_CHALLENGE;
+	return ret;
 }
 
 static void ut2004_server_done(struct qserver* server)
@@ -404,7 +405,7 @@ static int ut2004_send_query(struct qserver* server)
     return (qserver_send(server, buf, sizeof(buf)-left) > 0);
 }
 
-void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
     unsigned char* state = (unsigned char*)&server->master_query_tag[0];
 
@@ -412,8 +413,8 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 
     if(!pktlen)
     {
-	ut2004_server_done(server);
-	goto cleanup_out;
+		ut2004_server_done(server);
+		goto cleanup_out;
     }
 
     server->ping_total+= time_delta( &packet_recv_time, &server->packet_time1);
@@ -427,8 +428,8 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 		|| pktlen > 4 +1 +8 +1
 		|| rawpkt[pktlen-1] != '\0')
 	    {
-		malformed_packet(server, "invalid challenge" );
-		goto cleanup_out;
+			malformed_packet(server, "invalid challenge" );
+			goto cleanup_out;
 	    }
 	    else
 	    {
@@ -635,17 +636,16 @@ void deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pkt
 
 #if 0 // harms now with new ping scheduling
     server->retry1= 0;
-    cleanup_qserver( server, 0);
+    cleanup_qserver( server, NO_FORCE);
     bind_sockets();
 #endif
 
-    return;
+    return 0;
 
 cleanup_out:
     server->master_pkt_len = server->n_servers;
     server->n_servers /= 6;
-    cleanup_qserver(server, 1);
-    return;
+    return cleanup_qserver(server, FORCE );
 }
 
 static const char hexchar[] = "0123456789abcdef";

@@ -22,7 +22,7 @@
 #include "packet_manip.h"
 
 
-void send_ts2_request_packet( struct qserver *server )
+int send_ts2_request_packet( struct qserver *server )
 {
 	char buf[256];
 
@@ -42,11 +42,11 @@ void send_ts2_request_packet( struct qserver *server )
 		server->saved_data.pkt_index = 1;
 	}
 
-	send_packet( server, buf, strlen( buf ) );
+	return send_packet( server, buf, strlen( buf ) );
 }
 
 
-void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end;
 	int ping, connect_time, mode = 0;
@@ -157,6 +157,8 @@ void deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0 == server->saved_data.pkt_index )
 	{
 		server->map_name = strdup( "N/A" );
-		cleanup_qserver( server, 1 );
+		return cleanup_qserver( server, FORCE );
 	}
+
+	return 0;
 }
