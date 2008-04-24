@@ -51,7 +51,7 @@ int process_gs3_packet( struct qserver *server );
 //	query: [0xFE][0xFD][0x00][0x.. 4-byte-instance][0xb3412b5a "-1287574694"]
 //
 
-void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	unsigned int pkt_id;
@@ -89,21 +89,18 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
 			{
 				malformed_packet( server, "GS3 protocol not found" );
-				cleanup_qserver( server, 1 );
-				return;
+				return cleanup_qserver( server, FORCE );
 			}
 		}
 		server->type = gs3_type;
-		send_gs3_request_packet( server );
-		return;	
+		return send_gs3_request_packet( server );
 	}
 
 	if ( pktlen < 12 )
 	{
 		// invalid packet?
 		malformed_packet( server, "too short" );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	if ( 0x09 == *ptr )
@@ -117,15 +114,13 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		server->challenge = atoi( ptr );
 		server->retry1++;
 
-		send_gs3_request_packet( server );
-		return;
+		return send_gs3_request_packet( server );
 	}
 
 	if ( 0x00 != *ptr )
 	{
 		malformed_packet( server, "bad initial byte '%hhx'", *ptr );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 	ptr++;
 
@@ -142,14 +137,12 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( server->flags & TF_STATUS_QUERY )
 		{
 			// we have the status response
-			deal_with_gs3_status( server, ptr, pktlen - ( ptr - rawpkt )  );
-			return;
+			return deal_with_gs3_status( server, ptr, pktlen - ( ptr - rawpkt )  );
 		}
 		else
 		{
 			malformed_packet( server, "missing splitnum" );
-			cleanup_qserver( server, 1 );
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 	}
 	ptr += 9;
@@ -186,20 +179,18 @@ void deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( ! add_packet( server, pkt_id, pkt_index, pkt_max, pktlen, rawpkt, 1 ) )
 		{
 			// fatal error e.g. out of memory
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// combine_packets will call us recursively
-		combine_packets( server );
-		return;
+		return combine_packets( server );
 	}
 
 	// if we get here we have what should be a full packet
-	process_gs3_packet( server );
-	return;
+	return process_gs3_packet( server );
 }
 
-void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *pkt = rawpkt;
 	debug( 1, "status packet" );
@@ -310,7 +301,7 @@ void deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 	change_server_port( server, atoi( pkt ), 0 );
 	pkt += strlen( pkt ) + 1;
 
-	cleanup_qserver( server, 1 );
+	return cleanup_qserver( server, FORCE );
 }
 
 int process_gs3_packet( struct qserver *server )
@@ -337,8 +328,7 @@ int process_gs3_packet( struct qserver *server )
 		{
 			// invalid packet?
 			malformed_packet( server, "too short" );
-			cleanup_qserver( server, 1 );
-			return 0;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// skip over the header
@@ -368,8 +358,7 @@ int process_gs3_packet( struct qserver *server )
 			if ( ptr + 1 > end )
 			{
 				malformed_packet( server, "no rule value" );
-				cleanup_qserver( server, 1);
-				return 0;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			val = ptr;
@@ -561,8 +550,7 @@ int process_gs3_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				cleanup_qserver( server, 1 );
-				return 1;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			debug( 2, "player header '%s'", header );
@@ -570,8 +558,7 @@ int process_gs3_packet( struct qserver *server )
 			if ( ptr > end )
 			{
 				malformed_packet( server, "no details for header '%s'", header );
-				cleanup_qserver( server, 1 );
-				return 0;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			// the next byte is the starting number
@@ -639,8 +626,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short player detail" );
-					cleanup_qserver( server, 1);
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -695,8 +681,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( total_players > no_players )
 				{
 					malformed_packet( server, "to many players %d > %d", total_players, no_players );
-					cleanup_qserver( server, 1 );
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 			}
 		}
@@ -722,8 +707,7 @@ int process_gs3_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				cleanup_qserver( server, 1 );
-				return 1;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			debug( 2, "team header '%s'", header );
@@ -749,8 +733,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short team detail" );
-					cleanup_qserver( server, 1);
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -785,11 +768,10 @@ int process_gs3_packet( struct qserver *server )
 		}
 	}
 
-	cleanup_qserver( server, 1 );
-	return 1;
+	return cleanup_qserver( server, FORCE );
 }
 
-void send_gs3_request_packet( struct qserver *server )
+int send_gs3_request_packet( struct qserver *server )
 {
 	char *packet;
 	char query_buf[128];
@@ -848,5 +830,5 @@ void send_gs3_request_packet( struct qserver *server )
 		}
 	}
 
-	send_packet( server, packet, len );
+	return send_packet( server, packet, len );
 }

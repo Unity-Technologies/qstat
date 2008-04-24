@@ -58,7 +58,7 @@ int process_haze_packet( struct qserver *server );
 //	query: [0xFE][0xFD][0x00][0x.. 4-byte-instance][0xb3412b5a "-1287574694"]
 //
 
-void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	unsigned int pkt_id;
@@ -71,8 +71,7 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// invalid packet
 		malformed_packet( server, "too short" );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	if ( 0 == strncmp( ptr, "frdcr", 5 ) )
@@ -92,16 +91,14 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 		{
 			server->n_retries--;
 		}
-		send_haze_request_packet( server );
-		return;
+		return send_haze_request_packet( server );
 	}
 
 	if ( pktlen < 12 )
 	{
 		// invalid packet
 		malformed_packet( server, "too short" );
-		cleanup_qserver( server, 1 );
-		return;
+		return cleanup_qserver( server, FORCE );
 	}
 
 	server->n_servers++;
@@ -160,20 +157,18 @@ void deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( ! add_packet( server, pkt_id, pkt_index, pkt_max, pktlen, rawpkt, 1 ) )
 		{
 			// fatal error e.g. out of memory
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// combine_packets will call us recursively
-		combine_packets( server );
-		return;
+		return combine_packets( server );
 	}
 
 	// if we get here we have what should be a full packet
-	process_haze_packet( server );
-	return;
+	return process_haze_packet( server );
 }
 
-void deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
+int deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *pkt = rawpkt;
 	debug( 1, "status packet" );
@@ -203,7 +198,7 @@ void deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
 	change_server_port( server, atoi( pkt ), 0 );
 	pkt += strlen( pkt ) + 1;
 
-	cleanup_qserver( server, 1 );
+	return cleanup_qserver( server, FORCE );
 }
 
 int process_haze_packet( struct qserver *server )
@@ -230,8 +225,7 @@ int process_haze_packet( struct qserver *server )
 		{
 			// invalid packet
 			malformed_packet( server, "too short" );
-			cleanup_qserver( server, 1 );
-			return 0;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		// skip over the header
@@ -262,8 +256,7 @@ int process_haze_packet( struct qserver *server )
 			if ( ptr + 1 > end )
 			{
 				malformed_packet( server, "no basic value" );
-				cleanup_qserver( server, 1);
-				return 0;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			val = ptr;
@@ -316,8 +309,7 @@ int process_haze_packet( struct qserver *server )
 			if ( ptr + 1 > end )
 			{
 				malformed_packet( server, "no basic value" );
-				cleanup_qserver( server, 1);
-				return 0;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			val = ptr;
@@ -349,8 +341,7 @@ int process_haze_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				cleanup_qserver( server, 1 );
-				return 1;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			debug( 2, "player header '%s'", header );
@@ -358,8 +349,7 @@ int process_haze_packet( struct qserver *server )
 			if ( ptr > end )
 			{
 				malformed_packet( server, "no details for header '%s'", header );
-				cleanup_qserver( server, 1 );
-				return 0;
+				return cleanup_qserver( server, FORCE );
 			}
 
 		}
@@ -434,8 +424,7 @@ int process_haze_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short player detail" );
-					cleanup_qserver( server, 1);
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -490,8 +479,7 @@ int process_haze_packet( struct qserver *server )
 				if ( total_players > no_players )
 				{
 					malformed_packet( server, "to many players %d > %d", total_players, no_players );
-					cleanup_qserver( server, 1 );
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 			}
 		}
@@ -517,8 +505,7 @@ int process_haze_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				cleanup_qserver( server, 1 );
-				return 1;
+				return cleanup_qserver( server, FORCE );
 			}
 
 			debug( 2, "team header '%s'", header );
@@ -544,8 +531,7 @@ int process_haze_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short team detail" );
-					cleanup_qserver( server, 1);
-					return 0;
+					return cleanup_qserver( server, FORCE );
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -580,11 +566,10 @@ int process_haze_packet( struct qserver *server )
 		}
 	}
 
-	cleanup_qserver( server, 1 );
-	return 1;
+	return cleanup_qserver( server, FORCE );
 }
 
-void send_haze_request_packet( struct qserver *server )
+int send_haze_request_packet( struct qserver *server )
 {
 	char *packet;
 	char query_buf[128];
@@ -627,5 +612,5 @@ void send_haze_request_packet( struct qserver *server )
 		len = sizeof( haze_challenge );
 	}
 
-	send_packet( server, packet, len );
+	return send_packet( server, packet, len );
 }

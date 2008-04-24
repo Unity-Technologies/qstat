@@ -48,35 +48,34 @@ struct fl_status
 	unsigned char type;
 };
 
-void send_fl_request_packet(struct qserver *server)
+int send_fl_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
 	if( -1 == qserver_send_initial(server, FL_INFO, sizeof(FL_INFO) - 1) )
 	{
-		cleanup_qserver(server, 1);
-		return;
+		return cleanup_qserver(server, FORCE );
 	}
 
 	status->sent_info = 1;
 	status->type = 0;
+
+	return 0;
 }
 
-void send_fl_rule_request_packet(struct qserver *server)
+int send_fl_rule_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
 	if ( 1 >= status->type )
 	{
 		// Not supported
-		cleanup_qserver(server, 1);
-		return;
+		return cleanup_qserver(server, FORCE );
 	}
 
 	if(!get_server_rules && !get_player_info)
 	{
-		cleanup_qserver(server, 1);
-		return;
+		return cleanup_qserver(server, FORCE );
 	}
 
 	do
@@ -86,8 +85,7 @@ void send_fl_rule_request_packet(struct qserver *server)
 			debug(3, "sending challenge");
 			if(qserver_send_initial(server, FL_GETCHALLENGE, sizeof(FL_GETCHALLENGE)-1) == -1)
 			{
-				cleanup_qserver(server, 1);
-				return;
+				return cleanup_qserver(server, FORCE );
 			}
 			status->sent_challenge = 1;
 			break;
@@ -99,8 +97,7 @@ void send_fl_rule_request_packet(struct qserver *server)
 			debug(3, "sending rule query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
 			{
-				cleanup_qserver(server, 1);
-				return;
+				return cleanup_qserver(server, FORCE );
 			}
 			status->sent_rules = 1;
 			break;
@@ -112,8 +109,7 @@ void send_fl_rule_request_packet(struct qserver *server)
 			debug(3, "sending player query");
 			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
 			{
-				cleanup_qserver(server, 1);
-				return;
+				return cleanup_qserver(server, FORCE );
 			}
 			status->sent_player = 1;
 			break;
@@ -127,10 +123,10 @@ void send_fl_rule_request_packet(struct qserver *server)
 		}
 	} while(1);
 
-	return;
+	return 0;
 }
 
-void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
+int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 	char* pkt = rawpkt;
@@ -209,21 +205,18 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if ( NULL == sdata->data )
 		{
 			malformed_packet(server, "Out of memory");
-			cleanup_qserver( server, 1 );
-			return;
+			return cleanup_qserver( server, FORCE );
 		}
 
 		memcpy( sdata->data, pkt, sdata->datalen );
 
 		// combine_packets will call us recursively
-		combine_packets( server );
-		return;
+		return combine_packets( server );
 	}
 	else if ( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
 	{
 		malformed_packet(server, "invalid packet header");
-		cleanup_qserver(server, 1);
-		return;
+		return cleanup_qserver(server, FORCE );
 	}
 
 	pkt += 4;
@@ -497,8 +490,7 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	default:
 		malformed_packet(server, "invalid packet id %hhx", *--pkt);
-		cleanup_qserver(server, 1);
-		return;
+		return cleanup_qserver(server, FORCE );
 	}
 
 	if(
@@ -509,11 +501,12 @@ void deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->next_rule = NULL;
 	}
 
-	cleanup_qserver(server, 0);
-	return;
+	return cleanup_qserver(server, NO_FORCE );
 
 out_too_short:
 	malformed_packet(server, "packet too short");
+
+	return cleanup_qserver(server, FORCE );
 }
 
 // vim: sw=4 ts=8 noet

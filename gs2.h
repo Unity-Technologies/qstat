@@ -13,8 +13,8 @@
 #include "qserver.h"
 
 // Packet processing methods
-void deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen );
-void send_gs2_request_packet( struct qserver *server );
+int deal_with_gs2_packet( struct qserver *server, char *pkt, int pktlen );
+int send_gs2_request_packet( struct qserver *server );
 
 #endif
 

@@ -139,7 +139,7 @@ int combine_packets( struct qserver *server )
 
 		// Note: this is currently invalid as packet processing methods
 		// are void not int
-		if ( done || server->saved_data.data == NULL)
+		if ( done || NULL == server->saved_data.data )
 		{
 			break;
 		}
@@ -196,7 +196,6 @@ int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int 
 	if ( NULL == sdata->data )
 	{
 		fprintf( stderr, "Out of memory\n" );
-		cleanup_qserver( server, 1 );
 		return 0;
 	}
 

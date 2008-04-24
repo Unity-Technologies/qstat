@@ -10,7 +10,7 @@ ACLOCAL="aclocal"
 # Please add higher versions first. The last version number is the minimum
 # needed to compile KDE. Do not forget to include the name/version #
 # separator if one is present, e.g. -1.2 where - is the separator.
-AUTOCONF_VERS="-2.59 259 -2.58 258 -2.57 257 -2.54 254 -2.53 253"
+AUTOCONF_VERS="-2.61 261 -2.59 259 -2.58 258 -2.57 257 -2.54 254 -2.53 253"
 AUTOMAKE_VERS="-1.9 19 -1.8 18 -1.7 17 -1.6 16 -1.5 15"
 
 # We don't use variable here for remembering the type ... strings. Local 
