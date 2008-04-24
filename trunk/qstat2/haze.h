@@ -19,9 +19,9 @@
 #define HAZE_TEAM_INFO 0x08
 
 // Packet processing methods
-void deal_with_haze_packet( struct qserver *server, char *pkt, int pktlen );
-void deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen );
-void send_haze_request_packet( struct qserver *server );
+int deal_with_haze_packet( struct qserver *server, char *pkt, int pktlen );
+int deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen );
+int send_haze_request_packet( struct qserver *server );
 
 
 #endif

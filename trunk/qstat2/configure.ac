@@ -1,4 +1,4 @@
-AC_INIT([qstat],[2.11],[qstat-users@yahoogroups.com])
+AC_INIT([qstat],[2.12],[qstat-users@yahoogroups.com])
 AC_CONFIG_SRCDIR([qstat.c])
 AM_CONFIG_HEADER([gnuconfig.h])
 
@@ -22,6 +22,17 @@ case $host in
 esac
 
 dnl check if user wants debug
+AC_MSG_CHECKING([whether to enable optimization])
+AC_ARG_ENABLE(optimize,[  --disable-optimize         turn off optimization])
+if test x$enable_optimize != xno; then
+	AC_MSG_RESULT([yes])
+else
+	CPPFLAGS=""
+	CFLAGS="-ggdb"
+	AC_MSG_RESULT([no])
+fi
+
+dnl check if user wants debug
 AC_MSG_CHECKING([whether to enable debug output])
 AC_ARG_ENABLE(debug,[  --disable-debug         turn off debugging code])
 if test x$enable_debug != xno; then
@@ -43,6 +54,14 @@ if test x$enable_dump != xno; then
 else
 	AC_MSG_RESULT([no])
 fi
+
+AC_ARG_WITH(efence,
+[  --with-efence=<path>    Use electric fence for malloc debugging.],
+	if test x$withval != xyes ; then
+		LDFLAGS="${LDFLAGS} -L$withval"
+	fi
+	AC_CHECK_LIB(efence,malloc)
+)
 
 dnl Use -Wall if we have gcc.
 changequote(,)dnl
