@@ -4565,7 +4565,7 @@ int bind_qserver(struct qserver *server)
 					{ 
 						// Socket selected for write 
 						int valopt;
-						int lon = sizeof(int); 
+						unsigned int lon = sizeof(int); 
 						if ( 0 != getsockopt( server->fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) )
 						{ 
 							fprintf( stderr, "Error in getsockopt() %d - %s\n", errno, strerror(errno) ); 
