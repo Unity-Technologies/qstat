@@ -236,6 +236,7 @@ int player_compare(struct player *one, struct player *two);
 int type_option_compare(server_type *one, server_type *two);
 int type_string_compare(server_type *one, server_type *two);
 int proccess_func_ret( struct qserver *server, int ret );
+int connection_inprogress();
 STATIC int u2xmp_html_color(short color, char *dest, int *font_tag);
 STATIC int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag);
 
@@ -3205,7 +3206,8 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "retries must be greater than zero\n");
 				exit(1);
 			}
-		}		else if (strcmp(argv[arg], "-interval") == 0)
+		}
+		else if (strcmp(argv[arg], "-interval") == 0)
 		{
 			double value = 0.0;
 			arg++;
@@ -4050,7 +4052,7 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 			}
 			server->server_name = HOSTNOTFOUND;
 			server->error = strdup(strherror(h_errno));
-			server->query_port = server->port = port;
+			server->orig_port = server->query_port = server->port = port;
 			if (last_server != &servers)
 			{
 				prev_server = (struct qserver*)((char*)last_server - ((char*) &server->next - (char*)server));
@@ -4082,7 +4084,8 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 		if (portrange)
 		{
 			sprintf(server->arg + colonpos + 1, "%hu", port);
-		} if (hostname && colon)
+		}
+		if (hostname && colon)
 		{
 			server->host_name = (char*)malloc(strlen(hostname) + 5+2);
 			sprintf(server->host_name, "%s:%hu", hostname, port);
@@ -4093,7 +4096,7 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 		}
 
 		server->ipaddr = ipaddr;
-		server->query_port = server->port = port;
+		server->orig_port = server->query_port = server->port = port;
 		server->type = type;
 		server->outfilename = outfilename;
 		server->flags = flags;
@@ -4197,7 +4200,7 @@ struct qserver *add_qserver_byaddr(unsigned int ipaddr, unsigned short port, ser
 		server->host_name = strdup(arg);
 	}
 
-	server->query_port = server->port = port;
+	server->orig_port = server->query_port = server->port = port;
 	init_qserver(server, type);
 
 	if (num_servers_total % 10 == 0)
@@ -4384,14 +4387,17 @@ struct qserver *find_server_by_address(unsigned int ipaddr, unsigned short port)
 		for (hash = 0; hash < ADDRESS_HASH_LENGTH; hash++)
 		{
 			printf("%3d %d\n", hash, server_hash_len[hash]);
-		} return NULL;
+		}
+		return NULL;
 	}
 
 	hashed = server_hash[hash];
 	for (i = server_hash_len[hash]; i; i--, hashed++)
-	if (*hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)
 	{
-		return *hashed;
+		if (*hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)
+		{
+			return *hashed;
+		}
 	}
 	return NULL;
 }
@@ -4413,18 +4419,18 @@ void add_server_to_hash(struct qserver *server)
 void remove_server_from_hash(struct qserver *server)
 {
 	struct qserver **hashed;
-	unsigned int hash, i, ipaddr;
-	unsigned short port;
-	hash = (server->ipaddr + server->port) % ADDRESS_HASH_LENGTH;
+	unsigned int hash, i, ipaddr = server->ipaddr;
+	unsigned short port = server->orig_port;
+	hash = ( ipaddr + port ) % ADDRESS_HASH_LENGTH;
 
-	ipaddr = server->ipaddr;
-	port = server->port;
 	hashed = server_hash[hash];
 	for (i = server_hash_len[hash]; i; i--, hashed++)
-	if (*hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->port == port)
 	{
-		*hashed = NULL;
-		break;
+		if (*hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->orig_port == port)
+		{
+			*hashed = NULL;
+			break;
+		}
 	}
 }
 
@@ -4432,9 +4438,11 @@ void free_server_hash()
 {
 	int i;
 	for (i = 0; i < ADDRESS_HASH_LENGTH; i++)
-	if (server_hash[i])
 	{
-		free(server_hash[i]);
+		if (server_hash[i])
+		{
+			free(server_hash[i]);
+		}
 	}
 }
 
@@ -4446,7 +4454,6 @@ int bind_qserver(struct qserver *server)
 	struct sockaddr_in addr;
 	static int one = 1;
 	int sockbuf = RECV_BUF;
-
 
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
@@ -4511,6 +4518,11 @@ int bind_qserver(struct qserver *server)
 		}
 	}
 
+	// we need nonblocking always. poll on an udp socket would wake
+	// up and recv blocks if a packet with incorrect checksum is
+	// received
+	set_non_blocking(server->fd);
+
 	if (server->type->id != Q2_MASTER && !(server->flags &FLAG_BROADCAST))
 	{
 		addr.sin_family = AF_INET;
@@ -4527,28 +4539,66 @@ int bind_qserver(struct qserver *server)
 
 		if (connect(server->fd, (struct sockaddr*) &addr, sizeof(addr)) == SOCKET_ERROR)
 		{
+			int ignore = 0;
 			char error[50];
-			if (server->type->id == UN_MASTER)
+			if ( connection_inprogress() )
 			{
-				if (connection_refused())
+				while( 1 )
 				{
-					/* server->fd= -2; */
-					/* set up for connect retry */
+					int ret;
+					struct timeval tv;
+					fd_set connect_set;
+
+					tv.tv_sec = retry_interval / 1000; 
+					tv.tv_usec = ( retry_interval % 1000 ) * 1000;
+					FD_ZERO( &connect_set ); 
+					FD_SET( server->fd, &connect_set );
+
+					// NOTE: We may need to check exceptfds here on windows instead of writefds
+					ret = select( server->fd + 1, NULL, &connect_set, NULL, &tv );
+					if ( 0 > ret && errno != EINTR )
+					{ 
+						fprintf( stderr, "Error connecting %d - %s\n", errno, strerror(errno) ); 
+						break;
+					} 
+					else if ( 0 < ret )
+					{ 
+						// Socket selected for write 
+						int valopt;
+						int lon = sizeof(int); 
+						if ( 0 != getsockopt( server->fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) )
+						{ 
+							fprintf( stderr, "Error in getsockopt() %d - %s\n", errno, strerror(errno) ); 
+							break;
+						} 
+
+						// Check the value returned... 
+						if (valopt)
+						{ 
+							fprintf( stderr, "Error in delayed connection() %d - %s\n", valopt, strerror(valopt) ); 
+							break;
+						} 
+						ignore = 1;
+						break; 
+					} 
+					else
+					{ 
+						break;
+					} 
 				}
 			}
-			sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-			perror(error);
-			server->server_name = SYSERROR;
-			close(server->fd);
-			server->fd = - 1;
-			return -1;
+
+			if ( ! ignore )
+			{
+				sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+				perror(error);
+				server->server_name = SYSERROR;
+				close(server->fd);
+				server->fd = - 1;
+				return -1;
+			}
 		}
 	}
-
-	// we need nonblocking always. poll on an udp socket would wake
-	// up and recv blocks if a packet with incorrect checksum is
-	// received
-	set_non_blocking(server->fd);
 
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
@@ -7784,14 +7834,21 @@ void change_server_port(struct qserver *server, unsigned short port, int force)
 			// hostname isnt the query arg
 			char *colon = strchr(server->host_name, ':');
 			// dns hostname or hostname:port
-			char *hostname = malloc(strlen(server->host_name) + 6);
-			if (colon)
+			char *hostname = malloc( strlen(server->host_name) + 7 );
+			if ( NULL == hostname )
 			{
-				*colon = '\0';
+				fprintf(stderr, "Failed to malloc hostname memory\n");
 			}
-			sprintf(hostname, "%s:%hu", server->host_name, port);
-			free(server->host_name);
-			server->host_name = hostname;
+			else
+			{
+				if (colon)
+				{
+					*colon = '\0';
+				}
+				sprintf(hostname, "%s:%hu", server->host_name, port);
+				free(server->host_name);
+				server->host_name = hostname;
+			}
 		}
 
 		// Add a rule noting the servers hostport
@@ -12326,7 +12383,17 @@ int time_delta(struct timeval *later, struct timeval *past)
 	{
 		later->tv_sec--;
 		later->tv_usec += 1000000;
-	} return (later->tv_sec - past->tv_sec) *1000+(later->tv_usec - past->tv_usec) / 1000;
+	}
+	return (later->tv_sec - past->tv_sec) *1000+(later->tv_usec - past->tv_usec) / 1000;
+}
+
+int connection_inprogress()
+{
+#ifdef _WIN32
+	return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+	return errno == EINPROGRESS;
+#endif
 }
 
 int connection_refused()

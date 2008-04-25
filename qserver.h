@@ -39,6 +39,7 @@ struct qserver {
     struct query_param *params;
     unsigned long challenge;
     unsigned short port;
+    unsigned short orig_port; // This port is always constant from creation where as port can be updated based on the query results
     unsigned short query_port;
     /** \brief number of retries _left_ for status query or rule query.
      *
