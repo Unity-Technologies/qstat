@@ -157,8 +157,8 @@ int deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0 == server->saved_data.pkt_index )
 	{
 		server->map_name = strdup( "N/A" );
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
 
-	return 0;
+	return INPROGRESS;
 }

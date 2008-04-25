@@ -57,7 +57,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( pktlen < 15 )
 	{
 		// invalid packet?
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	server->n_servers++;
@@ -94,7 +94,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				malformed_packet( server, "no player headers" );
 			}
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 		ptr += var_len + 1;
 
@@ -157,7 +157,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be player headers here as we
 		// requested it
 		malformed_packet( server, "no player headers" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	// player info header
@@ -171,7 +171,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( ptr >= end )
 	{
 		malformed_packet( server, "no player headers" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	while ( 1 == type && ptr < end )
@@ -189,7 +189,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				free( headers );
 			}
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
 
 		headers = tmpp;
@@ -211,7 +211,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be player info here as we
 		// requested it
 		malformed_packet( server, "no players" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	while( 2 == type && ptr < end )
@@ -224,7 +224,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( 0 != no_players )
 			{
 				malformed_packet( server, "no players" );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 		}
 		else
@@ -240,7 +240,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short player detail" );
-					return cleanup_qserver( server, FORCE );
+					return PKT_ERROR;
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -289,7 +289,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( total_players > no_players )
 		{
 			malformed_packet( server, "to many players %d > %d", total_players, no_players );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		// check for end of player info
@@ -298,7 +298,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( total_players != no_players )
 			{
 				malformed_packet( server, "bad number of players %d != %d", total_players, no_players );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 			type = 3;
 			ptr++;
@@ -310,7 +310,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be team info here as we
 		// requested it
 		malformed_packet( server, "no teams" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	no_teams = (unsigned char)*ptr;
@@ -334,7 +334,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			{
 				free( headers );
 			}
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
 
 		headers = tmpp;
@@ -355,7 +355,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		// no more info should be team info here as we
 		// requested it
 		malformed_packet( server, "no teams" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	while( 4 == type && ptr < end )
@@ -370,7 +370,7 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( ptr >= end )
 			{
 				malformed_packet( server, "short team detail" );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 			val = ptr;
 			val_len = strlen( val );
@@ -389,9 +389,9 @@ int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( total_teams > no_teams )
 		{
 			malformed_packet( server, "to many teams" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }

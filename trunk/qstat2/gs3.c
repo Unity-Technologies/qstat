@@ -89,7 +89,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 			if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
 			{
 				malformed_packet( server, "GS3 protocol not found" );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 		}
 		server->type = gs3_type;
@@ -100,7 +100,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	{
 		// invalid packet?
 		malformed_packet( server, "too short" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if ( 0x09 == *ptr )
@@ -120,7 +120,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0x00 != *ptr )
 	{
 		malformed_packet( server, "bad initial byte '%hhx'", *ptr );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	ptr++;
 
@@ -142,7 +142,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		else
 		{
 			malformed_packet( server, "missing splitnum" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 	}
 	ptr += 9;
@@ -179,7 +179,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 		if ( ! add_packet( server, pkt_id, pkt_index, pkt_max, pktlen, rawpkt, 1 ) )
 		{
 			// fatal error e.g. out of memory
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
 
 		// combine_packets will call us recursively
@@ -301,7 +301,7 @@ int deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 	change_server_port( server, atoi( pkt ), 0 );
 	pkt += strlen( pkt ) + 1;
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 int process_gs3_packet( struct qserver *server )
@@ -328,7 +328,7 @@ int process_gs3_packet( struct qserver *server )
 		{
 			// invalid packet?
 			malformed_packet( server, "too short" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		// skip over the header
@@ -358,7 +358,7 @@ int process_gs3_packet( struct qserver *server )
 			if ( ptr + 1 > end )
 			{
 				malformed_packet( server, "no rule value" );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 
 			val = ptr;
@@ -400,7 +400,7 @@ int process_gs3_packet( struct qserver *server )
 							*next = '\0';
 							next++;
 						}
-	
+
 						if ( 0 == strcmp( var, "mapname" ) )
 						{
 							if ( server->map_name )
@@ -550,7 +550,7 @@ int process_gs3_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				return cleanup_qserver( server, FORCE );
+				return DONE_FORCE;
 			}
 
 			debug( 2, "player header '%s'", header );
@@ -558,7 +558,7 @@ int process_gs3_packet( struct qserver *server )
 			if ( ptr > end )
 			{
 				malformed_packet( server, "no details for header '%s'", header );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 
 			// the next byte is the starting number
@@ -626,7 +626,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short player detail" );
-					return cleanup_qserver( server, FORCE );
+					return PKT_ERROR;
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -681,7 +681,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( total_players > no_players )
 				{
 					malformed_packet( server, "to many players %d > %d", total_players, no_players );
-					return cleanup_qserver( server, FORCE );
+					return PKT_ERROR;
 				}
 			}
 		}
@@ -707,7 +707,7 @@ int process_gs3_packet( struct qserver *server )
 			{
 				// no more info
 				debug( 3, "All done" );
-				return cleanup_qserver( server, FORCE );
+				return DONE_FORCE;
 			}
 
 			debug( 2, "team header '%s'", header );
@@ -733,7 +733,7 @@ int process_gs3_packet( struct qserver *server )
 				if ( ptr >= end )
 				{
 					malformed_packet( server, "short team detail" );
-					return cleanup_qserver( server, FORCE );
+					return PKT_ERROR;
 				}
 				val = ptr;
 				val_len = strlen( val );
@@ -768,7 +768,7 @@ int process_gs3_packet( struct qserver *server )
 		}
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 int send_gs3_request_packet( struct qserver *server )

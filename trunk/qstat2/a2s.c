@@ -50,7 +50,7 @@ int send_a2s_request_packet(struct qserver *server)
 
 	if(qserver_send_initial(server, A2S_INFO, sizeof(A2S_INFO)) == -1)
 	{
-		return cleanup_qserver(server, FORCE );
+		return DONE_FORCE;
 	}
 
 	status->sent_info = 1;
@@ -68,7 +68,7 @@ int send_a2s_rule_request_packet(struct qserver *server)
 
 	if(!get_server_rules && !get_player_info)
 	{
-		return cleanup_qserver(server, FORCE );
+		return DONE_FORCE;
 	}
 
 	while( 1 )
@@ -76,9 +76,9 @@ int send_a2s_rule_request_packet(struct qserver *server)
 		if(!status->have_challenge)
 		{
 			debug(3, "sending challenge");
-			if(qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
 			{
-				return cleanup_qserver(server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_challenge = 1;
 			break;
@@ -88,9 +88,9 @@ int send_a2s_rule_request_packet(struct qserver *server)
 			char buf[sizeof(A2S_RULES)-1+4] = A2S_RULES;
 			memcpy(buf+sizeof(A2S_RULES)-1, &status->challenge, 4);
 			debug(3, "sending rule query");
-			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
-				return cleanup_qserver(server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_rules = 1;
 			break;
@@ -100,9 +100,9 @@ int send_a2s_rule_request_packet(struct qserver *server)
 			char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
 			memcpy(buf+sizeof(A2S_PLAYER)-1, &status->challenge, 4);
 			debug(3, "sending player query");
-			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
-				return cleanup_qserver( server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_player = 1;
 			break;
@@ -116,7 +116,7 @@ int send_a2s_rule_request_packet(struct qserver *server)
 		}
 	}
 
-	return 0;
+	return INPROGRESS;
 }
 
 int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -187,7 +187,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		else
 		{
 			malformed_packet( server, "Unable to determine packet format" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		// pkt_max is the total number of packets expected
@@ -212,7 +212,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if ( NULL == sdata->data )
 		{
 			malformed_packet(server, "Out of memory");
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
 		memcpy( sdata->data, pkt, sdata->datalen);
 
@@ -222,7 +222,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	else if( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
 	{
 		malformed_packet(server, "invalid packet header");
-		goto out_error;
+		return PKT_ERROR;
 	}
 
 	pkt += 4;
@@ -586,7 +586,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	default:
 		malformed_packet(server, "invalid packet id %hhx", *--pkt);
-		goto out_error;
+		return PKT_ERROR;
 	}
 
 	if(
@@ -597,13 +597,11 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->next_rule = NULL;
 	}
 
-	return cleanup_qserver( server, NO_FORCE );
+	return DONE_AUTO;
 
 out_too_short:
 	malformed_packet(server, "packet too short");
-
-out_error:
-	return cleanup_qserver(server, FORCE );
+	return PKT_ERROR;
 }
 
 // vim: sw=4 ts=8 noet
