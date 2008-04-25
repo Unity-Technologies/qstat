@@ -196,4 +196,9 @@ int register_send( struct qserver *server );
  */
 int send_packet( struct qserver* server, const char* data, size_t len );
 
+/**
+ * Logs the error from a socket send
+ */
+int send_error( struct qserver *server, int rc );
+
 #endif

@@ -52,9 +52,9 @@ int send_fl_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
-	if( -1 == qserver_send_initial(server, FL_INFO, sizeof(FL_INFO) - 1) )
+	if( SOCKET_ERROR == qserver_send_initial(server, FL_INFO, sizeof(FL_INFO) - 1) )
 	{
-		return cleanup_qserver(server, FORCE );
+		return SOCKET_ERROR;
 	}
 
 	status->sent_info = 1;
@@ -70,12 +70,12 @@ int send_fl_rule_request_packet(struct qserver *server)
 	if ( 1 >= status->type )
 	{
 		// Not supported
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if(!get_server_rules && !get_player_info)
 	{
-		return cleanup_qserver(server, FORCE );
+		return DONE_FORCE;
 	}
 
 	do
@@ -83,9 +83,9 @@ int send_fl_rule_request_packet(struct qserver *server)
 		if(!status->have_challenge)
 		{
 			debug(3, "sending challenge");
-			if(qserver_send_initial(server, FL_GETCHALLENGE, sizeof(FL_GETCHALLENGE)-1) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, FL_GETCHALLENGE, sizeof(FL_GETCHALLENGE)-1) )
 			{
-				return cleanup_qserver(server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_challenge = 1;
 			break;
@@ -95,9 +95,9 @@ int send_fl_rule_request_packet(struct qserver *server)
 			char buf[sizeof(FL_RULES)-1+4] = FL_RULES;
 			memcpy(buf+sizeof(FL_RULES)-1, &status->challenge, 4);
 			debug(3, "sending rule query");
-			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
-				return cleanup_qserver(server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_rules = 1;
 			break;
@@ -107,9 +107,9 @@ int send_fl_rule_request_packet(struct qserver *server)
 			char buf[sizeof(FL_PLAYER)-1+4] = FL_PLAYER;
 			memcpy(buf+sizeof(FL_PLAYER)-1, &status->challenge, 4);
 			debug(3, "sending player query");
-			if(qserver_send_initial(server, buf, sizeof(buf)) == -1)
+			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
-				return cleanup_qserver(server, FORCE );
+				return SOCKET_ERROR;
 			}
 			status->sent_player = 1;
 			break;
@@ -205,7 +205,7 @@ int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		if ( NULL == sdata->data )
 		{
 			malformed_packet(server, "Out of memory");
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
 
 		memcpy( sdata->data, pkt, sdata->datalen );
@@ -216,7 +216,7 @@ int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 	else if ( 0 != memcmp(pkt, "\xFF\xFF\xFF\xFF", 4) )
 	{
 		malformed_packet(server, "invalid packet header");
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	pkt += 4;
@@ -461,7 +461,7 @@ int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 				p->ping = ntohs( *(unsigned int *)(pkt+8) );
 				//((unsigned char*)&p->ping)[0] = pkt[9];
 				//((unsigned char*)&p->ping)[1] = pkt[8];
-		
+
 				// ProfileId
 				//p->profileid = ntohl( *(unsigned int *)pkt+10 );
 
@@ -490,7 +490,7 @@ int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	default:
 		malformed_packet(server, "invalid packet id %hhx", *--pkt);
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if(
@@ -501,12 +501,12 @@ int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->next_rule = NULL;
 	}
 
-	return cleanup_qserver(server, NO_FORCE );
+	return DONE_AUTO;
 
 out_too_short:
 	malformed_packet(server, "packet too short");
 
-	return cleanup_qserver(server, FORCE );
+	return PKT_ERROR;
 }
 
 // vim: sw=4 ts=8 noet

@@ -89,14 +89,12 @@ int deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen
 	if(!ok)
 	{
 		malformed_packet(server, reason);
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
-
-	cleanup_qserver( server, NO_FORCE );
 
 	bind_sockets();
 
-	return 0;
+	return DONE_AUTO;
 }
 
 #define xstr(s) str(s)
@@ -238,7 +236,7 @@ int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 			unsigned long long lli;
 			struct player* player;
 			unsigned char nr;
-			
+
 			nr = *ptr++;
 
 			debug(3, "player number %d", nr);
@@ -339,7 +337,7 @@ out:
 
 	server->retry1 = n_retries; // we're done with this packet, reset retry counter
 
-	return cleanup_qserver( server, reason ? FORCE : NO_FORCE );
+	return reason ? DONE_FORCE : DONE_AUTO;
 }
 
 int send_ottdmaster_request_packet(struct qserver *server)
