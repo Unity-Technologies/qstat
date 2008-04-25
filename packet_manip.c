@@ -29,7 +29,7 @@ int combine_packets( struct qserver *server )
 	int maxes[MAX_PACKETS];
 	int lengths[MAX_PACKETS];
 	SavedData *sdata = &server->saved_data;
-	int i, p, ret;
+	int i, p, ret = INPROGRESS;
 	n_ids = 0;
 
 	memset( &segments[0][0], 0, sizeof(segments) );
@@ -116,7 +116,7 @@ int combine_packets( struct qserver *server )
 				// reset to be unusable
 				pkt_id_index = -1;
 				free( combined );
-				return 0;
+				return INPROGRESS;
 			}
 			memcpy( combined + datalen, segments[pkt_id_index][p]->data, segments[pkt_id_index][p]->datalen );
 			datalen += segments[pkt_id_index][p]->datalen;
