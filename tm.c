@@ -57,7 +57,7 @@ int send_tm_request_packet( struct qserver *server )
 	}
 
 	len += sprintf( xmlp + len, TM_SERVERINFO );
-	
+
 	if ( get_player_info )
 	{
 		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
@@ -110,7 +110,7 @@ int deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 			return 0;
 		}
 		pktlen -= 4;
-		pkt += 4;	
+		pkt += 4;
 	}
 
 	if ( 11 <= pktlen && 1 == sscanf( pkt, "GBXRemote %d", &server->protocol_version ) )
@@ -149,7 +149,7 @@ int deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 	}
 
 	total_len = combined_length( server, server->saved_data.pkt_id );
-	expected_len = server->saved_data.pkt_id; 
+	expected_len = server->saved_data.pkt_id;
 	debug( 2, "total: %d, expected: %d\n", total_len, expected_len );
 	if ( total_len < expected_len + 8 )
 	{
@@ -190,12 +190,12 @@ int deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 		gettimeofday( &server->packet_time1, NULL);
 	}
 
-	// Terminate the packet data 
+	// Terminate the packet data
 	pkt = (char*)malloc( pktlen + 1 );
 	if ( NULL == pkt )
 	{
 		debug( 0, "Failed to malloc memory for packet terminator\n" );
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	memcpy( pkt, rawpkt, pktlen );
 	pkt[pktlen] = '\0';
@@ -342,8 +342,8 @@ int deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0 == strncmp( rawpkt + pktlen - 19, "</methodResponse>", 17 ) )
 	{
 		// last packet seen
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
 
-	return 0;
+	return INPROGRESS;
 }

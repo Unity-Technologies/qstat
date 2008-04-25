@@ -29,7 +29,7 @@ int combine_packets( struct qserver *server )
 	int maxes[MAX_PACKETS];
 	int lengths[MAX_PACKETS];
 	SavedData *sdata = &server->saved_data;
-	int i, p, done = 0;
+	int i, p, ret;
 	n_ids = 0;
 
 	memset( &segments[0][0], 0, sizeof(segments) );
@@ -134,12 +134,12 @@ int combine_packets( struct qserver *server )
 			print_packet( server, combined, datalen );
 		}
 		// Call the server's packet processing method
-		done = ( (int (*)()) server->type->packet_func)( server, combined, datalen );
+		ret = ( (int (*)()) server->type->packet_func)( server, combined, datalen );
 		free( combined );
 
 		// Note: this is currently invalid as packet processing methods
 		// are void not int
-		if ( done || NULL == server->saved_data.data )
+		if ( INPROGRESS != ret || NULL == server->saved_data.data )
 		{
 			break;
 		}
@@ -147,7 +147,7 @@ int combine_packets( struct qserver *server )
 	// reset to be unusable
 	pkt_id_index = -1;
 
-	return done;
+	return ret;
 }
 
 int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int pkt_max, int datalen, char *data, int calc_max )

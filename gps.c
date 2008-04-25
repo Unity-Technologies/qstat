@@ -465,8 +465,8 @@ int deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 		( server->num_players < 0 && id_minor >= 3)
 	)
 	{
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
 
-	return 0;
+	return INPROGRESS;
 }

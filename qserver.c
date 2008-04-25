@@ -44,7 +44,7 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 
 		if ( ret == SOCKET_ERROR)
 		{
-			perror( "send");
+			send_error( server, ret );
 		}
     }
 
@@ -69,15 +69,19 @@ int qserver_send(struct qserver* server, const char* data, size_t len)
 
     if(data)
     {
-	if ( server->flags & FLAG_BROADCAST)
-	    ret = send_broadcast(server, data, len);
-	else
-	    ret = send( server->fd, data, len, 0);
+		if ( server->flags & FLAG_BROADCAST)
+		{
+			ret = send_broadcast(server, data, len);
+		}
+		else
+		{
+			ret = send( server->fd, data, len, 0);
+		}
 
-	if ( ret == SOCKET_ERROR)
-	{
-	    perror( "send");
-	}
+		if ( ret == SOCKET_ERROR)
+		{
+			send_error( server, ret );
+		}
     }
 
     server->retry1 = n_retries;
@@ -89,19 +93,22 @@ int qserver_send(struct qserver* server, const char* data, size_t len)
 
 }
 
-int
-send_broadcast( struct qserver *server, const char *pkt, size_t pktlen)
+int send_broadcast( struct qserver *server, const char *pkt, size_t pktlen)
 {
     struct sockaddr_in addr;
     addr.sin_family= AF_INET;
     if ( no_port_offset || server->flags & TF_NO_PORT_OFFSET)
+	{
         addr.sin_port= htons(server->port);
+	}
     else
+	{
         addr.sin_port= htons((unsigned short)( server->port + server->type->port_offset ));
+	}
     addr.sin_addr.s_addr= server->ipaddr;
     memset( &(addr.sin_zero), 0, sizeof(addr.sin_zero));
-    return sendto( server->fd, (const char*) pkt, pktlen, 0,
-		(struct sockaddr *) &addr, sizeof(addr));
+
+    return sendto( server->fd, (const char*) pkt, pktlen, 0, (struct sockaddr *) &addr, sizeof(addr));
 }
 
 int register_send( struct qserver *server )
@@ -120,8 +127,8 @@ int register_send( struct qserver *server )
 	gettimeofday( &server->packet_time1, NULL);
     server->retry1--;
     server->n_packets++;
-	
-	return 1;
+
+	return INPROGRESS;
 }
 
 int send_packet( struct qserver* server, const char* data, size_t len )
@@ -147,18 +154,24 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 
 		if ( ret == SOCKET_ERROR )
 		{
-			unsigned int ipaddr = ntohl(server->ipaddr) ;
-			fprintf( stderr, "Error on %d.%d.%d.%d\n",
-				(ipaddr>>24)&0xff,
-				(ipaddr>>16)&0xff,
-				(ipaddr>>8)&0xff,
-				ipaddr&0xff
-			);
-			perror( "send" );
+			return send_error( server, ret );
 		}
     }
 
 	register_send( server );
 
-	return ret;
+	return INPROGRESS;
+}
+
+int send_error( struct qserver *server, int rc )
+{
+	unsigned int ipaddr = ntohl(server->ipaddr);
+	fprintf(stderr, "Error on %d.%d.%d.%d, skipping ...\n",
+		(ipaddr >> 24) &0xff,
+		(ipaddr >> 16) &0xff,
+		(ipaddr >> 8) &0xff,
+		ipaddr &0xff
+	);
+	perror("send");
+	return rc;
 }

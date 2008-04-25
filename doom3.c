@@ -146,7 +146,7 @@ int send_doom3master_request_packet( struct qserver *server)
 	rc= send( server->fd, packet, packet_len, 0);
 	if ( rc == SOCKET_ERROR)
 	{
-		perror( "send");
+		return send_error( server, rc );
 	}
 
 	if ( server->retry1 == n_retries)
@@ -179,7 +179,7 @@ int send_quake4master_request_packet( struct qserver *server)
 	rc= send( server->fd, packet, packet_len, 0);
 	if ( rc == SOCKET_ERROR)
 	{
-		perror( "send");
+		return send_error( server, rc );
 	}
 
 	if ( server->retry1 == n_retries)
@@ -212,7 +212,7 @@ int deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktl
 		server->server_name= SERVERERROR;
 		server->master_pkt_len = 0;
 		malformed_packet(server, "too short or invalid response");
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	server->retry1 = 0; // received at least one packet so no need to retry
@@ -276,7 +276,7 @@ static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pk
 		memcmp( doom3_inforesponse, ptr, sizeof(doom3_inforesponse)) != 0 )
 	{
 		malformed_packet(server, "too short or invalid response");
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	ptr += sizeof(doom3_inforesponse);
 
@@ -315,7 +315,7 @@ static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pk
 	if( protocolver >> 16 != version )
 	{
 		malformed_packet(server, "protocol version %u, expected %u", protocolver >> 16, version );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 */
 
@@ -332,7 +332,7 @@ static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pk
 		if ( !ptr )
 		{
 			malformed_packet( server, "no rule key" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 		keylen = ptr - key;
 
@@ -341,7 +341,7 @@ static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pk
 		if ( !ptr )
 		{
 			malformed_packet( server, "no rule value" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 		vallen = ptr - val;
 		++ptr;
@@ -378,7 +378,7 @@ x
 			{
 				// ET:QW reports maps/<mapname>.entities
 				// so we strip that here if it exists
-				char *tmpp = strstr( val, ".entities" );	
+				char *tmpp = strstr( val, ".entities" );
 				if ( NULL != tmpp )
 				{
 					*tmpp = '\0';
@@ -416,7 +416,7 @@ x
 		// no more info should be player headers here as we
 		// requested it
 		malformed_packet( server, "player info missing" );
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	// now each player details
@@ -439,14 +439,14 @@ x
 		{
 			// run off the end and shouldnt have
 			malformed_packet( server, "player info too short" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		player = add_player( server, player_id );
 		if(!player)
 		{
 			malformed_packet( server, "duplicate player id" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		// doesnt support score so set a sensible default
@@ -483,7 +483,7 @@ x
 		if ( !ptr )
 		{
 			malformed_packet( server, "player name not null terminated" );
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 		player->name = strdup( val );
 		ptr++;
@@ -495,7 +495,7 @@ x
 			if ( !ptr )
 			{
 				malformed_packet( server, "player clan not null terminated" );
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 			player->tribe_tag = strdup( val );
 			ptr++;
@@ -515,7 +515,7 @@ x
 				if ( !ptr )
 				{
 					malformed_packet( server, "player clan not null terminated" );
-					return cleanup_qserver( server, FORCE );
+					return PKT_ERROR;
 				}
 				player->tribe_tag = strdup( val );
 				ptr++;
@@ -568,7 +568,7 @@ x
 		add_rule( server, "osmask", tmp, NO_FLAGS );
 		debug( 2, "osmask %s", tmp);
 		ptr += 4;
-	
+
 		if ( 5 == version && end - ptr >= 1 )
 		{
 			// Ranked flag
@@ -646,7 +646,7 @@ x
 		server->num_players = viewers;
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 int deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)

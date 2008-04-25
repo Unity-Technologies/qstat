@@ -3271,4 +3271,11 @@ extern int show_game_port;
 #define FORCE 1
 #define NO_FORCE 0
 
+#define INPROGRESS 0
+#define DONE_AUTO 1
+#define DONE_FORCE 2
+#define MEM_ERROR -2
+#define PKT_ERROR -3
+#define ORD_ERROR -4
+
 #endif

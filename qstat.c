@@ -235,6 +235,7 @@ int server_compare(struct qserver *one, struct qserver *two);
 int player_compare(struct player *one, struct player *two);
 int type_option_compare(server_type *one, server_type *two);
 int type_string_compare(server_type *one, server_type *two);
+int proccess_func_ret( struct qserver *server, int ret );
 STATIC int u2xmp_html_color(short color, char *dest, int *font_tag);
 STATIC int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag);
 
@@ -2876,7 +2877,9 @@ static void replay_pkt_dumps()
 		if ((fd = open(pkt_dumps[i], O_RDONLY)) == -1)
 		{
 			goto err;
-		} if (fstat(fd, &statbuf) == -1)
+		}
+
+		if (fstat(fd, &statbuf) == -1)
 		{
 			goto err;
 		}
@@ -2891,10 +2894,12 @@ static void replay_pkt_dumps()
 			fprintf(stderr, "Failed to read entire packet from disk got %d of %ld bytes\n", bytes_read, (long)statbuf.st_size);
 			goto err;
 		}
-
-		server->type->packet_func(server, pkt, statbuf.st_size);
 		close(fd);
 		fd = 0;
+
+		debug(2, "replay, pre-packet_func");
+		proccess_func_ret( server, server->type->packet_func( server, pkt, statbuf.st_size ) );
+		debug(2, "replay, post-packet_func");
 	}
 	goto out;
 
@@ -3053,7 +3058,6 @@ void do_work(void)
 				dump_packet(pkt, pktlen);
 			}
 #endif
-
 			if (server->flags &FLAG_BROADCAST)
 			{
 				struct qserver *broadcast = server;
@@ -3062,7 +3066,8 @@ void do_work(void)
 				if (!(no_port_offset || server->flags &TF_NO_PORT_OFFSET))
 				{
 					port -= server->type->port_offset;
-				} server = add_qserver_byaddr(ntohl(buffer[i].addr.sin_addr.s_addr), port, server->type, NULL);
+				}
+				server = add_qserver_byaddr(ntohl(buffer[i].addr.sin_addr.s_addr), port, server->type, NULL);
 				if (server == NULL)
 				{
 					server = find_server_by_address(buffer[i].addr.sin_addr.s_addr, ntohs(buffer[i].addr.sin_port));
@@ -3093,7 +3098,7 @@ void do_work(void)
 			}
 
 			debug(2, "connected, pre-packet_func: %d", connected);
-			server->type->packet_func(server, pkt, pktlen);
+			proccess_func_ret( server, server->type->packet_func(server, pkt, pktlen) );
 			debug(2, "connected, post-packet_func: %d", connected);
 		}
 		buffill = 0;
@@ -3826,7 +3831,8 @@ void finish_output()
 			{
 				array[i] = server;
 				server = server->next;
-			} sort_servers(array, num_servers_total);
+			}
+			sort_servers(array, num_servers_total);
 			if (progress)
 			{
 				fprintf(stderr, "\n");
@@ -4491,7 +4497,8 @@ int bind_qserver(struct qserver *server)
 		{
 			perror("bind");
 			server->server_name = SYSERROR;
-		} close(server->fd);
+		}
+		close(server->fd);
 		server->fd = - 1;
 		return -1;
 	}
@@ -4596,7 +4603,7 @@ static struct timeval t_lastsend = { 0, 0 };
 
 int bind_sockets()
 {
-	struct qserver *server;
+	struct qserver *server, *next_server;
 	struct timeval now;
 	int rc, retry_count = 0;
 
@@ -4618,12 +4625,15 @@ int bind_sockets()
 		server = servers;
 	}
 
-	for (; server != NULL && connected < max_simultaneous; server = server->next)
+	for (; server != NULL && connected < max_simultaneous; )
 	{
+		// note the next server for use as process_func can free the server
+		next_server = server->next;
 		if (server->server_name == NULL && server->fd == -1)
 		{
 			if (waiting_for_masters && !server->type->master)
 			{
+				server = next_server;
 				continue;
 			}
 
@@ -4639,7 +4649,8 @@ int bind_sockets()
 
 				gettimeofday(&t_lastsend, NULL);
 				debug(2, "calling status_query_func for %p", server);
-				server->type->status_query_func(server);
+				proccess_func_ret( server, server->type->status_query_func(server) );
+
 				connected++;
 				if (!waiting_for_masters)
 				{
@@ -4652,6 +4663,8 @@ int bind_sockets()
 				return -2;
 			}
 		}
+
+		server = next_server;
 	}
 
 	if (!connected && retry_count)
@@ -4660,6 +4673,31 @@ int bind_sockets()
 	}
 
 	return 0;
+}
+
+int proccess_func_ret( struct qserver *server, int ret )
+{
+	switch ( ret )
+	{
+	case INPROGRESS:
+		break;
+
+	case DONE_AUTO:
+		cleanup_qserver( server, NO_FORCE );
+		break;
+
+	// For documenation only :)
+	//case DONE_FORCE:
+	//case SOCKET_ERROR:
+	//case MEM_ERROR:
+	//case PKT_ERROR:
+	//case ORD_ERROR:
+	default:
+		cleanup_qserver( server, FORCE );
+		break;
+	}
+
+	return ret;
 }
 
 
@@ -4737,7 +4775,7 @@ void send_packets()
 			{
 				// Query status
 				debug(2, "calling status_query_func for %p", server);
-				server->type->status_query_func(server);
+				proccess_func_ret( server, server->type->status_query_func(server) );
 				gettimeofday(&t_lastsend, NULL);
 				n_sent++;
 				continue;
@@ -4778,7 +4816,7 @@ void send_packets()
 				if (server->next_player_info >= server->num_players)
 				{
 					// no more retries
-					cleanup_qserver( server, NO_FORCE );
+					cleanup_qserver( server, FORCE );
 					continue;
 				}
 				server->retry2 = n_retries;
@@ -4822,15 +4860,7 @@ int send_bfris_request_packet(struct qserver *server)
  */
 int send_qserver_request_packet(struct qserver *server)
 {
-
-	int rc = send_packet(server, server->type->status_packet, server->type->status_len);
-
-	if (rc == SOCKET_ERROR)
-	{
-		return cleanup_qserver( server, FORCE );
-	}
-
-	return 1;
+	return send_packet(server, server->type->status_packet, server->type->status_len);
 }
 
 /* First packet for a QuakeWorld server
@@ -4858,15 +4888,7 @@ int send_qwserver_request_packet(struct qserver *server)
 
 	if (rc == SOCKET_ERROR)
 	{
-		unsigned int ipaddr = ntohl(server->ipaddr);
-		fprintf(stderr, "Error on %d.%d.%d.%d, skipping ...\n",
-			(ipaddr >> 24) &0xff,
-			(ipaddr >> 16) &0xff,
-			(ipaddr >> 8) &0xff,
-			ipaddr &0xff
-		);
-		perror("send");
-		return cleanup_qserver( server, FORCE );
+		return send_error( server, rc );
 	}
 
 	if (server->retry1 == n_retries || server->flags &FLAG_BROADCAST)
@@ -5126,7 +5148,7 @@ int send_qwmaster_request_packet(struct qserver *server)
 
 	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
 	if (server->retry1 == n_retries)
@@ -5169,10 +5191,12 @@ int send_tribes2_request_packet(struct qserver *server)
 
 	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
-	return register_send(server);
+	register_send(server);
+
+	return rc;
 }
 
 int send_ghostrecon_request_packet(struct qserver *server)
@@ -5430,10 +5454,12 @@ int send_tribes2master_request_packet(struct qserver *server)
 
 	rc = send(server->fd, (char*)packet, pkt - packet, 0);
 
-	send_done: if (rc == SOCKET_ERROR)
+send_done:
+	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
+
 	if (server->retry1 == n_retries)
 	{
 		gettimeofday(&server->packet_time1, NULL);
@@ -5445,7 +5471,7 @@ int send_tribes2master_request_packet(struct qserver *server)
 	}
 	server->retry1--;
 	server->n_packets++;
-	
+
 	return 1;
 }
 
@@ -5554,10 +5580,11 @@ int send_rule_request_packet(struct qserver *server)
 	rc = send(server->fd, (const char*)server->type->rule_packet, len, 0);
 	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
-	setup_retry: if (server->retry1 == n_retries)
+setup_retry:
+	if (server->retry1 == n_retries)
 	{
 		gettimeofday(&server->packet_time1, NULL);
 		server->n_requests++;
@@ -5613,10 +5640,11 @@ int send_player_request_packet(struct qserver *server)
 	rc = send(server->fd, (const char*)server->type->player_packet, server->type->player_len, 0);
 	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
-	setup_retry: if (server->retry2 == n_retries)
+setup_retry:
+	if (server->retry2 == n_retries)
 	{
 		gettimeofday(&server->packet_time2, NULL);
 		server->n_requests++;
@@ -5627,7 +5655,7 @@ int send_player_request_packet(struct qserver *server)
 	}
 	server->retry2--;
 	server->n_packets++;
-	
+
 	return 1;
 }
 
@@ -6032,8 +6060,10 @@ void free_server(struct qserver *server)
 	{
 		free(server->master_pkt);
 	}
-
-	free(server->query_arg);
+	if ( server->query_arg )
+	{
+		free(server->query_arg);
+	}
 
 	/* These fields are never malloc'd: outfilename
 	 */
@@ -6122,7 +6152,7 @@ int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
 	if (ntohs(pkt->length) != pktlen)
 	{
 		fprintf(stderr, "%s Ignoring bogus packet; length %d != %d\n", server->arg, ntohs(pkt->length), pktlen);
-		return cleanup_qserver(server, FORCE);
+		return PKT_ERROR;
 	}
 
 	rawpkt[pktlen] = '\0';
@@ -6152,12 +6182,12 @@ int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
 			return 0;
 	}
 
-	if (rc == -1)
+	if ( SOCKET_ERROR == rc )
 	{
 		fprintf(stderr, "%s error on packet opcode %x\n", server->arg, (int)pkt->op_code);
 	}
 
-	return cleanup_qserver(server, (rc == -1) ? FORCE : 0);
+	return rc;
 }
 
 
@@ -6234,7 +6264,7 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 			;
 		if (!pktlen)
 		{
-			return 0;
+			return INPROGRESS;
 		}
 		if (rawpkt[pktlen - 1] == '"')
 		{
@@ -6251,7 +6281,7 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 			send_rule_request_packet( server);
 			server->retry1= n_retries-1;
 		}
-		return 0;
+		return INPROGRESS;
 	}
 	else if (strncmp(&rawpkt[4], "statusResponse\n", 15) == 0 || (rawpkt[4] == '\001' && strncmp(&rawpkt[5], "statusResponse\n", 15) 	== 0))
 	{
@@ -6282,10 +6312,10 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 			ntohs(server->port)
 		);
 		print_packet(server, rawpkt, pktlen);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
-	return cleanup_qserver( server, NO_FORCE );
+	return DONE_AUTO;
 }
 
 int deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -6512,7 +6542,7 @@ int deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->server_name = strdup("");
 	}
 
-	return cleanup_qserver( server, NO_FORCE );
+	return DONE_AUTO;
 }
 
 int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen )
@@ -6763,17 +6793,17 @@ int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen )
 
 	if (!complete)
 	{
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	else if (server->server_name == NULL)
 	{
 		server->server_name = strdup("");
 	}
 
-	return cleanup_qserver( server, NO_FORCE );
+	return DONE_AUTO;
 }
 
-void ack_descent3master_packet(struct qserver *server, char *curtok)
+int ack_descent3master_packet(struct qserver *server, char *curtok)
 {
 	int rc;
 	char packet[0x1e];
@@ -6784,8 +6814,10 @@ void ack_descent3master_packet(struct qserver *server, char *curtok)
 	rc = send(server->fd, packet, sizeof(packet), 0);
 	if (rc == SOCKET_ERROR)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
+
+	return rc;
 }
 
 /* Packet from Descent3 master server (PXO)
@@ -6827,10 +6859,10 @@ int deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pk
 
 	if (lastpacket)
 	{
-		return cleanup_qserver( server, NO_FORCE );
+		return DONE_AUTO;
 	}
 
-	return 0;
+	return INPROGRESS;
 }
 
 /* Packet from QuakeWorld master server
@@ -6844,7 +6876,7 @@ int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 	{
 		server->error = strdup(&rawpkt[2]);
 		server->server_name = SERVERERROR;
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if (*((unsigned int*)rawpkt) == 0xffffffff)
@@ -6950,9 +6982,8 @@ int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 		{
 			// all done
 			server->server_name = MASTER;
-			cleanup_qserver( server, FORCE );
 			bind_sockets();
-			ret = 1;
+			ret = DONE_FORCE;
 		}
 		else
 		{
@@ -6973,9 +7004,8 @@ int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 			server->n_servers--;
 			server->master_pkt_len -= 6;
 			server->server_name = MASTER;
-			cleanup_qserver( server, FORCE );
 			bind_sockets();
-			ret = 1;
+			ret = DONE_FORCE;
 		}
 		else
 		{
@@ -6987,7 +7017,7 @@ int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 	else
 	{
 		server->server_name = MASTER;
-		cleanup_qserver( server, NO_FORCE );
+		ret = DONE_AUTO;
 		bind_sockets();
 	}
 
@@ -7026,7 +7056,7 @@ int decode_q3master_packet(struct qserver *server, char *pkt, int pktlen)
 			// Last packet ID ( seen in COD4 )
 			server->n_servers = server->master_pkt_len / 6;
 			server->retry1 = 0; // received at least one packet so no need to retry
-			return cleanup_qserver(server, FORCE);
+			return DONE_FORCE;
 		}
 	}
 
@@ -7034,7 +7064,7 @@ int decode_q3master_packet(struct qserver *server, char *pkt, int pktlen)
 	//  server->next_player_info= -1; evil, causes busy loop!
 	server->retry1 = 0; // received at least one packet so no need to retry
 
-	return 1;
+	return INPROGRESS;
 }
 
 int decode_stefmaster_packet(struct qserver *server, char *pkt, int pktlen)
@@ -7172,11 +7202,11 @@ int deal_with_tribesmaster_packet(struct qserver *server, char *rawpkt, int pktl
 
 	if (packet_number >= n_packets)
 	{
-		return cleanup_qserver(server, FORCE );
+		return DONE_FORCE;
 	}
 	else
 	{
-		return cleanup_qserver( server, NO_FORCE );
+		return DONE_AUTO;
 	}
 }
 
@@ -7244,13 +7274,13 @@ int deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen
 		server->n_servers = 0;
 		server->server_name = MASTER;
 		server->next_player_info = - 1;
-		return cleanup_qserver(server, FORCE);
+		return DONE_FORCE;
 	}
 
 	if (pkt[0] != TRIBES2_RESPONSE_MASTER)
 	{
 		/* error */
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	server_limit = get_param_ui_value(server, "limit", ~0);
@@ -7282,12 +7312,10 @@ int deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen
 
 	if (index >= total - 1 || server->n_servers >= server_limit)
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
-	else
-	{
-		return cleanup_qserver( server, NO_FORCE );
-	}
+
+	return DONE_AUTO;
 }
 
 int server_info_packet(struct qserver *server, struct q_packet *pkt, int datalen)
@@ -8405,20 +8433,24 @@ int deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int pktlen)
 	 * We do clean up if we don't fetch server rules so we don't
 	 * need to wait for timeout.
 	 */
-	if (error || (!get_server_rules && !get_player_info) || (!get_server_rules && server->num_players == server->n_player_info) ||
-	(server->next_rule == NULL && server->num_players == server->n_player_info))
+	if (
+		error ||
+		(!get_server_rules && !get_player_info) ||
+		(!get_server_rules && server->num_players == server->n_player_info) ||
+		(server->next_rule == NULL && server->num_players == server->n_player_info)
+	)
 	{
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
 
-	return 0;
+	return INPROGRESS;
 }
 
 int deal_with_unrealmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	if (pktlen == 0)
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 	print_packet(server, rawpkt, pktlen);
 	puts("--");
@@ -8442,7 +8474,7 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	if (pktlen < 5)
 	{
-		return cleanup_qserver(server, FORCE);
+		return PKT_ERROR;
 	}
 
 	if (((rawpkt[0] != '\377' && rawpkt[0] != '\376') || rawpkt[1] != '\377' || rawpkt[2] != '\377' || rawpkt[3] != '\377') && show_errors)
@@ -8700,7 +8732,7 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 		print_packet(server, rawpkt, pktlen);
 	}
 
-	return cleanup_qserver( server, NO_FORCE );
+	return DONE_AUTO;
 }
 
 
@@ -8724,12 +8756,12 @@ int deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	if (pktlen < sizeof(tribes_info_reponse))
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if (strncmp(rawpkt, tribes_players_reponse, sizeof(tribes_players_reponse)) != 0)
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	pkt = (unsigned char*) &rawpkt[sizeof(tribes_info_reponse)];
@@ -8774,7 +8806,7 @@ int deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 	n_teams = *pkt++; /* number of teams */
 	if (n_teams == 255)
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 	sprintf(buf, "%d", n_teams);
 	add_rule(server, "numteams", buf, NO_FLAGS);
@@ -8881,7 +8913,7 @@ int deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 	}
 	free(teams);
 
-	return cleanup_qserver(server, NO_FORCE );
+	return DONE_AUTO;
 }
 
 void get_tribes2_player_type(struct player *player)
@@ -8947,7 +8979,7 @@ int deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	{
 		if (pkt[6] < 4 || pkt[6] > 12 || strncmp(pkt + 7, "VER", 3) != 0)
 		{
-			return cleanup_qserver(server, FORCE );
+			return PKT_ERROR;
 		}
 
 		strncpy(str, pkt + 10, pkt[6] - 3);
@@ -8960,7 +8992,7 @@ int deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 		if (query_version != 3 && query_version != 5)
 		{
 			server->server_name = strdup("Unknown query version");
-			return cleanup_qserver(server,  FORCE );
+			return PKT_ERROR;
 		}
 
 		if (query_version == 5)
@@ -8988,14 +9020,14 @@ int deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	}
 	else if (pkt[0] != TRIBES2_RESPONSE_INFO)
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	pkt += 6;
 	for (i = 0; i < *(unsigned char*)pkt; i++)
 	if (!isprint(pkt[i + 1]))
 	{
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 	add_nrule(server, server->type->game_rule, pkt + 1, *(unsigned char*)pkt);
 	server->game = strndup(pkt + 1, *(unsigned char*)pkt);
@@ -9211,7 +9243,7 @@ info_done:
 		free(teams);
 	}
 
-	return cleanup_qserver(server, FORCE );
+	return DONE_FORCE;
 }
 
 static const char GrPacketHead[] =
@@ -9277,7 +9309,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (memcmp(pkt, GrPacketHead, sizeof(GrPacketHead)) != 0)
 	{
 		server->server_name = strdup("Unknown Packet Header");
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	pkt += sizeof(GrPacketHead);
@@ -9286,7 +9318,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (StartFlag != 0x42)
 	{
 		server->server_name = strdup("Unknown Start Flag");
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	/* compare packet length recieved to included size - header info */
@@ -9298,7 +9330,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (sLen != GrPayloadLen)
 	{
 		server->server_name = strdup("Packet Size Mismatch");
-		return cleanup_qserver(server, FORCE );
+		return PKT_ERROR;
 	}
 
 	/*
@@ -9320,7 +9352,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (ServerVersion == UNKNOWN_VERSION)
 	{
 		server->server_name = strdup("Unknown GR Version");
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	switch (ServerVersion)
@@ -9375,7 +9407,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		server->server_name = strdup("Server Name too Long");
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	server->server_name = strndup(pkt, iLen);
 	pkt += iLen;
@@ -9385,7 +9417,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		add_rule(server, "error", "Map Name too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	server->map_name = strndup(pkt, iLen);
 	pkt += iLen;
@@ -9395,7 +9427,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		add_rule(server, "error", "Mission Name too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	/* mission does not make sense unless a coop game type. Since
 	we dont know that now, we will save the mission and set
@@ -9409,7 +9441,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		add_rule(server, "error", "Mission Type too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	add_nrule(server, "missiontype", pkt, iLen);
 	pkt += iLen;
@@ -9429,7 +9461,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (server->max_players > 36)
 	{
 		add_rule(server, "error", "Max players more then 36", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	server->num_players = swap_long_from_little(pkt);
@@ -9437,7 +9469,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if (server->num_players > server->max_players)
 	{
 		add_rule(server, "error", "More then MAX Players", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if (iIgnoreServerPlayer)
@@ -9461,7 +9493,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 		if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 		{
 			add_rule(server, "error", "Player Name too Long", NO_FLAGS);
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 		player->name = strndup(pkt, iLen);
 		pkt += iLen; /* player name */
@@ -9481,7 +9513,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		add_rule(server, "error", "Version too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	strncpy(str, pkt, iLen);
 	add_rule(server, "version", str, NO_FLAGS);
@@ -9492,7 +9524,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > LONG_GR_LEN))
 	{
 		add_rule(server, "error", "Mods too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	server->game = strndup(pkt, iLen);
 
@@ -9586,7 +9618,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > LONG_GR_LEN))
 	{
 		add_rule(server, "error", "MOTD too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	strncpy(str, pkt, sizeof(str));
 	str[sizeof(str) - 1] = 0;
@@ -9827,7 +9859,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ((iLen < 1) || (iLen > SHORT_GR_LEN))
 	{
 		add_rule(server, "error", "Restrictions too Long", NO_FLAGS);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	add_rule(server, "restrict", pkt, NO_FLAGS);
 	pkt += iLen; /* restrictions */
@@ -9838,7 +9870,7 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	if ( ghostrecon_debug) print_packet( pkt, GrPayloadLen);
 	 */
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 char *find_ravenshield_game(char *gameno)
@@ -10241,7 +10273,7 @@ int deal_with_ravenshield_packet(struct qserver *server, char *rawpkt, int pktle
 		}
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -10424,7 +10456,7 @@ int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
 		*s = '\xFF';
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 int deal_with_farcry_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -10607,7 +10639,7 @@ int deal_with_farcry_packet(struct qserver *server, char *rawpkt, int pktlen)
 		*s = '\xFF';
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 /* postions of map name, player name (in player substring), zero-based */
@@ -10828,7 +10860,8 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	server->server_name = BFRIS_SERVER_NAME;
-	return cleanup_qserver( server, FORCE );
+
+	return DONE_FORCE;
 }
 
 struct rule *add_uchar_rule(struct qserver *server, char *key, unsigned char value)
@@ -10852,7 +10885,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 	{
 		fprintf(stderr, "short descent3 packet\n");
 		print_packet(server, rawpkt, pktlen);
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	/* 'info' response */
@@ -10860,7 +10893,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 	{
 		if (server->server_name != NULL)
 		{
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 
@@ -10916,7 +10949,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 		{
 			server->next_player_info = 0;
 			send_player_request_packet(server);
-			return cleanup_qserver( server, NO_FORCE );
+			return INPROGRESS;
 		}
 
 	}
@@ -10928,7 +10961,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if (server->players != NULL)
 		{
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 
 		pkt = &rawpkt[0x4];
@@ -10948,7 +10981,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 		print_packet(server, rawpkt, pktlen);
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 
@@ -10968,12 +11001,12 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	if (pktlen < 4)
 	{
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	if (rawpkt[0] != 'E' || rawpkt[1] != 'Y' || rawpkt[2] != 'E')
 	{
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
@@ -11018,9 +11051,9 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if (NULL == sdata->data)
 		{
-			fprintf(stderr, "Out of memory\n");
-			return cleanup_qserver( server, FORCE );
+			return MEM_ERROR;
 		}
+
 		if (pkt_index == 1)
 		{
 			memcpy(sdata->data, &rawpkt[0], sdata->datalen);
@@ -11037,28 +11070,28 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 	value = dup_n1string(&rawpkt[4], end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	add_rule(server, "gamename", value, NO_VALUE_COPY);
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	add_rule(server, "hostport", value, NO_VALUE_COPY);
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	server->server_name = value;
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	server->game = value;
 	add_rule(server, server->type->game_rule, value, NO_FLAGS);
@@ -11066,28 +11099,28 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	server->map_name = value;
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	add_rule(server, "_version", value, NO_VALUE_COPY);
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	add_rule(server, "_password", value, NO_VALUE_COPY);
 
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	server->num_players = atoi(value);
 	free(value);
@@ -11095,7 +11128,7 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 	value = dup_n1string(next, end, &next);
 	if (value == NULL)
 	{
-		return cleanup_qserver( server, FORCE );
+		return MEM_ERROR;
 	}
 	server->max_players = atoi(value);
 	free(value);
@@ -11217,7 +11250,7 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 		//fprintf( stderr, "Player '%s'\n", player->name );
 	}
 
-	return cleanup_qserver( server, FORCE );
+	return DONE_FORCE;
 }
 
 static const char hl2_statusresponse[] = "\xFF\xFF\xFF\xFF\x49";
@@ -11250,7 +11283,7 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 	if (pktlen < hl2_response_size)
 	{
 		malformed_packet(server, "short response type");
-		return cleanup_qserver( server, FORCE );
+		return PKT_ERROR;
 	}
 	else
 	{
@@ -11259,7 +11292,7 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 			if (pktlen < hl2_response_size + 20)
 			{
 				malformed_packet(server, "short packet");
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 			type = HL2_STATUS;
 		}
@@ -11274,7 +11307,7 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 		else
 		{
 			malformed_packet(server, "unknown response");
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 		}
 	}
 
@@ -11295,7 +11328,7 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 			if( '\x02' != protocolver )
 			{
 				malformed_packet(server, "protocol version != 0x02");
-				return cleanup_qserver( server, FORCE );
+				return PKT_ERROR;
 			}
 			 */
 
@@ -11452,15 +11485,10 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		default:
 			malformed_packet(server, "unknown response");
-			return cleanup_qserver( server, FORCE );
+			return PKT_ERROR;
 	}
 
-
-	if (0 == n_sent)
-	{
-		return cleanup_qserver( server, FORCE );
-	}
-	return 0;
+	return ( 0 == n_sent ) ? DONE_FORCE : INPROGRESS;
 }
 
 int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktlen)
@@ -11538,7 +11566,7 @@ int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int 
 		server->next_player_info = - 1;
 		server->retry1 = 0;
 
-		return cleanup_qserver( server, FORCE );
+		return DONE_FORCE;
 	}
 
 	if (!server->saved_data.data)
@@ -11553,7 +11581,7 @@ int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int 
 	memcpy(server->saved_data.data + server->saved_data.datalen, rawpkt, pktlen);
 	server->saved_data.datalen += pktlen;
 
-	return 0;
+	return INPROGRESS;
 }
 
 /* Misc utility functions
