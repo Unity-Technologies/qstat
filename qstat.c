@@ -4727,6 +4727,7 @@ int bind_sockets()
 
 int proccess_func_ret( struct qserver *server, int ret )
 {
+	debug( 3, "proccess_func_ret %p, %d", server, ret );
 	switch ( ret )
 	{
 	case INPROGRESS:
@@ -5740,6 +5741,7 @@ void qserver_disconnect(struct qserver *server)
 int cleanup_qserver(struct qserver *server, int force)
 {
 	int close_it = force;
+	debug( 3, "cleanup_qserver %p, %d", server, force );
 	if (server->server_name == NULL)
 	{
 		debug(3, "server has no name, forcing close");
@@ -6199,6 +6201,8 @@ int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
 	struct q_packet *pkt = (struct q_packet*)rawpkt;
 	int rc;
 
+	debug( 2, "deal_with_q_packet %p, %d", server, pktlen );
+
 	if (ntohs(pkt->length) != pktlen)
 	{
 		fprintf(stderr, "%s Ignoring bogus packet; length %d != %d\n", server->arg, ntohs(pkt->length), pktlen);
@@ -6245,6 +6249,7 @@ int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
  */
 int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
+	debug( 2, "deal_with_qw_packet %p, %d", server, pktlen );
 	if (server->server_name == NULL)
 	{
 		server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
@@ -6303,6 +6308,7 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 	else if (strncmp(&rawpkt[4], "infoResponse", 12) == 0 || (rawpkt[4] == '\001' && strncmp(&rawpkt[5], "infoResponse", 12) == 0))
 	{
 		/* quake3 info response */
+		int ret;
 		if (rawpkt[4] == '\001')
 		{
 			rawpkt++;
@@ -6326,12 +6332,15 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 			server->next_rule = "";
 		}
 
-		if ( ! deal_with_q2_packet(server, rawpkt, pktlen ) && ( get_player_info || get_server_rules ) )
+		ret = deal_with_q2_packet(server, rawpkt, pktlen );
+		if ( DONE_AUTO == ret && ( get_player_info || get_server_rules ) )
 		{
 			send_rule_request_packet( server);
 			server->retry1= n_retries-1;
+			return INPROGRESS;
 		}
-		return INPROGRESS;
+
+		return ret;
 	}
 	else if (strncmp(&rawpkt[4], "statusResponse\n", 15) == 0 || (rawpkt[4] == '\001' && strncmp(&rawpkt[5], "statusResponse\n", 15) 	== 0))
 	{
@@ -6375,6 +6384,8 @@ int deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 	int len, rc, complete = 0;
 	int number, frags, connect_time, ping;
 	char *pkt = &rawpkt[5];
+
+	debug( 2, "deal_with_q1qw_packet %p, %d", server, pktlen );
 
 	if (server->type->id == HW_SERVER)
 	{
@@ -6603,6 +6614,8 @@ int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen )
 	int len, rc, complete = 0;
 	int frags = 0, ping = 0, num_players = 0;
 	char *pkt = rawpkt;
+
+	debug( 2, "deal_with_q2_packet %p, %d", server, pktlen );
 
 	while (*pkt && pkt - rawpkt < pktlen)
 	{
@@ -6878,7 +6891,9 @@ int deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pk
 	char *names = rawpkt + 0x1f;
 	char *ips = rawpkt + 0x29f;
 	char *ports = rawpkt + 0x2ef;
-	/* printf ("s=%p p=%p l=%i\n",server,rawpkt,pktlen); */
+
+	debug( 2, "deal_with_descent3master_packet %p, %d", server, pktlen );
+
 	while (i < 20)
 	{
 		if (*names)
@@ -6920,6 +6935,9 @@ int deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pk
 int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	int ret = 0;
+
+	debug( 2, "deal_with_qwmaster_packet %p, %d", server, pktlen );
+
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 
 	if (rawpkt[0] == QW_NACK)
@@ -7160,6 +7178,8 @@ int deal_with_tribesmaster_packet(struct qserver *server, char *rawpkt, int pktl
 	int len;
 	unsigned int ipaddr;
 
+	debug( 2, "deal_with_tribesmaster_packet %p, %d", server, pktlen );
+
 	if (memcmp(rawpkt, tribes_master_response, sizeof(tribes_master_response)) != 0)
 	{
 		fprintf(stderr, "Odd packet from Tribes master server\n");
@@ -7295,6 +7315,8 @@ int deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen
 {
 	unsigned int n_servers, index, total, server_limit;
 	char *p, *mpkt;
+
+	debug( 2, "deal_with_tribes2master_packet %p, %d", server, pktlen );
 
 	if (pkt[0] == TRIBES2_RESPONSE_GAME_TYPES)
 	{
@@ -8380,6 +8402,8 @@ int deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int pktlen)
 	int error = 0, before;
 	unsigned int packet_header;
 
+	debug( 2, "deal_with_ut2003_packet %p, %d", server, pktlen );
+
 	rawpkt[pktlen] = '\0';
 	end = &rawpkt[pktlen];
 
@@ -8505,6 +8529,8 @@ int deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 int deal_with_unrealmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
+	debug( 2, "deal_with_unrealmaster_packet %p, %d", server, pktlen );
+
 	if (pktlen == 0)
 	{
 		return PKT_ERROR;
@@ -8523,6 +8549,8 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 	int pkt_index = 0, pkt_max = 0;
 	char number[16];
 	short pkt_id;
+
+	debug( 2, "deal_with_halflife_packet %p, %d", server, pktlen );
 
 	if (server->server_name == NULL)
 	{
@@ -8802,6 +8830,8 @@ int deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 	struct player **last_player = &server->players;
 	char buf[24];
 
+	debug( 2, "deal_with_tribes_packet %p, %d", server, pktlen );
+
 	if (server->server_name == NULL)
 	{
 		server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
@@ -9020,6 +9050,8 @@ int deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	struct player **teams = NULL, *player;
 	struct player **last_player = &server->players;
 	int query_version;
+
+	debug( 2, "deal_with_tribes2_packet %p, %d", server, pktlen );
 
 	pkt[pktlen] = '\0';
 
@@ -9343,6 +9375,8 @@ int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	long iSpawnType;
 	int ServerVersion = UNKNOWN_VERSION;
 	float flStartTimerSetPoint;
+
+	debug( 2, "deal_with_ghostrecon_packet %p, %d", server, pktlen );
 
 	start = pkt;
 	end = &pkt[pktlen];
@@ -9973,6 +10007,8 @@ int deal_with_ravenshield_packet(struct qserver *server, char *rawpkt, int pktle
 {
 	char *s, *key, *value;
 
+	debug( 2, "deal_with_ravenshield_packet %p, %d", server, pktlen );
+
 	server->n_servers++;
 	if (NULL == server->server_name)
 	{
@@ -10337,6 +10373,8 @@ int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *key, *value, *end;
 
+	debug( 2, "deal_with_savage_packet %p, %d", server, pktlen );
+
 	server->n_servers++;
 	if (NULL == server->server_name)
 	{
@@ -10519,6 +10557,8 @@ int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
 int deal_with_farcry_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *key, *value, *end;
+
+	debug( 2, "deal_with_farcry_packet %p, %d", server, pktlen );
 
 	server->n_servers++;
 	if (NULL == server->server_name)
@@ -10708,6 +10748,8 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 	SavedData *sdata;
 	unsigned char *saved_data;
 	int saved_data_size;
+
+	debug( 2, "deal_with_bfris_packet %p, %d", server, pktlen );
 
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 
@@ -10933,6 +10975,8 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 	char *pkt;
 	char buf[24];
 
+	debug( 2, "deal_with_descent3_packet %p, %d", server, pktlen );
+
 	if (server->server_name == NULL)
 	{
 		server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
@@ -11055,6 +11099,8 @@ int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 	struct player **last_player;
 	unsigned char pkt_index, pkt_max;
 	unsigned int pkt_id;
+
+	debug( 2, "deal_with_eye_packet %p, %d", server, pktlen );
 
 	if (pktlen < 4)
 	{
@@ -11326,6 +11372,8 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 	unsigned char protocolver = 0;
 	int n_sent = 0;
 
+	debug( 2, "deal_with_hl2_packet %p, %d", server, pktlen );
+
 	server->n_servers++;
 	if (server->server_name == NULL)
 	{
@@ -11550,6 +11598,8 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktlen)
 {
+	debug( 2, "deal_with_gamespy_master_response %p, %d", server, pktlen );
+
 	if (pktlen == 0)
 	{
 		int len = server->saved_data.datalen;
