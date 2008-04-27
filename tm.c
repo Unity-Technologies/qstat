@@ -48,7 +48,7 @@ int send_tm_request_packet( struct qserver *server )
 
 	if ( user != NULL && password != NULL )
 	{
-		len += sprintf( xmlp + len, TM_AUTH_TEMPLATE, user, password);
+		len += sprintf( xmlp + len, TM_AUTH_TEMPLATE, user, password );
 	}
 	else
 	{
@@ -56,19 +56,11 @@ int send_tm_request_packet( struct qserver *server )
 		len += sprintf( xmlp + len, TM_AUTH_TEMPLATE, "User", "User" );
 	}
 
+	// Always get Player info otherwise player count is invalid
+	// TODO: add more calls to get full player info?
+	server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
 	len += sprintf( xmlp + len, TM_SERVERINFO );
-
-	if ( get_player_info )
-	{
-		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
-		// TODO: add more calls to get full player info?
-		len += sprintf( xmlp + len, TM_PLAYERLIST );
-	}
-	else
-	{
-		server->flags |= TF_STATUS_QUERY;
-	}
-
+	len += sprintf( xmlp + len, TM_PLAYERLIST );
 	len += sprintf( xmlp + len, TM_XML_SUFFIX );
 
 	// First 4 bytes is the length of the request
