@@ -4238,7 +4238,8 @@ void add_servers_from_masters()
 		if (!server->type->master || server->master_pkt == NULL)
 		{
 			continue;
-		} pkt = server->master_pkt;
+		}
+		pkt = server->master_pkt;
 
 		if (server->query_arg && server->type->id == GAMESPY_MASTER)
 		{
@@ -5127,10 +5128,7 @@ int send_qwmaster_request_packet(struct qserver *server)
 	{
 		char *packet;
 		int packet_len;
-		char query_buf[4096] =
-		{
-			0
-		};
+		char query_buf[4096] = { 0 };
 
 		packet = server->type->master_packet;
 		packet_len = server->type->master_len;
@@ -5214,7 +5212,7 @@ int send_qwmaster_request_packet(struct qserver *server)
 	server->retry1--;
 	server->n_packets++;
 
-	return 1;
+	return INPROGRESS;
 }
 
 
