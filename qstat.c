@@ -11828,7 +11828,22 @@ char *xml_escape(char *string)
 				break;
 		}
 
-		if (xml_encoding == ENCODING_LATIN_1)
+		// Validate character
+		// http://www.w3.org/TR/2000/REC-xml-20001006#charsets
+		if ( !
+			(
+				0x09 == c ||
+				0xA == c ||
+				0xD == c ||
+				( 0x20 <= c && 0xD7FF >= c ) ||
+				( 0xE000 <= c && 0xFFFD >= c ) ||
+				( 0x10000 <= c && 0x10FFFF >= c )
+			)
+		)
+		{
+			fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
+		}
+		else if (xml_encoding == ENCODING_LATIN_1)
 		{
 			if (!name_xforms)
 			{
@@ -11854,7 +11869,20 @@ char *xml_escape(char *string)
 			};
 			unsigned char *buf = &tempbuf[0];
 			int bytes = 0;
-			int error = 0;
+			int error = 1;
+
+			// Valid character ranges
+			if (
+				0x09 == c ||
+				0xA == c ||
+				0xD == c ||
+				( 0x20 <= c && 0xD7FF >= c ) ||
+				( 0xE000 <= c && 0xFFFD >= c ) ||
+				( 0x10000 <= c && 0x10FFFF >= c )
+			)
+			{
+				error = 0;
+			}
 
 			if (c < 0x80)
 			/* 0XXX XXXX one byte */
