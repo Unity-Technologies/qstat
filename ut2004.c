@@ -653,4 +653,4 @@ static void bin2hex(const char* in, size_t len, char* out)
 	} while(o != out);
 }
 
-// vim: sw=4 ts=8 noet
+// vim: sw=4 ts=4 noet

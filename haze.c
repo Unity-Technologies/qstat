@@ -85,7 +85,7 @@ int deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 		server->n_packets--;
 		if ( server->retry1 == n_retries || server->flags & FLAG_BROADCAST )
 		{
-			server->n_requests--;
+			//server->n_requests--;
 		}
 		else
 		{
@@ -171,6 +171,7 @@ int deal_with_haze_packet( struct qserver *server, char *rawpkt, int pktlen )
 int deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *pkt = rawpkt;
+	int len;
 	debug( 1, "status packet" );
 
 
@@ -183,8 +184,14 @@ int deal_with_haze_status( struct qserver *server, char *rawpkt, int pktlen )
 	pkt += strlen( pkt ) + 1;
 
 	// map
+	len = strlen( pkt );
+	// remove .res from map names
+	if ( 0 == strncmp( pkt + len - 4, ".res", 4 ) )
+	{
+		*(pkt + len - 4) = '\0';
+	}
 	server->map_name = strdup( pkt );
-	pkt += strlen( pkt ) + 1;
+	pkt += len + 1;
 
 	// num players
 	server->num_players = atoi( pkt );
@@ -271,6 +278,11 @@ int process_haze_packet( struct qserver *server )
 			}
 			else if( 0 == strcmp( var, "map" ) )
 			{
+				// remove .res from map names
+				if ( 0 == strncmp( val + val_len - 4, ".res", 4 ) )
+				{
+					*(val + val_len - 4) = '\0';
+				}
 				server->map_name = strdup( val );
 			}
 			else if( 0 == strcmp( var, "maxPlayers" ) )
