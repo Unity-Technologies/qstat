@@ -509,4 +509,4 @@ out_too_short:
 	return PKT_ERROR;
 }
 
-// vim: sw=4 ts=8 noet
+// vim: sw=4 ts=4 noet
