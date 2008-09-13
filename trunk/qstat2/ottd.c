@@ -354,5 +354,5 @@ int send_ottd_request_packet(struct qserver *server)
 		server->next_rule = ""; // trigger calling send_a2s_rule_request_packet
 	}
 
-	return 1;
+	return INPROGRESS;
 }
