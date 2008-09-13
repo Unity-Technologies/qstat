@@ -23,9 +23,9 @@
 #include <sys/types.h>
 
 // TODO: get rid of this and use send_packet instead, remove n_requests hack from a2s
-int qserver_send_initial(struct qserver* server, const char* data, size_t len)
+query_status_t qserver_send_initial(struct qserver* server, const char* data, size_t len)
 {
-    int ret = 0;
+    int ret = INPROGRESS;
 
     if( data )
     {
@@ -47,6 +47,7 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
 		if ( ret == SOCKET_ERROR)
 		{
 			send_error( server, ret );
+			ret = SYS_ERROR;
 		}
     }
 
@@ -65,9 +66,9 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len)
     return ret;
 }
 
-int qserver_send(struct qserver* server, const char* data, size_t len)
+query_status_t qserver_send(struct qserver* server, const char* data, size_t len)
 {
-    int ret = 0;
+    int ret = INPROGRESS;
 
     if(data)
     {
@@ -83,6 +84,7 @@ int qserver_send(struct qserver* server, const char* data, size_t len)
 		if ( ret == SOCKET_ERROR)
 		{
 			send_error( server, ret );
+			ret = SYS_ERROR;
 		}
     }
 
