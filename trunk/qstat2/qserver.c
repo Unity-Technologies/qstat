@@ -18,6 +18,8 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <sys/types.h>
 
 // TODO: get rid of this and use send_packet instead, remove n_requests hack from a2s
@@ -166,12 +168,13 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 int send_error( struct qserver *server, int rc )
 {
 	unsigned int ipaddr = ntohl(server->ipaddr);
-	fprintf(stderr, "Error on %d.%d.%d.%d, skipping ...\n",
+	const char* errstr = strerror(errno);
+	fprintf(stderr, "Error on %d.%d.%d.%d: %s, skipping ...\n",
 		(ipaddr >> 24) &0xff,
 		(ipaddr >> 16) &0xff,
 		(ipaddr >> 8) &0xff,
-		ipaddr &0xff
+		ipaddr &0xff,
+		errstr
 	);
-	perror("send");
 	return rc;
 }
