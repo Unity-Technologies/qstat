@@ -4728,26 +4728,26 @@ int bind_sockets()
 
 int proccess_func_ret( struct qserver *server, int ret )
 {
-	debug( 3, "proccess_func_ret %p, %d", server, ret );
+	debug( 3, "%p, %d", server, ret );
 	switch ( ret )
 	{
 	case INPROGRESS:
-		break;
+		return ret;
 
 	case DONE_AUTO:
 		cleanup_qserver( server, NO_FORCE );
-		break;
+		return ret;
 
-	// For documenation only :)
-	//case DONE_FORCE:
-	//case SOCKET_ERROR:
-	//case MEM_ERROR:
-	//case PKT_ERROR:
-	//case ORD_ERROR:
-	default:
+	case DONE_FORCE:
+	case SYS_ERROR:
+	case MEM_ERROR:
+	case PKT_ERROR:
+	case ORD_ERROR:
 		cleanup_qserver( server, FORCE );
-		break;
+		return ret;
 	}
+
+	debug(0, "unhandled return code %d, please report!", ret);
 
 	return ret;
 }
