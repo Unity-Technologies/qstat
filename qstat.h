@@ -231,8 +231,19 @@ typedef struct _server_type server_type;
 
 struct q_packet;
 
+typedef enum {
+	INPROGRESS =  0,
+	DONE_AUTO  =  1,
+	DONE_FORCE =  2,
+
+	SYS_ERROR  = -1,
+	MEM_ERROR  = -2,
+	PKT_ERROR  = -3,
+	ORD_ERROR  = -4
+} query_status_t;
+
 typedef void (*DisplayFunc)( struct qserver *);
-typedef int (*QueryFunc)( struct qserver *);
+typedef query_status_t (*QueryFunc)( struct qserver *);
 typedef int (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
 
 /*
@@ -3270,12 +3281,5 @@ extern int show_game_port;
 
 #define FORCE 1
 #define NO_FORCE 0
-
-#define INPROGRESS 0
-#define DONE_AUTO 1
-#define DONE_FORCE 2
-#define MEM_ERROR -2
-#define PKT_ERROR -3
-#define ORD_ERROR -4
 
 #endif
