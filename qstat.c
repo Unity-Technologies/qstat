@@ -5197,7 +5197,8 @@ int send_qwmaster_request_packet(struct qserver *server)
 
 	if (rc == SOCKET_ERROR)
 	{
-		return send_error( server, rc );
+		send_error( server, rc );
+		return SYS_ERROR;
 	}
 
 	if (server->retry1 == n_retries)
