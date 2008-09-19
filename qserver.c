@@ -25,10 +25,11 @@
 // TODO: get rid of this and use send_packet instead, remove n_requests hack from a2s
 query_status_t qserver_send_initial(struct qserver* server, const char* data, size_t len)
 {
-    int ret = INPROGRESS;
+    int status = INPROGRESS;
 
     if( data )
     {
+		int ret;
 		debug( 2, "[%s] send", server->type->type_prefix );
 		if( 4 <= get_debug_level() )
 		{
@@ -47,7 +48,7 @@ query_status_t qserver_send_initial(struct qserver* server, const char* data, si
 		if ( ret == SOCKET_ERROR)
 		{
 			send_error( server, ret );
-			ret = SYS_ERROR;
+			status = SYS_ERROR;
 		}
     }
 
@@ -63,15 +64,16 @@ query_status_t qserver_send_initial(struct qserver* server, const char* data, si
     server->retry1--;
     server->n_packets++;
 
-    return ret;
+    return status;
 }
 
 query_status_t qserver_send(struct qserver* server, const char* data, size_t len)
 {
-    int ret = INPROGRESS;
+    int status = INPROGRESS;
 
     if(data)
     {
+		int ret;
 		if ( server->flags & FLAG_BROADCAST)
 		{
 			ret = send_broadcast(server, data, len);
@@ -84,7 +86,7 @@ query_status_t qserver_send(struct qserver* server, const char* data, size_t len
 		if ( ret == SOCKET_ERROR)
 		{
 			send_error( server, ret );
-			ret = SYS_ERROR;
+			status = SYS_ERROR;
 		}
     }
 
@@ -93,7 +95,7 @@ query_status_t qserver_send(struct qserver* server, const char* data, size_t len
     server->n_requests++;
     server->n_packets++;
 
-    return ret;
+    return status;
 
 }
 
@@ -137,8 +139,6 @@ int register_send( struct qserver *server )
 
 int send_packet( struct qserver* server, const char* data, size_t len )
 {
-    int ret = 0;
-
 	debug( 2, "[%s] send", server->type->type_prefix );
 	if( 4 <= get_debug_level() )
 	{
@@ -147,6 +147,7 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 
     if( data )
     {
+		int ret;
 		if ( server->flags & FLAG_BROADCAST )
 		{
 			ret = send_broadcast( server, data, len );
@@ -178,5 +179,5 @@ int send_error( struct qserver *server, int rc )
 		ipaddr &0xff,
 		errstr
 	);
-	return rc;
+	return SYS_ERROR;
 }
