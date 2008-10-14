@@ -11842,7 +11842,10 @@ char *xml_escape(char *string)
 			)
 		)
 		{
-			fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
+			if ( show_errors )
+			{
+				fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
+			}
 		}
 		else if (xml_encoding == ENCODING_LATIN_1)
 		{
