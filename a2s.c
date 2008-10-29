@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -229,7 +230,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pktlen -= 4;
 
 	pktlen -= 1;
-	debug( 2, "A2S type = %hhd", *pkt );
+	debug( 2, "A2S type = %x", *pkt );
 	switch(*pkt++)
 	{
 	case A2S_CHALLENGERESPONSE:
@@ -479,6 +480,58 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		add_rule(server, "version", pkt, 0);
 		pktlen -= str-pkt+1;
 		pkt += str-pkt+1;
+
+		// EDF
+		if ( 1 <= pktlen )
+		{
+			unsigned char edf = *pkt;
+			pkt++;
+			pktlen--;
+			if ( edf & 0x80 )
+			{
+				// game port
+				unsigned short gameport;
+
+				if(pktlen < 2) goto out_too_short;
+				gameport = swap_short_from_little( pkt );
+				sprintf( buf, "%hu", gameport );
+				add_rule( server, "game_port", buf, 0 );
+				pkt += 2;
+				pktlen -= 2;
+				fprintf( stderr, "game port = %d\n", gameport );
+			}
+
+			if ( edf & 0x40 )
+			{
+				// spectator port
+				unsigned short spectator_port;
+				if(pktlen < 3) goto out_too_short;
+				spectator_port = swap_short_from_little( pkt );
+				sprintf( buf, "%hu", spectator_port );
+				add_rule( server, "spectator_port", buf, 0 );
+				pkt += 2;
+				pktlen -= 2;
+
+				// spectator server name
+				str = memchr(pkt, '\0', pktlen);
+				if(!str) goto out_too_short;
+				add_rule(server, "spectator_server_name", pkt, 0);
+				pktlen -= str-pkt+1;
+				pkt += str-pkt+1;
+
+			}
+
+			if ( edf & 0x20 )
+			{
+				// game tag
+				str = memchr(pkt, '\0', pktlen);
+				if(!str) goto out_too_short;
+				add_rule(server, "game_tag", pkt, 0);
+				pktlen -= str-pkt+1;
+				pkt += str-pkt+1;
+			}
+		}
+		
 
 		status->have_info = 1;
 
