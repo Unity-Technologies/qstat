@@ -243,7 +243,7 @@ typedef enum {
 } query_status_t;
 
 typedef void (*DisplayFunc)( struct qserver *);
-typedef query_status_t (*QueryFunc)( struct qserver *);
+typedef int (*QueryFunc)( struct qserver *);
 typedef int (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
 
 /*
