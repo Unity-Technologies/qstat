@@ -85,12 +85,6 @@ int combine_packets( struct qserver *server )
 		if ( segments[i][sdata->pkt_index] == NULL)
 		{
 			// add the packet to the list of segments
-			if ( sdata->pkt_index >= MAX_FAGMENTS )
-			{
-				// we only deal up to MAX_FAGMENTS packet fragment
-				fprintf( stderr, "Too many fragments for packetid %d max %d\n", sdata->pkt_id, MAX_FAGMENTS );
-				continue;
-			}
 			segments[i][sdata->pkt_index]= sdata;
 			counts[i]++;
 			lengths[i] += sdata->datalen;
