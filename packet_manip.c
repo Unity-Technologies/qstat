@@ -46,6 +46,13 @@ int combine_packets( struct qserver *server )
 			continue;
 		}
 
+		if ( sdata->pkt_index >= MAX_FAGMENTS )
+		{
+			// we only deal up to MAX_FAGMENTS packet fragment
+			fprintf( stderr, "Too many fragments %d for packetid %d max %d\n", sdata->pkt_index, sdata->pkt_id, MAX_FAGMENTS );
+			continue;
+		}
+
 		for ( i = 0; i < n_ids; i++ )
 		{
 			if ( sdata->pkt_id == ids[i])
