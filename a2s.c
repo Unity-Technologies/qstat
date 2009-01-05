@@ -21,13 +21,14 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
-#define A2S_GETCHALLENGE	  "\xFF\xFF\xFF\xFF\x57"
+#define A2S_GETCHALLENGE		"\xFF\xFF\xFF\xFF\x57"
 #define A2S_CHALLENGERESPONSE 0x41
 #define A2S_INFO			  "\xFF\xFF\xFF\xFF\x54Source Engine Query"
 #define A2S_INFORESPONSE_HL1  0x6D
 #define A2S_INFORESPONSE_HL2  0x49
 #define A2S_PLAYER			"\xFF\xFF\xFF\xFF\x55"
 #define A2S_PLAYERRESPONSE	0x44
+#define A2S_PLAYER_INVALID_CHALLENGE	"\xFF\xFF\xFF\xFF\x55\xFF\xFF\xFF\xFF"
 #define A2S_RULES			 "\xFF\xFF\xFF\xFF\x56"
 #define A2S_RULESRESPONSE	 0x45
 
@@ -76,8 +77,13 @@ int send_a2s_rule_request_packet(struct qserver *server)
 	{
 		if(!status->have_challenge)
 		{
+			// Challenge Request is currently broken so instead use a player request with an invalid
+			// challenge which prompts the server to send a valid challenge
+			char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
+			memcpy( buf + sizeof(A2S_PLAYER)-1, &status->challenge, 4 );
 			debug(3, "sending challenge");
-			if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
+			//if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
+			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
 				return SOCKET_ERROR;
 			}
@@ -99,7 +105,7 @@ int send_a2s_rule_request_packet(struct qserver *server)
 		else if(get_player_info && !status->have_player)
 		{
 			char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
-			memcpy(buf+sizeof(A2S_PLAYER)-1, &status->challenge, 4);
+			memcpy( buf + sizeof(A2S_PLAYER)-1, &status->challenge, 4 );
 			debug(3, "sending player query");
 			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
 			{
@@ -160,7 +166,7 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += 4;
 
 		// packetId
-		if ( 1 == status->type )
+		if ( 1 == status->type || 200 > server->protocol_version )
 		{
 			// HL1 format
 			// The lower four bits represent the number of packets (2 to 15) and
@@ -436,7 +442,9 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		if(pktlen < 9) goto out_too_short;
 
-		// pkt[0], pkt[1] steam id unused
+		// pkt[0], pkt[1] steam appid
+		server->protocol_version = (unsigned short)*pkt;
+fprintf( stderr, "protocol_version: %d\n", server->protocol_version );
 		server->num_players = (unsigned char)pkt[2];
 		server->max_players = (unsigned char)pkt[3];
 		// pkt[4] number of bots
@@ -498,7 +506,6 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 				add_rule( server, "game_port", buf, 0 );
 				pkt += 2;
 				pktlen -= 2;
-				fprintf( stderr, "game port = %d\n", gameport );
 			}
 
 			if ( edf & 0x40 )
@@ -518,7 +525,6 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 				add_rule(server, "spectator_server_name", pkt, 0);
 				pktlen -= str-pkt+1;
 				pkt += str-pkt+1;
-
 			}
 
 			if ( edf & 0x20 )
