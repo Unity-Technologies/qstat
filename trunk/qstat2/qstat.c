@@ -5040,6 +5040,13 @@ char *build_hlmaster_packet(struct qserver *server, int *len)
 		pkt += sprintf(pkt, "\\map\\%s", map);
 	}
 
+	// steam
+	flags = get_param_value(server, "napp", NULL);
+	if ( flags )
+	{
+		pkt += sprintf( pkt, "\\napp\\%s", flags );
+	}
+
 	// not valid for steam?
 	flags = get_param_value(server, "status", NULL);
 	r = flags;
