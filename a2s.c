@@ -444,7 +444,6 @@ int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 		// pkt[0], pkt[1] steam appid
 		server->protocol_version = (unsigned short)*pkt;
-fprintf( stderr, "protocol_version: %d\n", server->protocol_version );
 		server->num_players = (unsigned char)pkt[2];
 		server->max_players = (unsigned char)pkt[3];
 		// pkt[4] number of bots
