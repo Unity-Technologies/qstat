@@ -235,7 +235,7 @@ int server_compare(struct qserver *one, struct qserver *two);
 int player_compare(struct player *one, struct player *two);
 int type_option_compare(server_type *one, server_type *two);
 int type_string_compare(server_type *one, server_type *two);
-int proccess_func_ret( struct qserver *server, int ret );
+int process_func_ret( struct qserver *server, int ret );
 int connection_inprogress();
 STATIC int u2xmp_html_color(short color, char *dest, int *font_tag);
 STATIC int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag);
@@ -2899,7 +2899,7 @@ static void replay_pkt_dumps()
 		fd = 0;
 
 		debug(2, "replay, pre-packet_func");
-		proccess_func_ret( server, server->type->packet_func( server, pkt, statbuf.st_size ) );
+		process_func_ret( server, server->type->packet_func( server, pkt, statbuf.st_size ) );
 		debug(2, "replay, post-packet_func");
 	}
 	goto out;
@@ -3099,7 +3099,7 @@ void do_work(void)
 			}
 
 			debug(2, "connected, pre-packet_func: %d", connected);
-			proccess_func_ret( server, server->type->packet_func(server, pkt, pktlen) );
+			process_func_ret( server, server->type->packet_func(server, pkt, pktlen) );
 			debug(2, "connected, post-packet_func: %d", connected);
 		}
 		buffill = 0;
@@ -3721,7 +3721,7 @@ int main(int argc, char *argv[])
 			return 1;
 			}
 			 */
-			if (type->flags &TF_QUERY_ARG_REQUIRED && !query_arg)
+			if (type->flags &TF_QUERY_ARG_REQUIRED && !query_arg )
 			{
 				fprintf(stderr, "option flag missing for server type \"%s\"\n", argv[arg - 1]);
 				return 1;
@@ -4700,7 +4700,7 @@ int bind_sockets()
 
 				gettimeofday(&t_lastsend, NULL);
 				debug(2, "calling status_query_func for %p", server);
-				proccess_func_ret( server, server->type->status_query_func(server) );
+				process_func_ret( server, server->type->status_query_func(server) );
 
 				connected++;
 				if (!waiting_for_masters)
@@ -4726,7 +4726,7 @@ int bind_sockets()
 	return 0;
 }
 
-int proccess_func_ret( struct qserver *server, int ret )
+int process_func_ret( struct qserver *server, int ret )
 {
 	debug( 3, "%p, %d", server, ret );
 	switch ( ret )
@@ -4827,7 +4827,7 @@ void send_packets()
 			{
 				// Query status
 				debug(2, "calling status_query_func for %p", server);
-				proccess_func_ret( server, server->type->status_query_func(server) );
+				process_func_ret( server, server->type->status_query_func(server) );
 				gettimeofday(&t_lastsend, NULL);
 				n_sent++;
 				continue;
@@ -4959,7 +4959,7 @@ int send_qwserver_request_packet(struct qserver *server)
 	}
 	server->next_player_info = NO_PLAYER_INFO; // we don't have a player packet
 
-	return 0;
+	return INPROGRESS;
 }
 
 // First packet for an Unreal Tournament 2003 server
@@ -5204,8 +5204,7 @@ int send_qwmaster_request_packet(struct qserver *server)
 
 	if (rc == SOCKET_ERROR)
 	{
-		send_error( server, rc );
-		return SYS_ERROR;
+		return send_error( server, rc );
 	}
 
 	if (server->retry1 == n_retries)
@@ -5529,7 +5528,7 @@ send_done:
 	server->retry1--;
 	server->n_packets++;
 
-	return 1;
+	return INPROGRESS;
 }
 
 static struct _gamespy_query_map
@@ -5559,22 +5558,25 @@ int send_gamespy_master_request(struct qserver *server)
 
 	if (server->n_packets)
 	{
-		return 0;
+		return DONE_AUTO;
 	}
 
 	rc = send(server->fd, server->type->master_packet, server->type->master_len, 0);
 	if (rc != server->type->master_len)
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
 	strcpy(request, server->type->status_packet);
 
 	for (i = 0; gamespy_query_map[i].qstat_type; i++)
-	if (strcasecmp(server->query_arg, gamespy_query_map[i].qstat_type) == 0)
 	{
-		break;
+		if (strcasecmp(server->query_arg, gamespy_query_map[i].qstat_type) == 0)
+		{
+			break;
+		}
 	}
+
 	if (gamespy_query_map[i].gamespy_type == NULL)
 	{
 		strcat(request, server->query_arg);
@@ -5589,7 +5591,7 @@ int send_gamespy_master_request(struct qserver *server)
 	rc = send(server->fd, request, strlen(request), 0);
 	if (rc != strlen(request))
 	{
-		perror("send");
+		return send_error( server, rc );
 	}
 
 	if (server->retry1 == n_retries)
@@ -5600,7 +5602,7 @@ int send_gamespy_master_request(struct qserver *server)
 
 	server->n_packets++;
 
-	return 1;
+	return INPROGRESS;
 }
 
 int send_rule_request_packet(struct qserver *server)
@@ -5656,7 +5658,7 @@ setup_retry:
 		server->n_packets++;
 	}
 
-	return 1;
+	return DONE_AUTO;
 }
 
 int send_player_request_packet(struct qserver *server)
@@ -5748,7 +5750,7 @@ int cleanup_qserver(struct qserver *server, int force)
 {
 	int close_it = force;
 	debug( 3, "cleanup_qserver %p, %d", server, force );
-	if (server->server_name == NULL)
+	if ( server->server_name == NULL )
 	{
 		debug(3, "server has no name, forcing close");
 		close_it = 1;
@@ -11606,7 +11608,7 @@ int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int 
 {
 	debug( 2, "deal_with_gamespy_master_response %p, %d", server, pktlen );
 
-	if (pktlen == 0)
+	if ( 0 == pktlen || ( pktlen > 6 && 0 == strncmp( rawpkt + pktlen - 6, "final\\", 6 ) ) )
 	{
 		int len = server->saved_data.datalen;
 		char *data = server->saved_data.data;
