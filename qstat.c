@@ -5561,6 +5561,14 @@ int send_gamespy_master_request(struct qserver *server)
 		return DONE_AUTO;
 	}
 
+	// WARNING: This only works for masters which don't check the value of validate
+	// e.g. unreal.epicgames.com
+	//
+	// What we should be doing here is recieving the challenge from the master
+	// processing the secure key and then using that as the value for validate.
+	//
+	// The details of this can be seen in gslist:
+	// http://aluigi.altervista.org/papers.htm#gslist
 	rc = send(server->fd, server->type->master_packet, server->type->master_len, 0);
 	if (rc != server->type->master_len)
 	{
