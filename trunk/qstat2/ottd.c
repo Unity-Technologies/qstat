@@ -150,7 +150,7 @@ int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	debug(3, "len %hu type %hhu ver %hhu", swap_short_from_little(rawpkt), type, ver);
 
-	FAIL_IF(ver != 4, "only version 4 servers are supported");
+	FAIL_IF(ver != 4 && ver != 5, "only version 4 and 5 servers are supported");
 
 	if(type == 1) // info packet
 	{
@@ -294,19 +294,22 @@ int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 				player_add_info(player, (char*)station_types[j], buf, 0);
 				ptr += 2;
 			}
-
-			// connections
-			while(ptr + 1 < end && *ptr)
+			
+			if (ver != 5)
 			{
-				++ptr;
-				GET_STRING; // client name
-				debug(3, "%s played by %s", str, player->name);
-				GET_STRING; // id
-				INVALID_IF(ptr + 4 > end);
-				ptr += 4;
-			}
+				// connections
+				while(ptr + 1 < end && *ptr)
+				{
+					++ptr;
+					GET_STRING; // client name
+					debug(3, "%s played by %s", str, player->name);
+					GET_STRING; // id
+					INVALID_IF(ptr + 4 > end);
+					ptr += 4;
+				}
 
-			++ptr; // record terminated by zero byte
+				++ptr; // record terminated by zero byte
+			}
 		}
 
 		// spectators
