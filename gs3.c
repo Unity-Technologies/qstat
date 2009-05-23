@@ -342,7 +342,8 @@ int process_gs3_packet( struct qserver *server )
 			char *var, *val;
 			int var_len, val_len;
 
-			if ( 0x00 == ptr[0] && 0x01 == ptr[1] )
+			debug( 4, "state = %d, %hhx, %hhx, bytes left = %d", state, ptr[0], ptr[1], (int)(end - ptr) );
+			if ( 0x00 == ptr[0] && 0x01 >= ptr[1] )
 			{
 				// not quite sure of the significance of these bytes
 				// but we use them as a check for end of section
