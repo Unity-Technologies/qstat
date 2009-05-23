@@ -5,7 +5,7 @@
 #LDLIBS  =
 
 #CFLAGS += -Dsysconfdir=\"/etc\"
-CFLAGS = -DDEBUG=1
+CFLAGS = -DDEBUG=1 -DENABLE_DUMP=1
 
 ## NOTE: if you get errors when linking qstat (missing symbols or
 ## libraries), then modify LDFLAGS or LDLIBS
