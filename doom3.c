@@ -458,7 +458,7 @@ x
 		player->ping = ping;
 		ptr += 2;
 
-		if ( 5 != version || 0xa0013 < protocolver )
+		if ( 5 != version || 0xa0013 >= protocolver ) // No Rate in ETQW since v1.4 ( protocol v10.19 )
 		{
 			// Rate
 			rate = swap_long_from_little(ptr);
