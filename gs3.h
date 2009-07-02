@@ -13,8 +13,8 @@
 #include "qserver.h"
 
 // Packet processing methods
-int deal_with_gs3_packet( struct qserver *server, char *pkt, int pktlen );
-int deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen );
-int send_gs3_request_packet( struct qserver *server );
+query_status_t deal_with_gs3_packet( struct qserver *server, char *pkt, int pktlen );
+query_status_t deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen );
+query_status_t send_gs3_request_packet( struct qserver *server );
 
 #endif

@@ -22,7 +22,7 @@
 #include "packet_manip.h"
 
 
-int send_ts2_request_packet( struct qserver *server )
+query_status_t send_ts2_request_packet( struct qserver *server )
 {
 	char buf[256];
 
@@ -46,7 +46,7 @@ int send_ts2_request_packet( struct qserver *server )
 }
 
 
-int deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end;
 	int ping, connect_time, mode = 0;

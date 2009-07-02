@@ -11,10 +11,10 @@
 
 #include "qstat.h"
 
-int send_ottdmaster_request_packet(struct qserver *server);
-int deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen);
+query_status_t send_ottdmaster_request_packet(struct qserver *server);
+query_status_t deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen);
 
-int send_ottd_request_packet(struct qserver *server);
-int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen);
+query_status_t send_ottd_request_packet(struct qserver *server);
+query_status_t deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen);
 
 #endif

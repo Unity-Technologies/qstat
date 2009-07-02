@@ -20,7 +20,7 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
-int send_gs2_request_packet( struct qserver *server )
+query_status_t send_gs2_request_packet( struct qserver *server )
 {
 	// The below should work but seems to make no difference to what some
 	// servers send
@@ -41,7 +41,7 @@ int send_gs2_request_packet( struct qserver *server )
 
 // See the following for protocol details:
 // http://dev.kquery.com/index.php?article=42
-int deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_gs2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;

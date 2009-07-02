@@ -46,7 +46,7 @@ struct a2s_status
 	unsigned char type;
 };
 
-int send_a2s_request_packet(struct qserver *server)
+query_status_t send_a2s_request_packet(struct qserver *server)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 
@@ -61,10 +61,10 @@ int send_a2s_request_packet(struct qserver *server)
 	if(get_server_rules || get_player_info)
 		server->next_rule = ""; // trigger calling send_a2s_rule_request_packet
 
-	return 0;
+	return INPROGRESS;
 }
 
-int send_a2s_rule_request_packet(struct qserver *server)
+query_status_t send_a2s_rule_request_packet(struct qserver *server)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 
@@ -126,7 +126,7 @@ int send_a2s_rule_request_packet(struct qserver *server)
 	return INPROGRESS;
 }
 
-int deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct a2s_status* status = (struct a2s_status*)server->master_query_tag;
 	char* pkt = rawpkt;

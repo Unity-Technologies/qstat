@@ -28,7 +28,7 @@
 #define TM_PLAYERLIST "<value><struct><member><name>methodName</name><value>GetPlayerList</value></member><member><name>params</name><value><array><data><value><i4>100</i4></value><value><i4>0</i4></value></data></array></value></member></struct></value>\n"
 #define TM_AUTH_TEMPLATE "<value><struct>\n<member><name>methodName</name><value><string>Authenticate</string></value></member>\n<member><name>params</name><value><array><data>\n<value><string>%s</string></value>\n<value><string>%s</string></value></data></array></value></member></struct></value>\n"
 
-int send_tm_request_packet( struct qserver *server )
+query_status_t send_tm_request_packet( struct qserver *server )
 {
 	char buf[2048];
 	char *xmlp = buf + 8;
@@ -76,7 +76,7 @@ int send_tm_request_packet( struct qserver *server )
 }
 
 
-int deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_tm_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s;
 	char *pkt = rawpkt;

@@ -12,7 +12,7 @@
 
 #include "qstat.h"
 
-int send_ut2004master_request_packet(struct qserver *server);
-int deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen);
+query_status_t send_ut2004master_request_packet(struct qserver *server);
+query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen);
 
 #endif

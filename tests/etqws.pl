@@ -6,9 +6,10 @@ use IO::Socket::INET;
 use IO::File;
 
 my $sock = IO::Socket::INET->new(
-	LocalAddr => '0.0.0.0',
-	LocalPort => 27733,
+	LocalAddr => 'localhost',
 	Proto     => 'udp');
+
+print $sock->sockport(),"\n";
 
 my $rin = '';
 vec($rin, $sock->fileno, 1) = 1;
@@ -16,13 +17,20 @@ vec($rin, $sock->fileno, 1) = 1;
 my @files = @ARGV;
 die "USAGE: $0 <file>" unless @files;
 
+sub _stat_size($)
+{
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	      $atime,$mtime,$ctime,$blksize,$blocks) = stat($_[0]);
+	return $size;
+}
+
 sub readfile($)
 {
 	my $fn = shift;
 	print "reading $fn\n";
 	my $f = IO::File->new($fn, "r");
 	my $buf;
-	$f->read($buf, 0xffff); # XXX use stat
+	$f->read($buf, _stat_size($f));
 	$f->close;
 	return $buf;
 }
