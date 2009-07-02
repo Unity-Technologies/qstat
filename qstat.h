@@ -64,6 +64,17 @@ typedef struct _server_type server_type;
 
 #include "qserver.h"
 
+typedef enum {
+	INPROGRESS =  0,
+	DONE_AUTO  =  1,
+	DONE_FORCE =  2,
+
+	SYS_ERROR  = -1,
+	MEM_ERROR  = -2,
+	PKT_ERROR  = -3,
+	ORD_ERROR  = -4
+} query_status_t;
+
 // Packet modules
 #include "ut2004.h"
 #include "doom3.h"
@@ -231,17 +242,6 @@ typedef struct _server_type server_type;
 
 struct q_packet;
 
-typedef enum {
-	INPROGRESS =  0,
-	DONE_AUTO  =  1,
-	DONE_FORCE =  2,
-
-	SYS_ERROR  = -1,
-	MEM_ERROR  = -2,
-	PKT_ERROR  = -3,
-	ORD_ERROR  = -4
-} query_status_t;
-
 typedef void (*DisplayFunc)( struct qserver *);
 typedef query_status_t (*QueryFunc)( struct qserver *);
 typedef int (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
@@ -366,7 +366,6 @@ int deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen );
-int deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen);
 int deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
@@ -383,7 +382,6 @@ int deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_doom3_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_ts2_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen);

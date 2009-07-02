@@ -131,7 +131,7 @@ static char* build_doom3_masterfilter(struct qserver* server, char* buf, unsigne
 	return buf;
 }
 
-int send_doom3master_request_packet( struct qserver *server)
+query_status_t send_doom3master_request_packet( struct qserver *server)
 {
 	int rc = 0;
 	int packet_len = -1;
@@ -161,10 +161,10 @@ int send_doom3master_request_packet( struct qserver *server)
 	server->retry1--;
 	server->n_packets++;
 
-	return 1;
+	return INPROGRESS;
 }
 
-int send_quake4master_request_packet( struct qserver *server)
+query_status_t send_quake4master_request_packet( struct qserver *server)
 {
 	int rc = 0;
 	int packet_len = -1;
@@ -194,12 +194,12 @@ int send_quake4master_request_packet( struct qserver *server)
 	server->retry1--;
 	server->n_packets++;
 
-	return 1;
+	return INPROGRESS;
 }
 
 static const char doom3_masterresponse[] = "\xFF\xFFservers";
 
-int deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
 	char* pkt, *dest;
 	int len;
@@ -241,13 +241,13 @@ int deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktl
 
 	debug(2, "%d servers added", server->n_servers);
 
-	return 0;
+	return INPROGRESS;
 }
 
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
 static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
 
-static int _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
+static query_status_t _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -649,27 +649,27 @@ x
 	return DONE_FORCE;
 }
 
-int deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 1 );
 }
 
-int deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_quake4_packet( struct qserver *server, char *rawpkt, int pktlen)
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 2 );
 }
 
-int deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_prey_demo_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 4 );
 }
 
-int deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 3 );
 }
 
-int deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 5 );
 }
