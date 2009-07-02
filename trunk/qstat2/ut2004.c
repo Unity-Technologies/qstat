@@ -455,7 +455,8 @@ query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpk
 			md5_finish(&md5, (unsigned char*)sum);
 			bin2hex(sum, 16, response+RESPONSE_OFFSET_CHALLENGE);
 
-			qserver_send(server, response, sizeof(response));
+			if(qserver_send(server, response, sizeof(response)))
+				goto cleanup_out;
 
 			server->server_name = MASTER;
 
@@ -474,7 +475,9 @@ query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpk
 
 		debug(2, "got approval, sending verify");
 
-		qserver_send(server, approved_response, sizeof(approved_response));
+		if(qserver_send(server, approved_response, sizeof(approved_response)))
+			goto cleanup_out;
+
 		*state = STATE_VERIFIED;
 
 		break;
@@ -488,7 +491,9 @@ query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpk
 			goto cleanup_out;
 		}
 
-		if(!ut2004_send_query(server))
+		debug(2, "CD key verified, sending query");
+
+		if(ut2004_send_query(server))
 			goto cleanup_out;
 
 		*state = STATE_LISTING;
@@ -632,7 +637,7 @@ query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpk
 
 	debug(2, "%d servers total", server->n_servers/6);
 
-	return 0;
+	return INPROGRESS;
 
 cleanup_out:
 	server->master_pkt_len = server->n_servers;
