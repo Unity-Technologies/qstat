@@ -169,7 +169,7 @@ unsigned int get_param_ui_value( struct qserver *server, char *key,
  * \param len length of data
  * \returns number of bytes sent or SOCKET_ERROR
  */
-int qserver_send_initial(struct qserver* server, const char* data, size_t len);
+query_status_t qserver_send_initial(struct qserver* server, const char* data, size_t len);
 
 /** \brief send an initial query packet to a server
  *
@@ -179,7 +179,7 @@ int qserver_send_initial(struct qserver* server, const char* data, size_t len);
  *
  * @see qserver_send_initial
  */
-int qserver_send(struct qserver* server, const char* data, size_t len);
+query_status_t qserver_send(struct qserver* server, const char* data, size_t len);
 
 int send_broadcast( struct qserver *server, const char *pkt, size_t pktlen);
 
@@ -195,11 +195,11 @@ int register_send( struct qserver *server );
  *
  * Once sent calls register_send to register the send of the packet
  */
-int send_packet( struct qserver* server, const char* data, size_t len );
+query_status_t send_packet( struct qserver* server, const char* data, size_t len );
 
 /**
  * Logs the error from a socket send
  */
-int send_error( struct qserver *server, int rc );
+query_status_t send_error( struct qserver *server, int rc );
 
 #endif

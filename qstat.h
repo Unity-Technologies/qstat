@@ -62,8 +62,6 @@ typedef struct _server_type server_type;
 #define GCC_FORMAT_PRINTF(a, b)
 #endif
 
-#include "qserver.h"
-
 typedef enum {
 	INPROGRESS =  0,
 	DONE_AUTO  =  1,
@@ -74,6 +72,12 @@ typedef enum {
 	PKT_ERROR  = -3,
 	ORD_ERROR  = -4
 } query_status_t;
+
+#include "qserver.h"
+
+typedef void (*DisplayFunc)( struct qserver *);
+typedef query_status_t (*QueryFunc)( struct qserver *);
+typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
 
 // Packet modules
 #include "ut2004.h"
@@ -242,10 +246,6 @@ typedef enum {
 
 struct q_packet;
 
-typedef void (*DisplayFunc)( struct qserver *);
-typedef query_status_t (*QueryFunc)( struct qserver *);
-typedef int (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
-
 /*
  * Output and formatting functions
  */
@@ -337,55 +337,42 @@ void xml_display_fl_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
-int send_server_request_packet( struct qserver *server);
-int send_qserver_request_packet( struct qserver *server);
-int send_qwserver_request_packet( struct qserver *server);
-int send_ut2003_request_packet( struct qserver *server);
-int send_tribes_request_packet( struct qserver *server);
-int send_qwmaster_request_packet( struct qserver *server);
-int send_bfris_request_packet( struct qserver *server);
+query_status_t send_qserver_request_packet( struct qserver *server);
+query_status_t send_qwserver_request_packet( struct qserver *server);
+query_status_t send_ut2003_request_packet( struct qserver *server);
+query_status_t send_tribes_request_packet( struct qserver *server);
+query_status_t send_qwmaster_request_packet( struct qserver *server);
+query_status_t send_bfris_request_packet( struct qserver *server);
 int send_player_request_packet( struct qserver *server);
-int send_rule_request_packet( struct qserver *server);
-int send_ravenshield_request_packet( struct qserver *server);
-int send_savage_request_packet( struct qserver *server);
-int send_farcry_request_packet( struct qserver *server);
-int send_gamespy_master_request( struct qserver *server);
-int send_tribes2_request_packet( struct qserver *server);
-int send_tribes2master_request_packet( struct qserver *server);
-int send_ghostrecon_request_packet( struct qserver *server);
-int send_eye_request_packet( struct qserver *server);
-int send_gs2_request_packet( struct qserver *server);
-int send_doom3_request_packet( struct qserver *server);
-int send_hl2_request_packet( struct qserver *server);
-int send_ts2_request_packet( struct qserver *server);
-int send_tm_request_packet( struct qserver *server);
-int send_wic_request_packet( struct qserver *server);
+query_status_t send_rule_request_packet( struct qserver *server);
+query_status_t send_savage_request_packet( struct qserver *server);
+query_status_t send_farcry_request_packet( struct qserver *server);
+query_status_t send_gamespy_master_request( struct qserver *server);
+query_status_t send_tribes2_request_packet( struct qserver *server);
+query_status_t send_tribes2master_request_packet( struct qserver *server);
+query_status_t send_hl2_request_packet( struct qserver *server);
 
-int deal_with_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen );
-int deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen );
+query_status_t deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
 int deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
-int deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_farcry_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_ts2_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_wic_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_farcry_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
 
 struct _server_type  {
     int id;
@@ -1750,7 +1737,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ghostrecon_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
-    send_ghostrecon_request_packet,	/* status_query_func */
+    send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
     deal_with_ghostrecon_packet,	/* packet_func */
@@ -1784,7 +1771,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_eye_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
-    send_eye_request_packet,	/* status_query_func */
+    send_qserver_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
     deal_with_eye_packet,	/* packet_func */
@@ -1886,7 +1873,7 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ravenshield_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
-    send_ravenshield_request_packet,	/* status_query_func */
+    send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
     deal_with_ravenshield_packet,	/* packet_func */
@@ -3003,6 +2990,8 @@ server_type builtin_types[] = {
     0,				/* rule_len */
     (char*) NULL,		/* master_packet */
     0,				/* master_len */
+    NULL,			/* master_protocol */
+    NULL,			/* master_query */
     NULL,			/* display_player_func */
     NULL,			/* display_rule_func */
     NULL,			/* display_raw_player_func */

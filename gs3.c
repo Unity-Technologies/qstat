@@ -51,7 +51,7 @@ int process_gs3_packet( struct qserver *server );
 //	query: [0xFE][0xFD][0x00][0x.. 4-byte-instance][0xb3412b5a "-1287574694"]
 //
 
-int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *ptr = rawpkt;
 	unsigned int pkt_id;
@@ -190,7 +190,7 @@ int deal_with_gs3_packet( struct qserver *server, char *rawpkt, int pktlen )
 	return process_gs3_packet( server );
 }
 
-int deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_gs3_status( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *pkt = rawpkt;
 	debug( 1, "status packet" );
@@ -772,7 +772,7 @@ int process_gs3_packet( struct qserver *server )
 	return DONE_FORCE;
 }
 
-int send_gs3_request_packet( struct qserver *server )
+query_status_t send_gs3_request_packet( struct qserver *server )
 {
 	char *packet;
 	char query_buf[128];

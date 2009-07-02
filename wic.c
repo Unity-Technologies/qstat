@@ -22,7 +22,7 @@
 #include "packet_manip.h"
 
 
-int send_wic_request_packet( struct qserver *server )
+query_status_t send_wic_request_packet( struct qserver *server )
 {
 	char buf[256];
 
@@ -47,7 +47,7 @@ int send_wic_request_packet( struct qserver *server )
 }
 
 
-int deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_wic_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end, *team = NULL;
 	int mode = server->n_servers, slot, score;

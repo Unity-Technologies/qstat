@@ -137,7 +137,7 @@ int register_send( struct qserver *server )
 	return INPROGRESS;
 }
 
-int send_packet( struct qserver* server, const char* data, size_t len )
+query_status_t send_packet( struct qserver* server, const char* data, size_t len )
 {
 	debug( 2, "[%s] send", server->type->type_prefix );
 	if( 4 <= get_debug_level() )
@@ -168,7 +168,7 @@ int send_packet( struct qserver* server, const char* data, size_t len )
 	return INPROGRESS;
 }
 
-int send_error( struct qserver *server, int rc )
+query_status_t send_error( struct qserver *server, int rc )
 {
 	unsigned int ipaddr = ntohl(server->ipaddr);
 	const char* errstr = strerror(errno);

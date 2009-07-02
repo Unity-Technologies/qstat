@@ -59,13 +59,13 @@ int gps_player_info_key( char *s, char *end)
     return 0;
 }
 
-int send_gps_request_packet( struct qserver *server )
+query_status_t send_gps_request_packet( struct qserver *server )
 {
 	return send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
 
-int deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_gps_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *key, *value, *end;
 	struct player *player = NULL;

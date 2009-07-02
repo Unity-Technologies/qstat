@@ -36,7 +36,7 @@ static const char* station_types[] = {
 	"num_docks",
 };
 
-int deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	const char* reason = "invalid packet";
 	int ok = 1;
@@ -120,7 +120,7 @@ int deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen
 #define INVALID_IF(cond) \
 	FAIL_IF(cond, "invalid packet")
 
-int deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	const char* reason = NULL;
 	unsigned char *ptr = (unsigned char*)rawpkt;
@@ -343,12 +343,12 @@ out:
 	return reason ? DONE_FORCE : DONE_AUTO;
 }
 
-int send_ottdmaster_request_packet(struct qserver *server)
+query_status_t send_ottdmaster_request_packet(struct qserver *server)
 {
 	return qserver_send_initial(server, server->type->master_packet, server->type->master_len);
 }
 
-int send_ottd_request_packet(struct qserver *server)
+query_status_t send_ottd_request_packet(struct qserver *server)
 {
 	qserver_send_initial(server, server->type->status_packet, server->type->status_len);
 

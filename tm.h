@@ -7,14 +7,14 @@
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
-#ifndef QSTAT_GPS_H
-#define QSTAT_GPS_H
+#ifndef QSTAT_TM_H
+#define QSTAT_TM_H
 
 #include "qserver.h"
 
 // Packet processing methods
-int deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen );
-int send_tm_request_packet( struct qserver *server );
+query_status_t deal_with_tm_packet( struct qserver *server, char *pkt, int pktlen );
+query_status_t send_tm_request_packet( struct qserver *server );
 
 #endif
 
