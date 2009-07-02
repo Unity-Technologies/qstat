@@ -90,7 +90,7 @@ query_status_t qserver_send(struct qserver* server, const char* data, size_t len
 		}
     }
 
-    server->retry1 = n_retries;
+    server->retry1 = n_retries-1;
     gettimeofday( &server->packet_time1, NULL);
     server->n_requests++;
     server->n_packets++;
