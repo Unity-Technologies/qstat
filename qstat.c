@@ -149,16 +149,6 @@ char *qstat_version = VERSION;
 	#endif
 #endif
 
-#ifdef ENABLE_DUMP
-	#ifndef _WIN32
-		#include <sys/mman.h>
-		#include <unistd.h>
-	#endif
-	#include <sys/types.h>
-	#include <sys/stat.h>
-	static int do_dump;
-#endif
-
 #include "debug.h"
 
 server_type *types;
