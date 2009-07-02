@@ -10,6 +10,8 @@
 #ifndef QSTAT_DEBUG_H
 #define QSTAT_DEBUG_H
 
+#include <sys/types.h>
+
 #include "qstat.h"
 
 
@@ -32,6 +34,20 @@
 #endif // DEBUG
 
 void dump_packet(const char* buf, int buflen);
+
+#ifdef ENABLE_DUMP
+#ifndef _WIN32
+	#include <sys/mman.h>
+	#include <unistd.h>
+#endif
+#include <sys/types.h>
+#include <sys/stat.h>
+int do_dump;
+ssize_t send_dump(int s, const void *buf, size_t len, int flags);
+#ifndef QSTAT_DEBUG_C
+#define send(s, buf, len, flags) send_dump(s, buf, len, flags)
+#endif
+#endif
 
 /** report a packet decoding error to stderr */
 void malformed_packet(const struct qserver* server, const char* fmt, ...) GCC_FORMAT_PRINTF(2, 3);

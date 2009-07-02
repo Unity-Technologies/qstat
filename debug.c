@@ -8,8 +8,6 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#include "debug.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #ifndef _WIN32
@@ -25,6 +23,17 @@
 #include <time.h>
 #include <fcntl.h>
 #include <stdarg.h>
+
+#define QSTAT_DEBUG_C
+#include "debug.h"
+
+#ifdef ENABLE_DUMP
+#ifndef _WIN32
+	#include <sys/socket.h>
+#else
+	#include <winsock.h>
+#endif
+#endif
 
 #ifdef DEBUG
 
@@ -92,19 +101,31 @@ void malformed_packet(const struct qserver* server, const char* fmt, ...)
 
 #ifdef ENABLE_DUMP
 static unsigned count = 0;
-#endif
-void dump_packet(const char* buf, int buflen)
+static void _dump_packet(const char* tag, const char* buf, int buflen)
 {
-#ifdef ENABLE_DUMP
 	char fn[PATH_MAX] = {0};
 	int fd;
-	sprintf(fn, "dump%03u", count++);
+	sprintf(fn, "%03u_%s.pkt", count++, tag);
 	fprintf(stderr, "dumping to %s\n", fn);
 	fd = open(fn, O_WRONLY|O_CREAT|O_EXCL, 0644);
 	if(fd == -1) { perror("open"); return; }
 	if(write(fd, buf, buflen) == -1)
 		perror("write");
 	close(fd);
+}
+
+ssize_t send_dump(int s, const void *buf, size_t len, int flags)
+{
+	if(do_dump)
+		_dump_packet("send", buf, len);
+	return send(s, buf, len, flags);
+}
+#endif
+
+void dump_packet(const char* buf, int buflen)
+{
+#ifdef ENABLE_DUMP
+	_dump_packet("recv", buf, buflen);
 #endif
 }
 
