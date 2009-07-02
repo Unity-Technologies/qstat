@@ -105,7 +105,7 @@ enum ut2004_state {
 	STATE_LISTING   = 0x03,
 };
 
-int send_ut2004master_request_packet(struct qserver *server)
+query_status_t send_ut2004master_request_packet(struct qserver *server)
 {
 	int ret;
 	if(server->n_packets)
@@ -408,7 +408,7 @@ static int ut2004_send_query(struct qserver* server)
 	return (qserver_send(server, buf, sizeof(buf)-left) > 0);
 }
 
-int deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ut2004master_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	unsigned char* state = (unsigned char*)&server->master_query_tag[0];
 

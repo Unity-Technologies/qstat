@@ -4902,7 +4902,7 @@ void send_packets()
 }
 
 /* server starts sending data immediately, so we need not do anything */
-int send_bfris_request_packet(struct qserver *server)
+query_status_t send_bfris_request_packet(struct qserver *server)
 {
 	return register_send(server);
 }
@@ -4910,14 +4910,14 @@ int send_bfris_request_packet(struct qserver *server)
 
 /* First packet for a normal Quake server
  */
-int send_qserver_request_packet(struct qserver *server)
+query_status_t send_qserver_request_packet(struct qserver *server)
 {
 	return send_packet(server, server->type->status_packet, server->type->status_len);
 }
 
 /* First packet for a QuakeWorld server
  */
-int send_qwserver_request_packet(struct qserver *server)
+query_status_t send_qwserver_request_packet(struct qserver *server)
 {
 	int rc;
 
@@ -4963,7 +4963,7 @@ int send_qwserver_request_packet(struct qserver *server)
 }
 
 // First packet for an Unreal Tournament 2003 server
-int send_ut2003_request_packet(struct qserver *server)
+query_status_t send_ut2003_request_packet(struct qserver *server)
 {
 	int ret = send_packet(server, server->type->status_packet, server->type->status_len);
 	server->next_player_info = NO_PLAYER_INFO;
@@ -4972,14 +4972,14 @@ int send_ut2003_request_packet(struct qserver *server)
 }
 
 // First packet for an Half-Life 2 server
-int send_hl2_request_packet(struct qserver *server)
+query_status_t send_hl2_request_packet(struct qserver *server)
 {
 	return send_packet(server, server->type->status_packet, server->type->status_len);
 }
 
 /* First packet for an Unreal master
  */
-int send_unrealmaster_request_packet(struct qserver *server)
+query_status_t send_unrealmaster_request_packet(struct qserver *server)
 {
 	return send_packet(server, server->type->status_packet, server->type->status_len);
 }
@@ -5109,7 +5109,7 @@ char *build_hlmaster_packet(struct qserver *server, int *len)
 
 /* First packet for a QuakeWorld master server
  */
-int send_qwmaster_request_packet(struct qserver *server)
+query_status_t send_qwmaster_request_packet(struct qserver *server)
 {
 	int rc = 0;
 
@@ -5223,12 +5223,12 @@ int send_qwmaster_request_packet(struct qserver *server)
 }
 
 
-int send_tribes_request_packet(struct qserver *server)
+query_status_t send_tribes_request_packet(struct qserver *server)
 {
 	return send_packet(server, server->type->player_packet, server->type->player_len);
 }
 
-int send_tribes2_request_packet(struct qserver *server)
+query_status_t send_tribes2_request_packet(struct qserver *server)
 {
 	int rc;
 
@@ -5255,22 +5255,7 @@ int send_tribes2_request_packet(struct qserver *server)
 	return rc;
 }
 
-int send_ghostrecon_request_packet(struct qserver *server)
-{
-	return send_packet(server, server->type->status_packet, server->type->status_len);
-}
-
-int send_eye_request_packet(struct qserver *server)
-{
-	return send_packet(server, server->type->status_packet, server->type->status_len);
-}
-
-int send_ravenshield_request_packet(struct qserver *server)
-{
-	return send_packet(server, server->type->status_packet, server->type->status_len);
-}
-
-int send_savage_request_packet(struct qserver *server)
+query_status_t send_savage_request_packet(struct qserver *server)
 {
 	int len;
 	char *pkt;
@@ -5289,7 +5274,7 @@ int send_savage_request_packet(struct qserver *server)
 	return send_packet(server, pkt, len);
 }
 
-int send_farcry_request_packet(struct qserver *server)
+query_status_t send_farcry_request_packet(struct qserver *server)
 {
 	int len;
 	char *pkt;
@@ -5308,7 +5293,7 @@ int send_farcry_request_packet(struct qserver *server)
 	return send_packet(server, pkt, len);
 }
 
-int send_tribes2master_request_packet(struct qserver *server)
+query_status_t send_tribes2master_request_packet(struct qserver *server)
 {
 	int rc;
 	unsigned char packet[1600], *pkt;
@@ -5551,7 +5536,7 @@ gamespy_query_map[] =
 	{ NULL, NULL }
 };
 
-int send_gamespy_master_request(struct qserver *server)
+query_status_t send_gamespy_master_request(struct qserver *server)
 {
 	int rc, i;
 	char request[1024];
@@ -5613,7 +5598,7 @@ int send_gamespy_master_request(struct qserver *server)
 	return INPROGRESS;
 }
 
-int send_rule_request_packet(struct qserver *server)
+query_status_t send_rule_request_packet(struct qserver *server)
 {
 	int rc, len;
 
@@ -6263,7 +6248,7 @@ int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 /* Packet from QuakeWorld server
  */
-int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	debug( 2, "deal_with_qw_packet %p, %d", server, pktlen );
 	if (server->server_name == NULL)
@@ -6393,7 +6378,7 @@ int deal_with_qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 	return DONE_AUTO;
 }
 
-int deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *key, *value, *end, *users;
 	struct player *player = NULL, **last_player = &server->players;
@@ -6622,7 +6607,7 @@ int deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 	return DONE_AUTO;
 }
 
-int deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *key, *value, *end;
 	struct player *player = NULL;
@@ -6901,7 +6886,7 @@ int ack_descent3master_packet(struct qserver *server, char *curtok)
 
 /* Packet from Descent3 master server (PXO)
  */
-int deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	int i = 0, lastpacket = 0;
 	char *names = rawpkt + 0x1f;
@@ -6948,7 +6933,7 @@ int deal_with_descent3master_packet(struct qserver *server, char *rawpkt, int pk
 
 /* Packet from QuakeWorld master server
  */
-int deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	int ret = 0;
 
@@ -7184,7 +7169,7 @@ int decode_stefmaster_packet(struct qserver *server, char *pkt, int pktlen)
 
 /* Packet from Tribes master server
  */
-int deal_with_tribesmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_tribesmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	unsigned char *upkt = (unsigned char*)rawpkt;
 	int packet_number = upkt[2];
@@ -7327,7 +7312,7 @@ char *display_tribes2_string_list(unsigned char *pkt)
 	return (char*)pkt;
 }
 
-int deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen)
+query_status_t deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen)
 {
 	unsigned int n_servers, index, total, server_limit;
 	char *p, *mpkt;
@@ -8408,7 +8393,7 @@ char *get_rule(struct qserver *server, char *name)
 	return NULL;
 }
 
-int deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 
 	// For protocol spec see:
@@ -8558,7 +8543,7 @@ int deal_with_unrealmaster_packet(struct qserver *server, char *rawpkt, int pktl
 
 /* Returns 1 if the query is done (server may be freed) and 0 if not.
  */
-int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *pkt;
 	char *end = &rawpkt[pktlen];
@@ -8837,7 +8822,7 @@ int deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 }
 
 
-int deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	unsigned char *pkt, *end;
 	int len, pnum, ping, packet_loss, n_teams, t;
@@ -9056,7 +9041,7 @@ void get_tribes2_player_type(struct player *player)
 	}
 }
 
-int deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
+query_status_t deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 {
 	char str[256], *pktstart = pkt, *term, *start;
 	unsigned int minimum_net_protocol, build_version, i, t, len, s, status;
@@ -9377,7 +9362,7 @@ static char Dat2Reply1_4[] =
 #define VERSION_1_3	2
 #define VERSION_1_4	3
 
-int deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
+query_status_t deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 {
 	char str[256], *start, *end, StartFlag, *lpszIgnoreServerPlayer;
 	char *lpszMission;
@@ -10019,7 +10004,7 @@ char *find_savage_game(char *gametype)
 	}
 }
 
-int deal_with_ravenshield_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ravenshield_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *key, *value;
 
@@ -10385,7 +10370,7 @@ int deal_with_ravenshield_packet(struct qserver *server, char *rawpkt, int pktle
 	return DONE_FORCE;
 }
 
-int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *key, *value, *end;
 
@@ -10570,7 +10555,7 @@ int deal_with_savage_packet(struct qserver *server, char *rawpkt, int pktlen)
 	return DONE_FORCE;
 }
 
-int deal_with_farcry_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_farcry_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *key, *value, *end;
 
@@ -10986,7 +10971,7 @@ struct rule *add_uchar_rule(struct qserver *server, char *key, unsigned char val
 	return add_rule(server, key, buf, NO_FLAGS);
 }
 
-int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *pkt;
 	char buf[24];
@@ -11109,7 +11094,7 @@ int deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 #define EYE_PING_MASK  16
 #define EYE_TIME_MASK  32
 
-int deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_eye_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *next, *end, *value, *key;
 	struct player **last_player;
@@ -11379,7 +11364,7 @@ static const int hl2_response_size = sizeof(hl2_statusresponse) - 1;
 #define HL2_STATUS 1
 #define HL2_PLAYERS 2
 #define HL2_RULES 3
-int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *ptr = rawpkt;
 	char *end = rawpkt + pktlen;
@@ -11612,7 +11597,7 @@ int deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 	return ( 0 == n_sent ) ? DONE_FORCE : INPROGRESS;
 }
 
-int deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktlen)
 {
 	debug( 2, "deal_with_gamespy_master_response %p, %d", server, pktlen );
 

@@ -13,8 +13,8 @@
 #include "qserver.h"
 
 // Packet processing methods
-int deal_with_gps_packet( struct qserver *server, char *pkt, int pktlen );
-int send_gps_request_packet( struct qserver *server );
+query_status_t deal_with_gps_packet( struct qserver *server, char *pkt, int pktlen );
+query_status_t send_gps_request_packet( struct qserver *server );
 
 #endif
 

@@ -48,7 +48,7 @@ struct fl_status
 	unsigned char type;
 };
 
-int send_fl_request_packet(struct qserver *server)
+query_status_t send_fl_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
@@ -60,10 +60,10 @@ int send_fl_request_packet(struct qserver *server)
 	status->sent_info = 1;
 	status->type = 0;
 
-	return 0;
+	return INPROGRESS;
 }
 
-int send_fl_rule_request_packet(struct qserver *server)
+query_status_t send_fl_rule_request_packet(struct qserver *server)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 
@@ -123,10 +123,10 @@ int send_fl_rule_request_packet(struct qserver *server)
 		}
 	} while(1);
 
-	return 0;
+	return INPROGRESS;
 }
 
-int deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct fl_status* status = (struct fl_status*)server->master_query_tag;
 	char* pkt = rawpkt;
