@@ -2997,7 +2997,8 @@ void do_work(void)
 
 			debug( 2, "recvfrom: %d", pktlen );
 
-			if (pktlen == SOCKET_ERROR || 0 == pktlen)
+			// pktlen == 0 is no error condition! happens on remote tcp socket close
+			if (pktlen == SOCKET_ERROR)
 			{
 				if (connection_would_block())
 				{
