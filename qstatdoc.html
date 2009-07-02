@@ -487,7 +487,7 @@ The Doom 3 master server supports a number of filtering options.
 You can set these filters with QStat by appending query arguments
 to the server type.  The general syntax is:
 <blockquote>
-<b>hlm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+<b>dm3m,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
 </blockquote>
 <table border=1>
 <tr><th>Query Argument</th><th>Values</th><th>Description</th></tr>
@@ -509,7 +509,7 @@ You can set these filters with QStat by appending query arguments
 to the server type. The general syntax is:
 
 <blockquote>
-  <b>hlm,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
+  <b>ut2004m,</b><i>query-arg</i><b>=</b><i>value</i><b>,</b> ...
 </blockquote>
 <table border=1>
   <tr>
@@ -545,7 +545,13 @@ to the server type. The general syntax is:
   </tr>
 </table>
 
-See the Tribes 2 master server above for example usage.<br>
+You may need to specify at least one filter option like status or gametype for
+the master to actually return any server.<br>
+
+Example:
+<blockquote>
+<b>qstat -ut2004m,cdkey=/usr/local/games/ut2004/System/cdkey,status=nostandard ut2004master1.epicgames.com:28902<br>
+</blockquote>
 
 <H4>Option Usage</H4>
 
