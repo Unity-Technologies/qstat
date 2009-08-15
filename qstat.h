@@ -212,8 +212,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define OTTD_SERVER 62
 #define OTTD_MASTER (63 | MASTER_SERVER)
 #define FL_SERVER	64
+#define WOLF_SERVER 65
 
-#define LAST_BUILTIN_SERVER  64
+#define LAST_BUILTIN_SERVER  65
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -2969,6 +2970,40 @@ server_type builtin_types[] = {
     send_fl_rule_request_packet,	/* rule_query_func */
 	NULL,							/* player_query_func */
     deal_with_fl_packet,			/* packet_func */
+},
+{
+    /* Wolfenstein */
+    WOLF_SERVER,					/* id */
+    "WOLF",							/* type_prefix */
+    "wolfs",						/* type_string */
+    "-wolfs",						/* type_option */
+    "Wolfenstein",					/* game_name */
+    0,								/* master */
+    WOLF_DEFAULT_PORT,				/* default_port */
+    0,								/* port_offset */
+    TF_QUAKE3_NAMES,				/* flags */
+    "fs_game",						/* game_rule */
+    "QUAKE4",						/* template_var */
+    (char*) &doom3_serverinfo,		/* status_packet */
+    sizeof( doom3_serverinfo),		/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_doom3_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_doom3_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_doom3_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_qwserver_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_wolf_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
