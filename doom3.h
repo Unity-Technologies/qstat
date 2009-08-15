@@ -21,6 +21,8 @@
 
 #define ETQW_DEFAULT_PORT	27733
 
+#define WOLF_DEFAULT_PORT	27758
+
 query_status_t send_doom3master_request_packet( struct qserver *server);
 query_status_t deal_with_doom3master_packet( struct qserver *server, char *rawpkt, int pktlen);
 
@@ -32,5 +34,7 @@ query_status_t deal_with_quake4_packet( struct qserver *server, char *rawpkt, in
 query_status_t deal_with_prey_packet( struct qserver *server, char *rawpkt, int pktlen);
 
 query_status_t deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen);
+
+query_status_t deal_with_wolf_packet( struct qserver *server, char *rawpkt, int pktlen);
 
 #endif
