@@ -375,7 +375,7 @@ x
 #endif
 		else if( 0 == strcasecmp( key, "si_map" ) )
 		{
-			if ( 5 == version )
+			if ( 5 == version || 6 == version )
 			{
 				// ET:QW reports maps/<mapname>.entities
 				// so we strip that here if it exists

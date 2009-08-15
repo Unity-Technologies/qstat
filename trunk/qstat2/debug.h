@@ -39,6 +39,11 @@ void dump_packet(const char* buf, int buflen);
 #ifndef _WIN32
 	#include <sys/mman.h>
 	#include <unistd.h>
+#else
+	#ifdef _MSC_VER
+		#define ssize_t SSIZE_T
+		#define uint32_t UINT32
+	#endif
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
