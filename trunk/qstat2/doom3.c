@@ -246,6 +246,7 @@ query_status_t deal_with_doom3master_packet( struct qserver *server, char *rawpk
 
 static const char doom3_inforesponse[] = "\xFF\xFFinfoResponse";
 static unsigned MAX_DOOM3_ASYNC_CLIENTS = 32;
+static unsigned MAX_WOLF_ASYNC_CLIENTS = 16;
 
 static query_status_t _deal_with_doom3_packet( struct qserver *server, char *rawpkt, int pktlen, unsigned version )
 {
@@ -428,7 +429,7 @@ x
 		short ping = 0;
 		unsigned rate = 0;
 
-		if( MAX_DOOM3_ASYNC_CLIENTS == player_id )
+		if( ( 6 == version && MAX_WOLF_ASYNC_CLIENTS == player_id ) || MAX_DOOM3_ASYNC_CLIENTS == player_id )
 		{
 			break;
 		}
@@ -672,4 +673,9 @@ query_status_t deal_with_prey_packet( struct qserver *server, char *rawpkt, int 
 query_status_t deal_with_etqw_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	return _deal_with_doom3_packet( server, rawpkt, pktlen, 5 );
+}
+
+query_status_t deal_with_wolf_packet( struct qserver *server, char *rawpkt, int pktlen )
+{
+	return _deal_with_doom3_packet( server, rawpkt, pktlen, 6 );
 }

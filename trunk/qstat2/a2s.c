@@ -615,7 +615,7 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 
 			if(pktlen < 8) goto out_too_short;
 
-			debug(3, "player index %d", idx);
+			debug(3, "player index %d = %s", idx, name );
 			p = add_player(server, server->n_player_info);
 			if(p)
 			{
