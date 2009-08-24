@@ -442,9 +442,16 @@ x
 			malformed_packet( server, "player info too short" );
 			return PKT_ERROR;
 		}
+/*
+		if ( 6 == version )
+		{
+			// Playerid is broken in wolf its always 0
+			player_id = num_players;
+		}
+*/
 
 		player = add_player( server, player_id );
-		if(!player)
+		if( ! player )
 		{
 			malformed_packet( server, "duplicate player id" );
 			return PKT_ERROR;
@@ -489,8 +496,9 @@ x
 		player->name = strdup( val );
 		ptr++;
 
-		if( 2 == version )
+		switch( version )
 		{
+		case 2: // Quake 4
 			val = ptr;
 			ptr = memchr(ptr, '\0', end-ptr);
 			if ( !ptr )
@@ -502,9 +510,10 @@ x
 			ptr++;
 			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, clan %s",
 					num_players, player->name, ping, rate, player_id, player->tribe_tag);
-		}
-		else if ( 5 == version )
-		{
+			break;
+
+		case 5: // ETQW
+		case 6: // Wolfenstien
 			if ( 0xa0011 <= protocolver ) // clan tag since 10.17
 			{
 				// clantag position
@@ -552,11 +561,10 @@ x
 				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
 					num_players, player->name, ping, rate, player_id, player->type_flag );
 			}
-		}
-		else
-		{
-			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu",
-					num_players, player->name, ping, rate, player_id );
+			break;
+
+		default:
+			debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu", num_players, player->name, ping, rate, player_id );
 		}
 
 		++num_players;
