@@ -77,13 +77,15 @@ query_status_t send_a2s_rule_request_packet(struct qserver *server)
 	{
 		if(!status->have_challenge)
 		{
-			// Challenge Request is currently broken so instead use a player request with an invalid
-			// challenge which prompts the server to send a valid challenge
-			char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
-			memcpy( buf + sizeof(A2S_PLAYER)-1, &status->challenge, 4 );
 			debug(3, "sending challenge");
-			//if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
-			if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
+
+			// Challenge Request was broken so instead we use a player request with an invalid
+			// challenge which prompts the server to send a valid challenge
+			// This was fixed as of the update 2009-08-26
+			//char buf[sizeof(A2S_PLAYER)-1+4] = A2S_PLAYER;
+			//memcpy( buf + sizeof(A2S_PLAYER)-1, &status->challenge, 4 );
+			//if( SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf)) )
+			if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
 			{
 				return SOCKET_ERROR;
 			}
