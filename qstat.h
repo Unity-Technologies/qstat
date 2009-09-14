@@ -70,7 +70,8 @@ typedef enum {
 	SYS_ERROR  = -1,
 	MEM_ERROR  = -2,
 	PKT_ERROR  = -3,
-	ORD_ERROR  = -4
+	ORD_ERROR  = -4,
+	REQ_ERROR  = -5
 } query_status_t;
 
 #include "qserver.h"
