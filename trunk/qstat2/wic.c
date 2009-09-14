@@ -57,6 +57,13 @@ query_status_t deal_with_wic_packet( struct qserver *server, char *rawpkt, int p
 
 	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
 	server->n_requests++;
+
+	if ( 0 == pktlen )
+	{
+		// Invalid password
+		return REQ_ERROR;
+	}
+
 	gettimeofday( &server->packet_time1, NULL);
 
 	rawpkt[pktlen]= '\0';

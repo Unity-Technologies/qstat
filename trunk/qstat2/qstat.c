@@ -4734,6 +4734,7 @@ int process_func_ret( struct qserver *server, int ret )
 	case MEM_ERROR:
 	case PKT_ERROR:
 	case ORD_ERROR:
+	case REQ_ERROR:
 		cleanup_qserver( server, FORCE );
 		return ret;
 	}
