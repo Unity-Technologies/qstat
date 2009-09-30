@@ -54,13 +54,13 @@ query_status_t deal_with_ts2_packet( struct qserver *server, char *rawpkt, int p
 	debug( 2, "processing..." );
 
 	server->n_servers++;
-	if ( server->server_name == NULL)
+	server->n_requests++;
+	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+
+	if ( 0 == pktlen )
 	{
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-	}
-	else
-	{
-		gettimeofday( &server->packet_time1, NULL);
+		// Invalid password
+		return REQ_ERROR;
 	}
 
 	rawpkt[pktlen]= '\0';
@@ -153,6 +153,8 @@ query_status_t deal_with_ts2_packet( struct qserver *server, char *rawpkt, int p
 		}
 		s = strtok( NULL, "\015\012" );
 	}
+
+	gettimeofday( &server->packet_time1, NULL );
 
 	if ( 0 == server->saved_data.pkt_index )
 	{
