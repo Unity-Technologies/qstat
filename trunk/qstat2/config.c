@@ -740,10 +740,12 @@ set_packet_value( server_type *gametype, char *value, char *packet_name,
 	    REPORT_ERROR((stderr, "Empty %s packet", packet_name));
 	    return -1;
 	}
-	if ( *packet == NULL)  {
-	    REPORT_ERROR((stderr, "Cannot set %s packet; extend game type does not define a %s packet", packet_name, packet_name));
-	    return -1;
-	}
+	// Removed as this doesn't seem to be any reason why we can't do this and it works just fine for warsow
+	//if ( *packet == NULL)  {
+	//    REPORT_ERROR((stderr, "Cannot set %s packet; extend game type does not define a %s packet", packet_name, packet_name));
+	//    return -1;
+	//}
+
 	*packet= memdup( value, value_len);
 	*len= value_len;
     return 0;
