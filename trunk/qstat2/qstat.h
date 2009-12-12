@@ -93,6 +93,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "tm.h"
 #include "wic.h"
 #include "ottd.h"
+#include "tee.h"
 
 /*
  * Various magic numbers.
@@ -214,8 +215,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define OTTD_MASTER (63 | MASTER_SERVER)
 #define FL_SERVER	64
 #define WOLF_SERVER 65
+#define TEE_SERVER	66
 
-#define LAST_BUILTIN_SERVER  65
+#define LAST_BUILTIN_SERVER  66
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -280,6 +282,7 @@ void display_tm_player_info( struct qserver *server);
 void display_haze_player_info( struct qserver *server);
 void display_wic_player_info( struct qserver *server);
 void display_fl_player_info( struct qserver *server);
+void display_tee_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -307,6 +310,7 @@ void raw_display_tm_player_info( struct qserver *server);
 void raw_display_haze_player_info( struct qserver *server);
 void raw_display_wic_player_info( struct qserver *server);
 void raw_display_fl_player_info( struct qserver *server);
+void raw_display_tee_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -336,6 +340,7 @@ void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
 void xml_display_fl_player_info( struct qserver *server);
+void xml_display_tee_player_info( struct qserver *server);
 char *xml_escape( char*);
 char *str_replace( char *, char *, char *);
 
@@ -824,6 +829,14 @@ char ottd_serverdetails[] = {
 	0x03, 0x00,	// packet length
 	0x02,		// packet type
 };
+
+/* Teeworlds */
+
+char tee_serverstatus[14] = { '\x20', '\0', '\0', '\0', '\0', '\0', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', 'f' };
+
+
+/* SERVER BUILTIN TYPES */
+
 
 server_type builtin_types[] = {
 {
@@ -3005,6 +3018,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_wolf_packet,			/* packet_func */
+},
+{
+    /* Teeworlds */
+    TEE_SERVER,						/* id */
+    "TEE",							/* type_prefix */
+    "tee",							/* type_string */
+    "-tee",							/* type_option */
+    "Teeworlds",		/* game_name */
+    0,								/* master */
+    35515,							/* default_port */
+    0,								/* port_offset */
+    0,				/* flags */
+    "gametype",							/* game_rule */
+    "TEE",							/* template_var */
+    tee_serverstatus,						/* status_packet */
+    sizeof(tee_serverstatus),					/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_tee_player_info,			/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_tee_player_info,		/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_tee_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_tee_request_packet,			/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_tee_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */

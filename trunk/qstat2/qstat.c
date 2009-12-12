@@ -977,6 +977,17 @@ void display_farcry_player_info(struct qserver *server)
 	}
 }
 
+void display_tee_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t%4d score %s\n", player->score, xform_name(player->name, server));
+	}
+}
+
 char *get_qw_game(struct qserver *server)
 {
 	struct rule *rule;
@@ -1589,6 +1600,19 @@ void raw_display_tm_player_info(struct qserver *server)
 			player->skin ? player->skin: "", RD,
 			play_time(player->connect_time,1)
 		);
+		fputs("\n", OF);
+	}
+}
+
+void raw_display_tee_player_info(struct qserver *server)
+{
+	static const char *fmt = "%s";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, fmt, xform_name(player->name,server) );
 		fputs("\n", OF);
 	}
 }
@@ -2383,6 +2407,26 @@ void xml_display_farcry_player_info(struct qserver *server)
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
 		fprintf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 2)));
+
+		fprintf(OF, "\t\t\t</player>\n");
+	}
+
+	fprintf(OF, "\t\t</players>\n");
+}
+
+void xml_display_tee_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	fprintf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t\t\t<player>\n");
+
+		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
 
 		fprintf(OF, "\t\t\t</player>\n");
 	}
