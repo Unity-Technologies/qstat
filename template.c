@@ -21,7 +21,7 @@
 #include <ctype.h>
 #include <time.h>
 
-#if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__)
+#if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/types.h>
 #endif
 
