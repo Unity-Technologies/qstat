@@ -11,7 +11,7 @@
 #include "qstat.h"
 
 int qsc_load_default_config_files();
-int qsc_load_config_file( char *filename);
+int qsc_load_config_file(char const* filename);
 server_type ** qsc_get_config_server_types( int *n_config_types);
 
 

@@ -39,16 +39,16 @@ static int n_config_types;
 static int max_config_types;
 static int next_gametype_id= LAST_BUILTIN_SERVER+1;
 
-static int load_config_file( char *filename);
-static int try_load_config_file( char *filename, int show_error);
+static int load_config_file(char const* filename);
+static int try_load_config_file(char const* filename, int const show_error);
 static int pf_top_level( char *text, void *context);
 static int pf_gametype_new( char *text, void *context);
 static int pf_gametype_modify( char *text, void *context);
 
 static int set_game_type_value( server_type *gametype, int key, char *value);
 static int modify_game_type_value( server_type *gametype, int key, char *value);
-static int set_packet_value( server_type *gametype, char *value,
-	char *packet_name, char **packet, int *len);
+static int set_packet_value(server_type* gametype, char const* value,
+	char const* packet_name, char** packet, int* len);
 
 static char *first_token( char *text);
 static char *next_token();
@@ -67,7 +67,7 @@ int parse_config_file( FILE *file);
 static int (*parse_func)( char *, void *);
 static void *parse_context;
 static int line;
-static char *current_file_name;
+static char const* current_file_name;
 
 static char *parse_text;
 static char *parse_end;
@@ -103,7 +103,7 @@ typedef struct _config_key {
     char *key_name;
 } ConfigKey;
 
-static ConfigKey new_keys[] = {
+static ConfigKey const new_keys[] = {
 { CK_MASTER_PROTOCOL, "master protocol" },
 { CK_MASTER_QUERY, "master query" },
 { CK_MASTER_PACKET, "master packet" },
@@ -121,7 +121,7 @@ static ConfigKey new_keys[] = {
 { 0, NULL },
 };
 
-static ConfigKey modify_keys[] = {
+static ConfigKey const modify_keys[] = {
 { CK_MASTER_PROTOCOL, "master protocol" },
 { CK_MASTER_QUERY, "master query" },
 { CK_MASTER_PACKET, "master packet" },
@@ -136,7 +136,7 @@ typedef struct {
 } ServerFlag;
 
 #define SERVER_FLAG(x) { #x, x }
-ServerFlag server_flags[] = {
+ServerFlag const server_flags[] = {
     SERVER_FLAG(TF_SINGLE_QUERY),
     SERVER_FLAG(TF_OUTFILE),
     SERVER_FLAG(TF_MASTER_MULTI_RESPONSE),
@@ -254,7 +254,7 @@ qsc_load_default_config_files()
 }
 
 int
-qsc_load_config_file( char *filename)
+qsc_load_config_file(char const* filename)
 {
     int rc= load_config_file( filename);
     if ( rc == -2)  {
@@ -275,7 +275,7 @@ qsc_get_config_server_types( int *n_config_types_ref)
 }
 
 STATIC int
-try_load_config_file( char *filename, int show_error)
+try_load_config_file(char const* filename, int const show_error)
 {
     int rc= load_config_file( filename);
     if ( rc == -2 && show_error)  {
@@ -290,7 +290,7 @@ try_load_config_file( char *filename, int show_error)
 }
 
 STATIC int
-load_config_file( char *filename)
+load_config_file(char const* filename)
 {
     FILE *file;
     int rc;
@@ -729,7 +729,7 @@ set_game_type_value( server_type *gametype, int key, char *value)
 }
 
 STATIC int
-set_packet_value( server_type *gametype, char *value, char *packet_name,
+set_packet_value(server_type* gametype, char const* value, char const* packet_name,
 	char **packet, int *len)
 {
     if ( gametype->master)  {
