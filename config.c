@@ -60,7 +60,7 @@ static unsigned int parse_oct( char *oct, int len, int *error);
 static char *force_lower_case( char *string);
 static char *force_upper_case( char *string);
 static char *get_token();
-static void * memdup( void *mem, unsigned int len);
+static void *memdup( const void *mem, unsigned int len);
 
 int parse_config_file( FILE *file);
 
@@ -156,7 +156,7 @@ ServerFlag const server_flags[] = {
 };
 #undef SERVER_FLAG
 
-static int get_config_key( char *first_token, ConfigKey *keys);
+static int get_config_key( char *first_token, const ConfigKey *keys);
 static void add_config_type( server_type *gametype);
 static server_type * get_config_type( char *game_type);
 static void copy_server_type( server_type *dest, server_type *source);
@@ -522,7 +522,7 @@ pf_gametype_new( char *text, void *_context)
 }
 
 STATIC int
-get_config_key( char *first_token, ConfigKey *keys)
+get_config_key( char *first_token, const ConfigKey *keys)
 {
     char key_name[1024], *token;
     int key= 0;
@@ -883,10 +883,15 @@ copy_server_type( server_type *dest, server_type *source)
 }
 
 STATIC void *
-memdup( void *mem, unsigned int len)
+memdup( const void *mem, unsigned int len)
 {
     void *result= malloc( len);
-    memcpy( result, mem, len);
+	if ( NULL == result )
+	{
+	    REPORT_ERROR(( stderr, "Failed to malloc %d bytes of memory", len ) );
+		return NULL;
+	}
+	memcpy( result, mem, len);
     return result;
 }
 
