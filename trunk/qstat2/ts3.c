@@ -2,8 +2,8 @@
  * qstat 2.8
  * by Steve Jankowski
  *
- * Teamspeak 2 query protocol
- * Copyright 2005 Steven Hartland
+ * Teamspeak 3 query protocol
+ * Copyright 2009 Steven Hartland
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  *
@@ -57,49 +57,71 @@ char *str_replace( char *source, char *find, char *replace )
 query_status_t send_ts3_request_packet( struct qserver *server )
 {
 	char buf[256];
+	int serverport;
 
-	int serverport = get_param_i_value( server, "port", 0 );
-	change_server_port( server, serverport, 1 );
+	debug( 3, "send_ts3_request_packet: state = %ld", server->challenge );
 
-	if ( get_player_info )
+	switch ( server->challenge )
 	{
-		server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
-		sprintf( buf, "use port=%d\nserverinfo\nclientlist\nquit\n", serverport );
-		server->n_servers = 3; // use an as indicator of how many responses we are going to get
-	}
-	else
-	{
-		server->flags |= TF_STATUS_QUERY;
-		sprintf( buf, "use port=%d\nserverinfo\nquit\n", serverport );
-		server->n_servers = 2; // use an as indicator of how many responses we are going to get
+	case 0:
+		// Not seen a challenge yet, wait for it
+		return INPROGRESS;
+
+	case 1:
+		// Select port
+		serverport = get_param_i_value( server, "port", 0 ); 
+		change_server_port( server, serverport, 1 );
+		// NOTE: we use n_servers as an indeicated of how many responses we are expecting to get
+		if ( get_player_info )
+		{
+			server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
+			server->n_servers = 4;
+		}
+		else
+		{
+			server->flags |= TF_STATUS_QUERY;
+			server->n_servers = 3;
+		}
+		sprintf( buf, "use port=%d\015\012", serverport );
+		break;
+
+	case 2:
+		// Server Info
+		sprintf( buf, "serverinfo\015\012" );
+		break;
+
+	case 3:
+		// Player Info or Quit
+		sprintf( buf, ( get_player_info ) ? "clientlist\015\012" : "quit\015\012" );
+		break;
+
+	case 4:
+		// Quit or Done
+		if ( get_player_info )	
+		{
+			sprintf( buf, "quit\015\012" );
+		}
+		else
+		{
+			return DONE_FORCE;
+		}
+		break;
 	}
 	server->saved_data.pkt_max = -1;
 
 	return send_packet( server, buf, strlen( buf ) );
 }
 
-
-query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int pktlen )
+int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *end, *player_name = "unknown";
-	int mode = 0;
-	char last_char;
-	debug( 2, "processing..." );
+	char *end = &rawpkt[pktlen-1];
+	char *s = rawpkt;
 
-	server->n_requests++;
-	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-
-	if ( 0 == pktlen )
+	if ( 0 == strncmp( "TS3", s, 3 ) )
 	{
-		// Invalid password
-		return REQ_ERROR;
+		// Challenge
+		return 1;
 	}
-
-	last_char = rawpkt[pktlen-1];
-	rawpkt[pktlen-1] = '\0';
-	end = &rawpkt[pktlen-1];
-
-	s = rawpkt;
 
 	while ( NULL != s )
 	{
@@ -109,8 +131,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 			// end cmd response
 			if ( 0 == strncmp( "error id=0", s, 9 ) )
 			{
-				//server->saved_data.pkt_index--;
-				mode++;
+				return 1;
 			}
 			else
 			{
@@ -127,36 +148,92 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 		}
 	}
 
-	gettimeofday( &server->packet_time1, NULL );
+	return 0;
+}
 
-	if ( mode != server->n_servers )
+query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int pktlen )
+{
+	char *s, *end, *player_name = "unknown";
+	int valid_response = 0, mode = 0;
+	char last_char;
+	debug( 2, "processing..." );
+
+	server->n_requests++;
+	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+
+	if ( 0 == pktlen )
 	{
-		int pkt_id;
-		int pkt_max;
-		if ( 0 == server->saved_data.pkt_max )
-		{
-			// detected a recursive call just return
-			server->saved_data.pkt_max = 1;
-			return INPROGRESS;
-		}
-
-		// We're expecting more to come
-		pkt_id = packet_count( server );
-		pkt_max = ( 0 == pkt_id ) ? 2 : pkt_id + 1;
-		rawpkt[pktlen-1] = last_char; // restore the last character
-		if ( ! add_packet( server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1 ) )
-		{
-			// fatal error e.g. out of memory
-			return MEM_ERROR;
-		}
-
-		// combine_packets will call us recursively
-		return combine_packets( server );
+		// Invalid password
+		return REQ_ERROR;
 	}
+
+	last_char = rawpkt[pktlen-1];
+	rawpkt[pktlen-1] = '\0';
+	end = &rawpkt[pktlen-1];
+	s = rawpkt;
+
+	debug( 3, "packet: combined = %d, challenge = %ld, n_servers = %d", server->combined, server->challenge, server->n_servers );
+	if ( ! server->combined )
+	{
+		// First time packet
+		gettimeofday( &server->packet_time1, NULL );
+
+		valid_response = valid_ts3_response( server, rawpkt, pktlen );
+
+		if ( 0 > valid_response )
+		{
+			// Error occured
+			return valid_response;
+		}
+
+		// only update on the original packed not on a combined call
+		server->challenge += valid_response;
+
+		debug( 3, "new packet: valid_response = %d, challenge = %ld, n_servers = %d", valid_response, server->challenge, server->n_servers );
+
+		if ( valid_response )
+		{
+			// Got a valid response, send the next request
+			int ret = send_ts3_request_packet( server );
+			if ( 0 != ret )
+			{
+				// error sending packet
+				debug( 4, "Request failed: %d", ret );
+				return ret;
+			}
+		}
+
+		if ( server->n_servers >= server->challenge )
+		{
+			// response fragment recieved
+			int pkt_id;
+			int pkt_max;
+
+			// We're expecting more to come
+			debug( 5, "fragment recieved..." );
+			pkt_id = packet_count( server );
+			pkt_max = ( 0 == pkt_id ) ? 2 : pkt_id + 1;
+			rawpkt[pktlen-1] = last_char; // restore the last character
+			if ( ! add_packet( server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1 ) )
+			{
+				// fatal error e.g. out of memory
+				return MEM_ERROR;
+			}
+
+			// combine_packets will call us recursively
+			return combine_packets( server );
+		}
+	}
+	else if ( server->n_servers > server->challenge )
+	{
+		// recursive call which is still incomplete
+		return INPROGRESS;
+	}
+
+	debug( 3, "processing response..." );
 
 	s = strtok( rawpkt, "\012\015 |" );
 
-	mode = 0;
 	// NOTE: id=XXX and msg=XXX will be processed by the mod fillowing the one they where the response of
 	while ( NULL != s )
 	{
