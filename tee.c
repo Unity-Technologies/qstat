@@ -19,26 +19,23 @@
 
 char tee_serverinfo[8] = { '\xFF', '\xFF', '\xFF', '\xFF', 'i', 'n', 'f', 'o' };
 
-int send_tee_request_packet( struct qserver *server )
+query_status_t send_tee_request_packet( struct qserver *server )
 {
-// printf("send packet %d\n", server->n_requests);
 	return send_packet( server, server->type->status_packet, server->type->status_len );
 }
 
-
-int deal_with_tee_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t deal_with_tee_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-// printf("receive packet %d len %d\n", server->n_requests, pktlen);
-	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
-
 	// skip unimplemented ack, crc, etc
 	char *pkt = rawpkt + 6;
 	char *tok = NULL, *version = NULL;
 	int i;
 	struct player* player;
+
+	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
+
 	if (0 == memcmp( pkt, tee_serverinfo, 8)) 
 	{
-// printf("info ok\n");
 		pkt += 8;
 		// version
 		version = strdup(pkt); pkt += strlen(pkt) + 1;
@@ -66,21 +63,15 @@ int deal_with_tee_packet( struct qserver *server, char *rawpkt, int pktlen )
 		pkt += strlen(pkt) + 1;
 		// num players
 		server->num_players = atoi(pkt); pkt += strlen(pkt) + 1;
-// printf("num players %d\n", server->num_players);
 		// max players
 		server->max_players = atoi(pkt); pkt += strlen(pkt) + 1;
 		// players
-// printf("max players %d\n", server->max_players);
-		for(i = 0; i < server->num_players; i++) {
+		for(i = 0; i < server->num_players; i++)
+		{
 			player = add_player( server, i );
-// printf("player %s ", pkt);
 			player->name = strdup(pkt); pkt += strlen(pkt) + 1;
-// printf("%s\n", pkt);
 			player->score = atoi(pkt); pkt += strlen(pkt) + 1;
-// fflush(stdout);
 		}
-// printf("players ok");		
-// fflush(stdout);
 		// version reprise
 		server->protocol_version = 0;
 
@@ -97,5 +88,5 @@ int deal_with_tee_packet( struct qserver *server, char *rawpkt, int pktlen )
 	}
 
 	// unknown packet type
-	return -1;
+	return PKT_ERROR;
 }

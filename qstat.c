@@ -887,6 +887,16 @@ void display_ts2_player_info(struct qserver *server)
 	}
 }
 
+void display_ts3_player_info(struct qserver *server)
+{
+	struct player *player;
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t%s\n", xform_name(player->name, server));
+	}
+}
+
 void display_wic_player_info(struct qserver *server)
 {
 	struct player *player;
@@ -1561,6 +1571,23 @@ void raw_display_ts2_player_info(struct qserver *server)
 		fprintf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->ping, RD,
+			player->skin ? player->skin: "", RD,
+			play_time(player->connect_time, 1)
+		);
+		fputs("\n", OF);
+	}
+}
+
+void raw_display_ts3_player_info(struct qserver *server)
+{
+	static const char *fmt = "%s""%s%s""%s%s";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, fmt,
+			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
 			play_time(player->connect_time, 1)
 		);
@@ -2304,6 +2331,31 @@ void xml_display_ts2_player_info(struct qserver *server)
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		}
+
+		xml_display_player_info_info(player);
+		fprintf(OF, "\t\t\t</player>\n");
+	}
+
+	fprintf(OF, "\t\t</players>\n");
+}
+
+void xml_display_ts3_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	fprintf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t\t\t<player>\n");
+
+		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 
 		if (player->connect_time)
 		{
@@ -4412,10 +4464,18 @@ void init_qserver(struct qserver *server, server_type *type)
 
 // ipaddr should be network byte-order
 // port should be host byte-order
+// NOTE: This will return the first matching server, which is not nessacarily correct
+// depending on if duplicate ports are allowed
 struct qserver *find_server_by_address(unsigned int ipaddr, unsigned short port)
 {
 	struct qserver **hashed;
 	unsigned int hash, i;
+
+	if ( ! noserverdups && show_errors )
+	{
+		fprintf( stderr, "error: find_server_by_address while duplicates are allowed, this is unsafe!" );
+	}
+
 	hash = (ipaddr + port) % ADDRESS_HASH_LENGTH;
 
 	if (ipaddr == 0)
@@ -4462,7 +4522,8 @@ void remove_server_from_hash(struct qserver *server)
 	hashed = server_hash[hash];
 	for (i = server_hash_len[hash]; i; i--, hashed++)
 	{
-		if (*hashed && (*hashed)->ipaddr == ipaddr && (*hashed)->orig_port == port)
+		// NOTE: we use direct pointer checks here to prevent issues with duplicate port servers e.g. teamspeak 2 and 3
+		if ( *hashed == server )
 		{
 			*hashed = NULL;
 			break;
@@ -5690,7 +5751,7 @@ setup_retry:
 	return DONE_AUTO;
 }
 
-int send_player_request_packet(struct qserver *server)
+query_status_t send_player_request_packet(struct qserver *server)
 {
 	int rc;
 
@@ -6233,7 +6294,7 @@ void free_rule(struct rule *rule)
 
 /* Packet from normal Quake server
  */
-int deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_q_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	struct q_packet *pkt = (struct q_packet*)rawpkt;
 	int rc;
@@ -10779,7 +10840,7 @@ query_status_t deal_with_farcry_packet(struct qserver *server, char *rawpkt, int
 /* postions of map name, player name (in player substring), zero-based */
 #define BFRIS_MAP_POS 18
 #define BFRIS_PNAME_POS 11
-int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	int i, player_data_pos, nplayers;
 	SavedData *sdata;
@@ -10814,7 +10875,7 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 		/* server data goes up to map name */
 		if (sdata->datalen <= BFRIS_MAP_POS)
 		{
-			return 0;
+			return INPROGRESS;
 		}
 
 		/* see if map name is complete */
@@ -10827,7 +10888,7 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 				/* data must extend beyond map name */
 				if (saved_data_size <= player_data_pos)
 				{
-					return 0;
+					return INPROGRESS;
 				}
 				break;
 			}
@@ -10836,7 +10897,7 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 		/* did we find beginning of player data? */
 		if (!player_data_pos)
 		{
-			return 0;
+			return INPROGRESS;
 		}
 
 		/* now we can go ahead and fill in server data */
@@ -10905,7 +10966,7 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 		/* does player data extend to player name? */
 		if (saved_data_size <= player_data_pos + 1)
 		{
-			return 0;
+			return INPROGRESS;
 		}
 
 		/* does player data extend to end of player name? */
@@ -10914,7 +10975,7 @@ int deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 			if (saved_data_size == player_data_pos + i + 1)
 			{
-				return 0;
+				return INPROGRESS;
 			}
 
 			if (saved_data[player_data_pos + i] == '\0')

@@ -90,6 +90,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "gs3.h"
 #include "haze.h"
 #include "ts2.h"
+#include "ts3.h"
 #include "tm.h"
 #include "wic.h"
 #include "ottd.h"
@@ -141,6 +142,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define HL2_DEFAULT_PORT	27015
 #define HL2_MASTER_DEFAULT_PORT	27011
 #define TS2_DEFAULT_PORT 51234
+#define TS3_DEFAULT_PORT 10011
 #define TM_DEFAULT_PORT 5000
 #define WIC_DEFAULT_PORT 5000 // Default is actually disabled
 #define FL_DEFAULT_PORT 5478
@@ -216,8 +218,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define FL_SERVER	64
 #define WOLF_SERVER 65
 #define TEE_SERVER	66
+#define TS3_PROTOCOL_SERVER	67
 
-#define LAST_BUILTIN_SERVER  66
+#define LAST_BUILTIN_SERVER  67
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -278,6 +281,7 @@ void display_gs2_player_info( struct qserver *server);
 void display_doom3_player_info( struct qserver *server);
 void display_hl2_player_info( struct qserver *server);
 void display_ts2_player_info( struct qserver *server);
+void display_ts3_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
 void display_haze_player_info( struct qserver *server);
 void display_wic_player_info( struct qserver *server);
@@ -306,6 +310,7 @@ void raw_display_gs2_player_info( struct qserver *server);
 void raw_display_doom3_player_info( struct qserver *server);
 void raw_display_hl2_player_info( struct qserver *server);
 void raw_display_ts2_player_info( struct qserver *server);
+void raw_display_ts3_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
 void raw_display_haze_player_info( struct qserver *server);
 void raw_display_wic_player_info( struct qserver *server);
@@ -336,6 +341,7 @@ void xml_display_gs2_player_info( struct qserver *server);
 void xml_display_doom3_player_info( struct qserver *server);
 void xml_display_hl2_player_info( struct qserver *server);
 void xml_display_ts2_player_info( struct qserver *server);
+void xml_display_ts3_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
@@ -350,7 +356,7 @@ query_status_t send_ut2003_request_packet( struct qserver *server);
 query_status_t send_tribes_request_packet( struct qserver *server);
 query_status_t send_qwmaster_request_packet( struct qserver *server);
 query_status_t send_bfris_request_packet( struct qserver *server);
-int send_player_request_packet( struct qserver *server);
+query_status_t send_player_request_packet( struct qserver *server);
 query_status_t send_rule_request_packet( struct qserver *server);
 query_status_t send_savage_request_packet( struct qserver *server);
 query_status_t send_farcry_request_packet( struct qserver *server);
@@ -359,7 +365,7 @@ query_status_t send_tribes2_request_packet( struct qserver *server);
 query_status_t send_tribes2master_request_packet( struct qserver *server);
 query_status_t send_hl2_request_packet( struct qserver *server);
 
-int deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen );
@@ -368,7 +374,7 @@ query_status_t deal_with_halflife_packet( struct qserver *server, char *pkt, int
 query_status_t deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
-int deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
 query_status_t deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
@@ -811,8 +817,6 @@ unsigned char farcry_serverquery[] = {
 };
 
 char ravenshield_serverquery[] = "REPORT";
-
-unsigned char ts2_status_query[] = "si";
 
 char ottd_master_query[] = {
 	0x04, 0x00,	// packet length
@@ -3052,6 +3056,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_tee_packet,			/* packet_func */
+},
+{
+    /* TEAMSPEAK 3 PROTOCOL */
+    TS3_PROTOCOL_SERVER,			/* id */
+    "TS3",							/* type_prefix */
+    "ts3",							/* type_string */
+    "-ts3",							/* type_option */
+    "Teamspeak 3",					/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT|TF_QUERY_ARG_REQUIRED|TF_QUERY_ARG,	/* flags */
+    "N/A",							/* game_rule */
+    "TS3PROTOCOL",					/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_ts3_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_ts3_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_ts3_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_ts3_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_ts3_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
