@@ -323,6 +323,11 @@ int process_gs3_packet( struct qserver *server )
 		char *end = ptr + pktlen;
 		debug( 2, "processing fragment[%d]...", fragment->pkt_index );
 
+		if( 6 <= get_debug_level() )
+		{
+			print_packet( server, ptr, pktlen );
+		}
+
 		// check we have a full header
 		if ( pktlen < 16 )
 		{
@@ -342,8 +347,15 @@ int process_gs3_packet( struct qserver *server )
 			char *var, *val;
 			int var_len, val_len;
 
-			debug( 4, "state = %d, %hhx, %hhx, bytes left = %d", state, ptr[0], ptr[1], (int)(end - ptr) );
-			if ( 0x00 == ptr[0] && 0x01 >= ptr[1] )
+			if ( ptr + 1 >= end )
+			{
+				debug( 4, "state = %d, %hhx, bytes left = %d", state, ptr[0], (int)(end - ptr) );
+			}
+			else
+			{
+				debug( 4, "state = %d, %hhx, %hhx, bytes left = %d", state, ptr[0], ptr[1], (int)(end - ptr) );
+			}
+			if ( 0x00 == ptr[0] && ( ptr + 1 >= end || 0x01 >= ptr[1] ) )
 			{
 				// not quite sure of the significance of these bytes
 				// but we use them as a check for end of section
