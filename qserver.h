@@ -41,6 +41,12 @@ struct qserver {
     unsigned short port;
     unsigned short orig_port; // This port is always constant from creation where as port can be updated based on the query results
     unsigned short query_port;
+
+	// State variable to flag if the current processing call is a call from combine_packets
+	// This should really by done via a flag to the method itself but that would require changes
+	// to all handlers :(
+	unsigned short combined;
+
     /** \brief number of retries _left_ for status query or rule query.
      *
      * That means
