@@ -134,9 +134,11 @@ int combine_packets( struct qserver *server )
 		{
 			print_packet( server, combined, datalen );
 		}
-		// Call the server's packet processing method
+		// Call the server's packet processing method flagging as a combine call
+		server->combined = 1;
 		ret = ( (int (*)()) server->type->packet_func)( server, combined, datalen );
 		free( combined );
+		server->combined = 0;
 
 		// Note: this is currently invalid as packet processing methods
 		// are void not int
