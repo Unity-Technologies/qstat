@@ -539,13 +539,15 @@ int process_gs3_packet( struct qserver *server )
 			}
 		}
 
+
 		while ( 1 == state && ptr < end )
 		{
 			// first we have the header
 			char *header = ptr;
 			int head_len = strlen( header );
 			int header_type;
-			ptr += head_len + 1;
+
+			debug( 4, "state = %d, bytes left = %d, head_len = %d", state, (int)(end - ptr), head_len );
 
 			if ( 0 == head_len )
 			{
@@ -554,13 +556,19 @@ int process_gs3_packet( struct qserver *server )
 				return DONE_FORCE;
 			}
 
-			debug( 2, "player header '%s'", header );
+			ptr += head_len + 1;
 
-			if ( ptr > end )
+			if ( ptr >= end )
 			{
-				malformed_packet( server, "no details for header '%s'", header );
-				return PKT_ERROR;
+				// partial header, should be restarted in the next fragment
+				debug( 5, "partial header '%s'", header );
+				// ensure gt than
+				ptr++;
+
+				break;
 			}
+
+			debug( 2, "player header '%s'", header );
 
 			// the next byte is the starting number
 			total_players = *ptr++;
@@ -605,7 +613,7 @@ int process_gs3_packet( struct qserver *server )
 				// check for end of this headers player info
 				if ( 0x00 == *ptr )
 				{
-					debug( 3, "end of '%s' detail", header );
+					debug( 3, "end of '%s' detail, %d bytes left", header, (int)(end - ptr) );
 					ptr++;
 					// Note: can't check ( total_players != no_players ) here as we may have more packets
 					if ( ptr < end && 0x00 == *ptr )
@@ -687,7 +695,9 @@ int process_gs3_packet( struct qserver *server )
 			}
 		}
 
-		if ( 2 == state )
+		debug( 4, "state = %d, bytes left = %d", state, (int)(end - ptr) );
+
+		if ( 2 == state && ptr < end )
 		{
 			no_teams = (unsigned char)*ptr;
 			ptr++;
@@ -709,6 +719,13 @@ int process_gs3_packet( struct qserver *server )
 				// no more info
 				debug( 3, "All done" );
 				return DONE_FORCE;
+			}
+
+			if ( ptr >= end )
+			{
+				// partial header, should be restarted in the next fragment
+				debug( 5, "partial header '%s'", header );
+				break;
 			}
 
 			debug( 2, "team header '%s'", header );

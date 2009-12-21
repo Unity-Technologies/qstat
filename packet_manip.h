@@ -18,5 +18,6 @@ int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int 
 int next_sequence();
 SavedData* get_packet_fragment( int index );
 unsigned combined_length( struct qserver *server, int pkt_id );
+unsigned packet_count( struct qserver *server );
 
 #endif

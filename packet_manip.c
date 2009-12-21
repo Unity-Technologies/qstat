@@ -151,6 +151,9 @@ int combine_packets( struct qserver *server )
 	return ret;
 }
 
+// NOTE:
+// pkt_id is the packet aka response identifier
+// pkt_index is the index of the packet fragment
 int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int pkt_max, int datalen, char *data, int calc_max )
 {
 	SavedData *sdata;
@@ -239,4 +242,20 @@ unsigned combined_length( struct qserver *server, int pkt_id )
 		}
 	}
 	return len;
+}
+
+unsigned packet_count( struct qserver *server )
+{
+	SavedData *sdata = &server->saved_data;
+	unsigned cnt = 0;
+	if ( NULL == sdata->data )
+	{
+		return 0;
+	}
+
+	for ( ; sdata != NULL; sdata = sdata->next )
+	{
+		cnt++;
+	}
+	return cnt;
 }
