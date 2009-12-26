@@ -65,6 +65,7 @@ query_status_t send_ts3_request_packet( struct qserver *server )
 	{
 	case 0:
 		// Not seen a challenge yet, wait for it
+		gettimeofday( &server->packet_time1, NULL);
 		return INPROGRESS;
 
 	case 1:
@@ -158,9 +159,6 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	char last_char;
 	debug( 2, "processing..." );
 
-	server->n_requests++;
-	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-
 	if ( 0 == pktlen )
 	{
 		// Invalid password
@@ -175,8 +173,9 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	debug( 3, "packet: combined = %d, challenge = %ld, n_servers = %d", server->combined, server->challenge, server->n_servers );
 	if ( ! server->combined )
 	{
-		// First time packet
-		gettimeofday( &server->packet_time1, NULL );
+		server->retry1 = n_retries;
+		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+		server->n_requests++; // Not quite right but gives a good estimate
 
 		valid_response = valid_ts3_response( server, rawpkt, pktlen );
 
