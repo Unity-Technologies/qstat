@@ -12,6 +12,10 @@
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#else
+#include <winsock.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,13 +58,47 @@ char *str_replace( char *source, char *find, char *replace )
 	return source;
 }
 
-query_status_t send_ts3_request_packet( struct qserver *server )
+int all_ts3_servers( struct qserver *server )
+{
+	return ( 1 == get_param_i_value( server, "allservers", 0 ) ) ? 1 : 0;
+}
+
+query_status_t send_ts3_all_servers_packet( struct qserver *server )
+{
+	char buf[256];
+
+	switch ( server->challenge )
+	{
+	case 0:
+		// Not seen a challenge yet, wait for it
+		gettimeofday( &server->packet_time1, NULL);
+		return INPROGRESS;
+
+	case 1:
+		// NOTE: we currently don't support player info
+		server->flags |= TF_STATUS_QUERY;
+		server->n_servers = 2;
+		sprintf( buf, "serverlist\015\012" );
+		break;
+
+	case 2:
+		sprintf( buf, "quit\015\012" );
+		break;
+
+	case 3:
+		return DONE_FORCE;
+	}
+
+	server->saved_data.pkt_max = -1;
+
+	return send_packet( server, buf, strlen( buf ) );
+}
+
+
+query_status_t send_ts3_single_server_packet( struct qserver *server )
 {
 	char buf[256];
 	int serverport;
-
-	debug( 3, "send_ts3_request_packet: state = %ld", server->challenge );
-
 	switch ( server->challenge )
 	{
 	case 0:
@@ -92,7 +130,7 @@ query_status_t send_ts3_request_packet( struct qserver *server )
 		break;
 
 	case 3:
-		// Player Info or Quit
+		// Player Info, Quit or Done
 		sprintf( buf, ( get_player_info ) ? "clientlist\015\012" : "quit\015\012" );
 		break;
 
@@ -111,6 +149,12 @@ query_status_t send_ts3_request_packet( struct qserver *server )
 	server->saved_data.pkt_max = -1;
 
 	return send_packet( server, buf, strlen( buf ) );
+}
+
+query_status_t send_ts3_request_packet( struct qserver *server )
+{
+	debug( 3, "send_ts3_request_packet: state = %ld", server->challenge );
+	return ( all_ts3_servers( server ) ) ? send_ts3_all_servers_packet( server ) : send_ts3_single_server_packet( server );
 }
 
 int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
@@ -155,8 +199,9 @@ int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
 query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end, *player_name = "unknown";
-	int valid_response = 0, mode = 0;
+	int valid_response = 0, mode = 0, all_servers = 0;
 	char last_char;
+	unsigned short port = 0, down = 0;
 	debug( 2, "processing..." );
 
 	if ( 0 == pktlen )
@@ -169,13 +214,17 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	rawpkt[pktlen-1] = '\0';
 	end = &rawpkt[pktlen-1];
 	s = rawpkt;
+	all_servers = all_ts3_servers( server );
 
 	debug( 3, "packet: combined = %d, challenge = %ld, n_servers = %d", server->combined, server->challenge, server->n_servers );
 	if ( ! server->combined )
 	{
 		server->retry1 = n_retries;
-		server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-		server->n_requests++; // Not quite right but gives a good estimate
+		if ( 0 == all_servers || 0 == server->ping_total )
+		{
+			server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+			server->n_requests++; // Not quite right but gives a good estimate
+		}
 
 		valid_response = valid_ts3_response( server, rawpkt, pktlen );
 
@@ -233,17 +282,21 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 
 	s = strtok( rawpkt, "\012\015 |" );
 
-	// NOTE: id=XXX and msg=XXX will be processed by the mod fillowing the one they where the response of
+	// NOTE: id=XXX and msg=XXX will be processed by the mod following the one they where the response of
 	while ( NULL != s )
 	{
-		debug( 6, "LINE: %s\n", s );
+		debug( 6, "LINE: %d, %s\n", mode, s );
 		switch ( mode )
 		{
 		case 0:
-			// use response
+			// prompt, use or serverlist response
 			if ( 0 == strcmp( "TS3", s ) )
 			{
-				// nothing to do
+				// nothing to do unless in all servers mode
+				if ( 1 == all_servers )
+				{
+					mode++;
+				}
 			}
 			else if ( 0 == strncmp( "error", s, 5 ) )
 			{
@@ -252,7 +305,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 			}
 			break;
 		case 1:
-			// serverinfo response
+			// serverinfo or serverlist response
 			if ( 0 == strncmp( "error", s, 5 ) )
 			{
 				// end of serverinfo response
@@ -270,11 +323,38 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 					debug( 6, "Rule: %s = %s\n", key, value );
 					if ( 0 == strcmp( "virtualserver_name", key ) )
 					{
-						server->server_name = strdup( decode_val( value ) );
+						if ( 1 == all_servers )
+						{
+							struct qserver *new_server = add_qserver_byaddr( ntohl( server->ipaddr ), port, server->type, NULL );
+							if ( NULL != new_server )
+							{
+								if ( down )
+								{
+									// Status indicates this server is actually offline
+									new_server->server_name = DOWN;
+								}
+								else
+								{
+									new_server->max_players = server->max_players;
+									new_server->num_players = server->num_players;
+									new_server->server_name = strdup( decode_val( value ) );
+									new_server->map_name = strdup( "N/A" );
+									new_server->ping_total = server->ping_total;
+									new_server->n_requests = server->n_requests;
+								}
+								cleanup_qserver( new_server, FORCE );
+							}
+							down = 0;
+						}
+						else
+						{
+							server->server_name = strdup( decode_val( value ) );
+						}
 					}
 					else if ( 0 == strcmp( "virtualserver_port", key ) )
 					{
-						change_server_port( server, atoi( value ), 0 );
+						port = atoi( value );
+						change_server_port( server, port, 0 );
 						add_rule( server, key, value, NO_FLAGS );
 					}
 					else if ( 0 == strcmp( "virtualserver_maxclients", key ) )
@@ -293,11 +373,15 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 					else if ( 0 == strcmp( "virtualserver_status", key ) && ( 0 == strcmp( "virtual", value ) || 0 == strcmp( "none", value ) ) )
 					{
 						// Server is actually offline to client so display as down
-						server->server_name = DOWN;
-						server->saved_data.pkt_index = 0;
-						return DONE_FORCE;
+						down = 1;
+						if ( 1 != all_servers )
+						{
+							server->server_name = DOWN;
+							//server->saved_data.pkt_index = 0;
+							return DONE_FORCE;
+						}
 					}
-					else
+					else if ( 1 != all_servers )
 					{
 						add_rule( server, key, value, NO_FLAGS);
 					}
