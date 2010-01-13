@@ -71,7 +71,6 @@ query_status_t send_ts3_all_servers_packet( struct qserver *server )
 	{
 	case 0:
 		// Not seen a challenge yet, wait for it
-		gettimeofday( &server->packet_time1, NULL);
 		return INPROGRESS;
 
 	case 1:
@@ -103,14 +102,13 @@ query_status_t send_ts3_single_server_packet( struct qserver *server )
 	{
 	case 0:
 		// Not seen a challenge yet, wait for it
-		gettimeofday( &server->packet_time1, NULL);
 		return INPROGRESS;
 
 	case 1:
 		// Select port
 		serverport = get_param_i_value( server, "port", 0 ); 
 		change_server_port( server, serverport, 1 );
-		// NOTE: we use n_servers as an indeicated of how many responses we are expecting to get
+		// NOTE: we use n_servers as an indication of how many responses we are expecting to get
 		if ( get_player_info )
 		{
 			server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
@@ -220,10 +218,10 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	if ( ! server->combined )
 	{
 		server->retry1 = n_retries;
-		if ( 0 == all_servers || 0 == server->ping_total )
+		if ( 0 == server->n_requests )
 		{
-			server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
-			server->n_requests++; // Not quite right but gives a good estimate
+			server->ping_total = time_delta( &packet_recv_time, &server->packet_time1 );
+			server->n_requests++;
 		}
 
 		valid_response = valid_ts3_response( server, rawpkt, pktlen );
@@ -277,6 +275,10 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 		// recursive call which is still incomplete
 		return INPROGRESS;
 	}
+
+	// Correct ping
+	// Not quite right but gives a good estimate
+	server->ping_total = ( server->ping_total * server->n_requests ) / 2;
 
 	debug( 3, "processing response..." );
 
