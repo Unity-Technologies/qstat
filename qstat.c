@@ -4634,6 +4634,12 @@ int bind_qserver(struct qserver *server)
 		addr.sin_addr.s_addr = server->ipaddr;
 		memset(&(addr.sin_zero), 0, sizeof(addr.sin_zero));
 
+		if ( server->type->flags & TF_TCP_CONNECT )
+		{
+			// TCP set packet_time1 so it can be used for ping calculations for protocols with an initial response
+			gettimeofday( &server->packet_time1, NULL );
+		}
+
 		if (connect(server->fd, (struct sockaddr*) &addr, sizeof(addr)) == SOCKET_ERROR)
 		{
 			int ignore = 0;
@@ -4920,7 +4926,7 @@ void send_packets()
 				continue;
 			}
 
-			if (qserver_get_timeout(server, &now) <= 0)
+			if ( qserver_get_timeout(server, &now) <= 0 && ! ( server->type->flags & TF_TCP_CONNECT ) )
 			{
 				// Query status
 				debug(2, "calling status_query_func for %p", server);
