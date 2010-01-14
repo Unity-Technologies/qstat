@@ -27,8 +27,8 @@
 
 query_status_t send_bfbc2_request_packet( struct qserver *server )
 {
-	debug( 3, "send_bfbc2_request_packet: state = %ld", server->challenge );
 	char *buf = "\x00\x00\x00\x00\x1b\x00\x00\x00\x01\x00\x00\x00\x0a\x00\x00\x00serverInfo\x00";
+	debug( 3, "send_bfbc2_request_packet: state = %ld", server->challenge );
 
 	return send_packet( server, buf, 27 );
 }
