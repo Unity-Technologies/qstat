@@ -25,7 +25,7 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
-char *decode_val( char *val )
+char *decode_ts3_val( char *val )
 {
 	val = str_replace( val, "\\\\", "\\" );
 	val = str_replace( val, "\\/", "/" );
@@ -339,7 +339,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 								{
 									new_server->max_players = server->max_players;
 									new_server->num_players = server->num_players;
-									new_server->server_name = strdup( decode_val( value ) );
+									new_server->server_name = strdup( decode_ts3_val( value ) );
 									new_server->map_name = strdup( "N/A" );
 									new_server->ping_total = server->ping_total;
 									new_server->n_requests = server->n_requests;
@@ -350,7 +350,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 						}
 						else
 						{
-							server->server_name = strdup( decode_val( value ) );
+							server->server_name = strdup( decode_ts3_val( value ) );
 						}
 					}
 					else if ( 0 == strcmp( "virtualserver_port", key ) )
@@ -420,7 +420,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 						struct player *player = add_player( server, server->n_player_info );
 						if ( NULL != player )
 						{
-							player->name = strdup( decode_val( player_name ) );
+							player->name = strdup( decode_ts3_val( player_name ) );
 						}
 					}
 				}

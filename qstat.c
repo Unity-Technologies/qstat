@@ -897,6 +897,16 @@ void display_ts3_player_info(struct qserver *server)
 	}
 }
 
+void display_bfbc2_player_info(struct qserver *server)
+{
+	struct player *player;
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t%s\n", xform_name(player->name, server));
+	}
+}
+
 void display_wic_player_info(struct qserver *server)
 {
 	struct player *player;
@@ -1579,6 +1589,23 @@ void raw_display_ts2_player_info(struct qserver *server)
 }
 
 void raw_display_ts3_player_info(struct qserver *server)
+{
+	static const char *fmt = "%s""%s%s""%s%s";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, fmt,
+			xform_name(player->name,server), RD,
+			player->skin ? player->skin: "", RD,
+			play_time(player->connect_time, 1)
+		);
+		fputs("\n", OF);
+	}
+}
+
+void raw_display_bfbc2_player_info(struct qserver *server)
 {
 	static const char *fmt = "%s""%s%s""%s%s";
 	struct player *player;
@@ -2345,6 +2372,31 @@ void xml_display_ts2_player_info(struct qserver *server)
 }
 
 void xml_display_ts3_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	fprintf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		fprintf(OF, "\t\t\t<player>\n");
+
+		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		}
+
+		xml_display_player_info_info(player);
+		fprintf(OF, "\t\t\t</player>\n");
+	}
+
+	fprintf(OF, "\t\t</players>\n");
+}
+
+void xml_display_bfbc2_player_info(struct qserver *server)
 {
 	struct player *player;
 

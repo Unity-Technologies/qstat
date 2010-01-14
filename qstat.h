@@ -95,6 +95,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "wic.h"
 #include "ottd.h"
 #include "tee.h"
+#include "bfbc2.h"
 
 /*
  * Various magic numbers.
@@ -143,6 +144,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define HL2_MASTER_DEFAULT_PORT	27011
 #define TS2_DEFAULT_PORT 51234
 #define TS3_DEFAULT_PORT 10011
+#define BFBC2_DEFAULT_PORT 48888
 #define TM_DEFAULT_PORT 5000
 #define WIC_DEFAULT_PORT 5000 // Default is actually disabled
 #define FL_DEFAULT_PORT 5478
@@ -219,8 +221,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define WOLF_SERVER 65
 #define TEE_SERVER	66
 #define TS3_PROTOCOL_SERVER	67
+#define BFBC2_PROTOCOL_SERVER	68
 
-#define LAST_BUILTIN_SERVER  67
+#define LAST_BUILTIN_SERVER  68
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -282,6 +285,7 @@ void display_doom3_player_info( struct qserver *server);
 void display_hl2_player_info( struct qserver *server);
 void display_ts2_player_info( struct qserver *server);
 void display_ts3_player_info( struct qserver *server);
+void display_bfbc2_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
 void display_haze_player_info( struct qserver *server);
 void display_wic_player_info( struct qserver *server);
@@ -311,6 +315,7 @@ void raw_display_doom3_player_info( struct qserver *server);
 void raw_display_hl2_player_info( struct qserver *server);
 void raw_display_ts2_player_info( struct qserver *server);
 void raw_display_ts3_player_info( struct qserver *server);
+void raw_display_bfbc2_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
 void raw_display_haze_player_info( struct qserver *server);
 void raw_display_wic_player_info( struct qserver *server);
@@ -342,6 +347,7 @@ void xml_display_doom3_player_info( struct qserver *server);
 void xml_display_hl2_player_info( struct qserver *server);
 void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_ts3_player_info( struct qserver *server);
+void xml_display_bfbc2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
 void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
@@ -3090,6 +3096,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_ts3_packet,			/* packet_func */
+},
+{
+    /* BATTLEFIELD BAD COMPANY 2 PROTOCOL */
+    BFBC2_PROTOCOL_SERVER,			/* id */
+    "BFBC2",						/* type_prefix */
+    "bfbc2",						/* type_string */
+    "-bfbc2",						/* type_option */
+    "Battlefield Bad Company 2",	/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT,					/* flags */
+    "gametype",						/* game_rule */
+    "BFBC2PROTOCOL",				/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_bfbc2_player_info,		/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_bfbc2_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_bfbc2_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_bfbc2_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_bfbc2_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,		/* id */
