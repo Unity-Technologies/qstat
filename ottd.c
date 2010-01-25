@@ -38,58 +38,48 @@ static const char* station_types[] = {
 
 query_status_t deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
-	const char* reason = "invalid packet";
-	int ok = 1;
+	unsigned num;
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 	server->server_name = MASTER;
 
 	if(swap_short_from_little(rawpkt) != pktlen)
 	{
-		reason = "invalid packet length";
-		ok = 0;
+		malformed_packet( server, "invalid packet length" );
+		return PKT_ERROR;
 	}
 	if(rawpkt[2] != 7)
 	{
-		reason = "invalid packet type";
-		ok = 0;
+		malformed_packet( server, "invalid packet type" );
+		return PKT_ERROR;
 	}
 
 	if(rawpkt[3] != 1)
 	{
-		reason = "invalid packet version";
-		ok = 0;
+		malformed_packet( server, "invalid packet version" );
+		return PKT_ERROR;
 	}
 
-	if(ok)
+	num = swap_short_from_little(&rawpkt[4]);
+	rawpkt += 6;
+	pktlen -= 6;
+	if( num && num*6 <= pktlen )
 	{
-		unsigned num = swap_short_from_little(&rawpkt[4]);
-		rawpkt += 6;
-		pktlen -= 6;
-		if(num && num*6 <= pktlen)
+		unsigned i;
+		server->master_pkt = (char*)realloc(server->master_pkt, server->master_pkt_len + pktlen );
+		memset(server->master_pkt + server->master_pkt_len, 0, pktlen );
+		server->master_pkt_len += pktlen;
+		for( i = 0; i < num * 6; i += 6 )
 		{
-			unsigned i;
-			server->master_pkt = (char*)realloc(server->master_pkt, server->master_pkt_len + pktlen );
-			memset(server->master_pkt + server->master_pkt_len, 0, pktlen );
-			server->master_pkt_len += pktlen;
-			for(i=0; i < num*6; i+=6)
-			{
-				memcpy(&server->master_pkt[i], &rawpkt[i], 4);
-				server->master_pkt[i+4] = rawpkt[i+5];
-				server->master_pkt[i+5] = rawpkt[i+4];
-			}
-			server->n_servers += num;
-			ok = 1;
+			memcpy(&server->master_pkt[i], &rawpkt[i], 4);
+			server->master_pkt[i+4] = rawpkt[i+5];
+			server->master_pkt[i+5] = rawpkt[i+4];
 		}
-		else
-		{
-			ok = 0;
-		}
+		server->n_servers += num;
 	}
-
-	if(!ok)
+	else
 	{
-		malformed_packet(server, reason);
-		return DONE_FORCE;
+		malformed_packet( server, "invalid packet" );
+		return PKT_ERROR;
 	}
 
 	bind_sockets();
@@ -105,16 +95,16 @@ query_status_t deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt,
 		ptr = memchr(ptr, '\0', end-ptr); \
 		if ( !ptr ) \
 		{ \
-			reason = __FILE__ ":" xstr(__LINE__) " invalid packet"; \
-			goto out; \
+			malformed_packet( server, "%s:%s invalid packet", __FILE__, xstr(__LINE__) ); \
+			return PKT_ERROR; \
 		} \
 		++ptr; \
 	} while(0)
 
 #define FAIL_IF(cond, msg) \
 	if((cond)) { \
-		reason = __FILE__ ":" xstr(__LINE__) " " msg; \
-		goto out; \
+		malformed_packet( server, "%s:%s %s", __FILE__, xstr(__LINE__), msg ); \
+		return PKT_ERROR; \
 	}
 
 #define INVALID_IF(cond) \
@@ -122,13 +112,11 @@ query_status_t deal_with_ottdmaster_packet(struct qserver *server, char *rawpkt,
 
 query_status_t deal_with_ottd_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
-	const char* reason = NULL;
 	unsigned char *ptr = (unsigned char*)rawpkt;
 	unsigned char *end = (unsigned char*)(rawpkt + pktlen);
 	unsigned char type;
 	char* str;
 	char buf[32];
-
 	unsigned ver;
 
 	server->n_servers++;
@@ -329,18 +317,13 @@ query_status_t deal_with_ottd_packet(struct qserver *server, char *rawpkt, int p
 	}
 	else
 	{
-		reason = "invalid type";
-	}
-
-out:
-	if(reason)
-	{
-		malformed_packet(server, reason);
+		malformed_packet( server, "invalid type" );
+		return PKT_ERROR;
 	}
 
 	server->retry1 = n_retries; // we're done with this packet, reset retry counter
 
-	return reason ? DONE_FORCE : DONE_AUTO;
+	return DONE_AUTO;
 }
 
 query_status_t send_ottdmaster_request_packet(struct qserver *server)
