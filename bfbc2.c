@@ -28,7 +28,7 @@
 query_status_t send_bfbc2_request_packet( struct qserver *server )
 {
 	char buf[50];
-	int size;
+	int size = 0;
 	switch ( server->challenge )
 	{
 	case 0:
