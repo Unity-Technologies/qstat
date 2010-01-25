@@ -27,10 +27,28 @@
 
 query_status_t send_bfbc2_request_packet( struct qserver *server )
 {
-	char *buf = "\x00\x00\x00\x00\x1b\x00\x00\x00\x01\x00\x00\x00\x0a\x00\x00\x00serverInfo\x00";
+	char buf[50];
+	int size;
+	switch ( server->challenge )
+	{
+	case 0:
+		// Initial connect send serverInfo
+		size = 27;
+		memcpy( buf, "\x00\x00\x00\x00\x1b\x00\x00\x00\x01\x00\x00\x00\x0a\x00\x00\x00serverInfo\x00", size );
+		break;
+
+	case 1:
+		// All Done send quit
+		size = 21;
+		memcpy( buf, "\x01\x00\x00\x00\x15\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00quit\x00", size );
+		break;
+
+	case 2:
+		return DONE_FORCE;
+	}
 	debug( 3, "send_bfbc2_request_packet: state = %ld", server->challenge );
 
-	return send_packet( server, buf, 27 );
+	return send_packet( server, buf, size );
 }
 
 query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int pktlen )
@@ -39,7 +57,7 @@ query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int
 	int size, words, word = 0;
 	debug( 2, "processing..." );
 
-	if ( 12 > pktlen )
+	if ( 17 > pktlen )
 	{
 		// Invalid packet
 		return REQ_ERROR;
@@ -105,9 +123,14 @@ query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int
 		words--;
 	}
 
-	debug( 3, "processing response..." );
-
+	server->challenge++;
 	gettimeofday( &server->packet_time1, NULL );
+
+	if ( 1 == server->challenge )
+	{
+		send_bfbc2_request_packet( server );
+		return INPROGRESS;
+	}
 
 	return DONE_FORCE;
 }
