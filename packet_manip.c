@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 #define MAX_PACKETS 8
-#define MAX_FAGMENTS 64
+#define MAX_FAGMENTS 128
 
 int pkt_seq = 0;
 int pkt_id_index = -1;
