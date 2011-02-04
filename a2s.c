@@ -505,6 +505,7 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 				gameport = swap_short_from_little( pkt );
 				sprintf( buf, "%hu", gameport );
 				add_rule( server, "game_port", buf, 0 );
+				change_server_port( server, gameport, 0 );
 				pkt += 2;
 				pktlen -= 2;
 			}
