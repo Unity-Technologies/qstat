@@ -4730,8 +4730,15 @@ int bind_qserver(struct qserver *server)
 						// Check the value returned... 
 						if (valopt)
 						{ 
-							fprintf( stderr, "Error in delayed connection() %d - %s\n", valopt, strerror(valopt) ); 
-							break;
+							if ( show_errors )
+							{
+								fprintf( stderr, "Error in delayed connection() %d - %s (%d)\n", valopt, strerror(valopt), server->type->id ); 
+								perror(error);
+							}
+							server->server_name = SYSERROR;
+							close(server->fd);
+							server->fd = - 1;
+							return -1;
 						} 
 						ignore = 1;
 						break; 
@@ -4745,8 +4752,11 @@ int bind_qserver(struct qserver *server)
 
 			if ( ! ignore )
 			{
-				sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-				perror(error);
+				if ( show_errors )
+				{
+					sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+					perror(error);
+				}
 				server->server_name = SYSERROR;
 				close(server->fd);
 				server->fd = - 1;
