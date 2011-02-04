@@ -69,7 +69,7 @@ query_status_t deal_with_gs3_packet( struct qserver *server, char *rawpkt, int p
 
 		// Correct the stats due to two phase protocol
 		int i;
-		server_type *gs3_type = &builtin_types[49];
+		server_type *gs3_type = &builtin_types[50];
 		debug( 3, "Attempting gs3 fallback from gs4" );
 		server->retry1++;
 		if ( GAMESPY3_PROTOCOL_SERVER != gs3_type->id )
