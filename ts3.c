@@ -65,26 +65,37 @@ int all_ts3_servers( struct qserver *server )
 
 query_status_t send_ts3_all_servers_packet( struct qserver *server )
 {
-	char buf[256];
-
+	char buf[256], *password, *username;
 	switch ( server->challenge )
 	{
 	case 0:
 		// Not seen a challenge yet, wait for it
+		server->n_servers = 999;
 		return INPROGRESS;
 
 	case 1:
+		password = get_param_value( server, "password", "" );
+		if ( 0 != strlen( password ) )
+		{
+			username = get_param_value( server, "username", "serveradmin" );
+			sprintf( buf, "login %s %s\015\012", username, password );
+			break;
+		}
+		// NOTE: no break so we fall through
+		server->challenge++;
+
+	case 2:
 		// NOTE: we currently don't support player info
 		server->flags |= TF_STATUS_QUERY;
-		server->n_servers = 2;
+		server->n_servers = 3;
 		sprintf( buf, "serverlist\015\012" );
 		break;
 
-	case 2:
+	case 3:
 		sprintf( buf, "quit\015\012" );
 		break;
 
-	case 3:
+	case 4:
 		return DONE_FORCE;
 	}
 
@@ -96,15 +107,28 @@ query_status_t send_ts3_all_servers_packet( struct qserver *server )
 
 query_status_t send_ts3_single_server_packet( struct qserver *server )
 {
-	char buf[256];
+	char buf[256], *password, *username;
 	int serverport;
 	switch ( server->challenge )
 	{
 	case 0:
 		// Not seen a challenge yet, wait for it
+		server->n_servers = 999;
 		return INPROGRESS;
 
 	case 1:
+		// Login if needed
+		password = get_param_value( server, "password", "" );
+		if ( 0 != strlen( password ) )
+		{
+			username = get_param_value( server, "username", "serveradmin" );
+			sprintf( buf, "login %s %s\015\012", password, username );
+			break;
+		}
+		// NOTE: no break so we fall through
+		server->challenge++;
+
+	case 2:
 		// Select port
 		serverport = get_param_i_value( server, "port", 0 ); 
 		change_server_port( server, serverport, 1 );
@@ -112,27 +136,27 @@ query_status_t send_ts3_single_server_packet( struct qserver *server )
 		if ( get_player_info )
 		{
 			server->flags |= TF_PLAYER_QUERY|TF_RULES_QUERY;
-			server->n_servers = 4;
+			server->n_servers = 5;
 		}
 		else
 		{
 			server->flags |= TF_STATUS_QUERY;
-			server->n_servers = 3;
+			server->n_servers = 4;
 		}
 		sprintf( buf, "use port=%d\015\012", serverport );
 		break;
 
-	case 2:
+	case 3:
 		// Server Info
 		sprintf( buf, "serverinfo\015\012" );
 		break;
 
-	case 3:
+	case 4:
 		// Player Info, Quit or Done
 		sprintf( buf, ( get_player_info ) ? "clientlist\015\012" : "quit\015\012" );
 		break;
 
-	case 4:
+	case 5:
 		// Quit or Done
 		if ( get_player_info )	
 		{
@@ -199,7 +223,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	char *s, *end, *player_name = "unknown";
 	int valid_response = 0, mode = 0, all_servers = 0;
 	char last_char;
-	unsigned short port = 0, down = 0;
+	unsigned short port = 0, down = 0, auth_seen = 0;
 	debug( 2, "processing..." );
 
 	if ( 0 == pktlen )
@@ -287,7 +311,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	// NOTE: id=XXX and msg=XXX will be processed by the mod following the one they where the response of
 	while ( NULL != s )
 	{
-		debug( 6, "LINE: %d, %s\n", mode, s );
+		debug( 2, "LINE: %d, %s\n", mode, s );
 		switch ( mode )
 		{
 		case 0:
@@ -306,9 +330,15 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 				mode++;
 			}
 			break;
+
 		case 1:
-			// serverinfo or serverlist response
-			if ( 0 == strncmp( "error", s, 5 ) )
+			// serverinfo or serverlist response including condition authentication
+			if ( 0 == auth_seen && 0 != strlen( get_param_value( server, "password", "" ) ) && 0 == strncmp( "error", s, 5 ) )
+			{
+				// end of auth response
+				auth_seen = 1;
+			}
+			else if ( 0 == strncmp( "error", s, 5 ) )
 			{
 				// end of serverinfo response
 				mode++;
@@ -383,6 +413,10 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 							return DONE_FORCE;
 						}
 					}
+					else if ( 0 == strcmp( "id", key ) || 0 == strcmp( "msg", key ) )
+					{
+						// Ignore details from the response code
+					}
 					else if ( 1 != all_servers )
 					{
 						add_rule( server, key, value, NO_FLAGS);
@@ -422,6 +456,10 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 						{
 							player->name = strdup( decode_ts3_val( player_name ) );
 						}
+					}
+					else if ( 0 == strcmp( "id", key ) || 0 == strcmp( "msg", key ) )
+					{
+						// Ignore details from the response code
 					}
 				}
 			}
