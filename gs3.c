@@ -112,6 +112,7 @@ query_status_t deal_with_gs3_packet( struct qserver *server, char *rawpkt, int p
 		memcpy( &pkt_id, ptr, 4 );
 		ptr += 4;
 		server->challenge = atoi( ptr );
+		debug( 3, "Challenge: %ld", server->challenge );
 		server->retry1++;
 
 		return send_gs3_request_packet( server );
