@@ -95,8 +95,10 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "wic.h"
 #include "ottd.h"
 #include "tee.h"
+#include "cube2.h"
 #include "bfbc2.h"
 #include "ventrilo.h"
+#include "mumble.h"
 
 /*
  * Various magic numbers.
@@ -150,6 +152,8 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define WIC_DEFAULT_PORT 5000 // Default is actually disabled
 #define FL_DEFAULT_PORT 5478
 #define VENTRILO_DEFAULT_PORT 3784
+#define CUBE2_DEFAULT_PORT 28785
+#define MUMBLE_DEFAULT_PORT 64738
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -225,8 +229,10 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define TS3_PROTOCOL_SERVER	67
 #define BFBC2_PROTOCOL_SERVER	68
 #define VENTRILO_PROTOCOL_SERVER	69
+#define CUBE2_SERVER 70
+#define MUMBLE_PROTOCOL_SERVER 71
 
-#define LAST_BUILTIN_SERVER  69
+#define LAST_BUILTIN_SERVER  71
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -849,6 +855,13 @@ char ottd_serverdetails[] = {
 /* Teeworlds */
 
 char tee_serverstatus[14] = { '\x20', '\0', '\0', '\0', '\0', '\0', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', 'f' };
+
+/* Cube2 */
+
+char cube2_serverstatus[3] = {'\x80', '\x10', '\x27'};
+
+/* Mumble */
+char mumble_serverstatus[12] = {'\x00', '\x00', '\x00', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08' };
 
 
 /* SERVER BUILTIN TYPES */
@@ -3172,7 +3185,75 @@ server_type builtin_types[] = {
     deal_with_ventrilo_packet,			/* packet_func */
 },
 {
-    Q_UNKNOWN_TYPE,		/* id */
+    /* Cube 2/Sauerbraten/Blood Frontier */
+    CUBE2_SERVER,						/* id */
+    "CUBE2",							/* type_prefix */
+    "cube2",							/* type_string */
+    "-cubes",							/* type_option */
+    "Sauerbraten",						/* game_name */
+    0,									/* master */
+    CUBE2_DEFAULT_PORT,					/* default_port */
+    1,									/* port_offset */
+    0,									/* flags */
+    "",									/* game_rule */
+    "CUBE2",							/* template_var */
+    cube2_serverstatus,					/* status_packet */
+    sizeof(cube2_serverstatus),			/* status_len */
+    NULL,								/* player_packet */
+    0,									/* player_len */
+    NULL,								/* rule_packet */
+    0,									/* rule_len */
+    NULL,								/* master_packet */
+    0,									/* master_len */
+    NULL,								/* master_protocol */
+    NULL,								/* master_query */
+    NULL,								/* display_player_func */
+    display_server_rules,				/* display_rule_func */
+    NULL,								/* display_raw_player_func */
+    raw_display_server_rules,			/* display_raw_rule_func */
+    NULL,								/* display_xml_player_func */
+    xml_display_server_rules,			/* display_xml_rule_func */
+    send_cube2_request_packet,			/* status_query_func */
+    NULL,								/* rule_query_func */
+    NULL,								/* player_query_func */
+    deal_with_cube2_packet,				/* packet_func */
+},
+{
+    /* MUMBLE PROTOCOL */
+    MUMBLE_PROTOCOL_SERVER,			/* id */
+    "MUMBLE",						/* type_prefix */
+    "mumble",						/* type_string */
+    "-mumble",						/* type_option */
+    "Mumble",						/* game_name */
+    0,								/* master */
+    MUMBLE_DEFAULT_PORT,			/* default_port */
+    0,								/* port_offset */
+    0,								/* flags */
+    "gametype",						/* game_rule */
+    "MUMBLEPROTOCOL",				/* template_var */
+    mumble_serverstatus,			/* status_packet */
+    12,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    NULL,							/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_mumble_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_mumble_packet,			/* packet_func */
+},
+{
+    Q_UNKNOWN_TYPE,	/* id */
     "",				/* type_prefix */
     "",				/* type_string */
     "",				/* type_option */
@@ -3189,7 +3270,7 @@ server_type builtin_types[] = {
     0,				/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
-    (char*) NULL,		/* master_packet */
+    (char*) NULL,	/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */

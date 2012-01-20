@@ -26,9 +26,11 @@ qstat_SOURCES = \
 	wic.c wic.h \
 	fl.c fl.h \
 	tee.c tee.h \
+	cube2.c cube2.h \
 	ts3.c ts3.h \
 	bfbc2.c bfbc2.h \
-	ventrilo.c ventrilo.h
+	ventrilo.c ventrilo.h \
+	mumble.c mumble.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
