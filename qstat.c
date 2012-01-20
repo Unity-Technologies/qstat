@@ -455,11 +455,11 @@ void standard_display_server(struct qserver *server)
 			game,
 			xform_name(server->server_name, server)
 		);
-		if (get_server_rules)
+		if (get_server_rules && NULL != server->type->display_rule_func )
 		{
 			server->type->display_rule_func(server);
 		}
-		if (get_player_info)
+		if (get_player_info && NULL != server->type->display_player_func )
 		{
 			server->type->display_player_func(server);
 		}
@@ -1203,11 +1203,11 @@ void raw_display_server(struct qserver *server)
 		return ;
 	}
 
-	if (get_server_rules)
+	if (get_server_rules && NULL != server->type->display_raw_rule_func )
 	{
 		server->type->display_raw_rule_func(server);
 	}
-	if (get_player_info)
+	if (get_player_info && NULL != server->type->display_raw_player_func)
 	{
 		server->type->display_raw_player_func(server);
 	}
@@ -1816,11 +1816,11 @@ void xml_display_server(struct qserver *server)
 
 	if (!server->type->master && server->error == NULL)
 	{
-		if (get_server_rules)
+		if (get_server_rules && NULL != server->type->display_xml_rule_func )
 		{
 			server->type->display_xml_rule_func(server);
 		}
-		if (get_player_info)
+		if (get_player_info && NULL != server->type->display_xml_player_func )
 		{
 			server->type->display_xml_player_func(server);
 		}
