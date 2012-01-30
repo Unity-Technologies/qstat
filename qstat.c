@@ -4077,6 +4077,7 @@ void add_file(char *filename)
 	FILE *file;
 	char name[200], *comma, *query_arg = NULL;
 	server_type *type;
+	debug(4, "Loading servers from '%s'...\n", filename);
 
 	if (strcmp(filename, "-") == 0)
 	{
@@ -4125,6 +4126,7 @@ void add_file(char *filename)
 	{
 		fclose(file);
 	}
+	debug(4, "Loaded servers from '%s'\n", filename);
 
 	current_fileline = 0;
 }
@@ -4172,6 +4174,8 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 	unsigned short port, port_max;
 	int portrange = 0;
 	unsigned colonpos = 0;
+
+	debug(4, "%s, %s, %s, %s\n", arg, (NULL != type) ? type->type_string : "unknown", outfilename, query_arg);
 
 	if (run_timeout && time(0) - start_time >= run_timeout)
 	{
@@ -4236,15 +4240,19 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 		print_file_location();
 		fprintf(stderr, "%s: %s\n", arg, strherror(h_errno));
 		server = (struct qserver*)calloc(1, sizeof(struct qserver));
-		for (; port <= port_max; ++port)
+		// NOTE: 0 != port to prevent infinite loop due to lack of range on unsigned short
+		for (; port <= port_max && 0 != port; ++port)
 		{
 			init_qserver(server, type);
 			if (portrange)
 			{
 				server->arg = (port == port_max) ? arg_copy : strdup(arg_copy);
-			} if (portrange)
-			{
+				// NOTE: arg_copy and therefore server->arg will always have enough space as it was a port range
 				sprintf(server->arg + colonpos + 1, "%hu", port);
+			}
+			else
+			{
+				server->arg = arg_copy;
 			}
 			server->server_name = HOSTNOTFOUND;
 			server->error = strdup(strherror(h_errno));
@@ -4268,7 +4276,8 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 		return -1;
 	}
 
-	for (; port > 0 && port <= port_max; ++port)
+	// NOTE: 0 != port to prevent infinite loop due to lack of range on unsigned short
+	for (; port <= port_max && 0 != port; ++port)
 	{
 		if (noserverdups && find_server_by_address(ipaddr, port) != NULL)
 		{
