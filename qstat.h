@@ -99,6 +99,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "bfbc2.h"
 #include "ventrilo.h"
 #include "mumble.h"
+#include "terraria.h"
 
 /*
  * Various magic numbers.
@@ -154,6 +155,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define VENTRILO_DEFAULT_PORT 3784
 #define CUBE2_DEFAULT_PORT 28785
 #define MUMBLE_DEFAULT_PORT 64738
+#define TERRARIA_DEFAULT_PORT 7777
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -231,8 +233,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define VENTRILO_PROTOCOL_SERVER	69
 #define CUBE2_SERVER 70
 #define MUMBLE_PROTOCOL_SERVER 71
+#define TERRARIA_PROTOCOL_SERVER 72
 
-#define LAST_BUILTIN_SERVER  71
+#define LAST_BUILTIN_SERVER  72
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -291,12 +294,10 @@ void display_eye_player_info( struct qserver *server);
 void display_armyops_player_info( struct qserver *server);
 void display_gs2_player_info( struct qserver *server);
 void display_doom3_player_info( struct qserver *server);
-void display_hl2_player_info( struct qserver *server);
 void display_ts2_player_info( struct qserver *server);
 void display_ts3_player_info( struct qserver *server);
 void display_bfbc2_player_info( struct qserver *server);
 void display_tm_player_info( struct qserver *server);
-void display_haze_player_info( struct qserver *server);
 void display_wic_player_info( struct qserver *server);
 void display_fl_player_info( struct qserver *server);
 void display_tee_player_info( struct qserver *server);
@@ -322,12 +323,10 @@ void raw_display_eye_player_info( struct qserver *server);
 void raw_display_armyops_player_info( struct qserver *server);
 void raw_display_gs2_player_info( struct qserver *server);
 void raw_display_doom3_player_info( struct qserver *server);
-void raw_display_hl2_player_info( struct qserver *server);
 void raw_display_ts2_player_info( struct qserver *server);
 void raw_display_ts3_player_info( struct qserver *server);
 void raw_display_bfbc2_player_info( struct qserver *server);
 void raw_display_tm_player_info( struct qserver *server);
-void raw_display_haze_player_info( struct qserver *server);
 void raw_display_wic_player_info( struct qserver *server);
 void raw_display_fl_player_info( struct qserver *server);
 void raw_display_tee_player_info( struct qserver *server);
@@ -353,14 +352,12 @@ void xml_display_descent3_player_info( struct qserver *server);
 void xml_display_ghostrecon_player_info( struct qserver *server);
 void xml_display_eye_player_info( struct qserver *server);
 void xml_display_armyops_player_info( struct qserver *server);
-void xml_display_gs2_player_info( struct qserver *server);
+void xml_display_player_info( struct qserver *server);
 void xml_display_doom3_player_info( struct qserver *server);
-void xml_display_hl2_player_info( struct qserver *server);
 void xml_display_ts2_player_info( struct qserver *server);
 void xml_display_ts3_player_info( struct qserver *server);
 void xml_display_bfbc2_player_info( struct qserver *server);
 void xml_display_tm_player_info( struct qserver *server);
-void xml_display_haze_player_info( struct qserver *server);
 void xml_display_wic_player_info( struct qserver *server);
 void xml_display_fl_player_info( struct qserver *server);
 void xml_display_tee_player_info( struct qserver *server);
@@ -863,6 +860,9 @@ char cube2_serverstatus[3] = {'\x80', '\x10', '\x27'};
 /* Mumble */
 char mumble_serverstatus[12] = {'\x00', '\x00', '\x00', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08' };
 
+/* Terraria */
+char terraria_serverstatus[] = "GET /status HTTP/1.1\x0d\x0a\x0d\x0a";
+
 
 /* SERVER BUILTIN TYPES */
 
@@ -1129,11 +1129,11 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_hl2_player_info,		/* display_player_func */
+    display_halflife_player_info,		/* display_player_func */
     display_server_rules,			/* display_rule_func */
-    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_halflife_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_hl2_request_packet,		/* status_query_func */
     NULL,				/* rule_query_func */
@@ -1847,7 +1847,7 @@ server_type builtin_types[] = {
     display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
-    xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
@@ -2527,11 +2527,11 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_hl2_player_info,		/* display_player_func */
+    display_halflife_player_info,		/* display_player_func */
     display_server_rules,			/* display_rule_func */
-    raw_display_hl2_player_info,	/* display_raw_player_func */
+    raw_display_halflife_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_hl2_player_info,	/* display_xml_player_func */
+    xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_a2s_request_packet,		/* status_query_func */
     send_a2s_rule_request_packet,	/* rule_query_func */
@@ -2599,7 +2599,7 @@ server_type builtin_types[] = {
     display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
-    xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
@@ -2735,7 +2735,7 @@ server_type builtin_types[] = {
     display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
-    xml_display_gs2_player_info,	/* display_xml_player_func */
+    xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
@@ -2867,11 +2867,11 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_haze_player_info,	/* display_player_func */
+    display_gs2_player_info,	/* display_player_func */
     display_server_rules,	/* display_rule_func */
-    raw_display_haze_player_info,	/* display_raw_player_func */
+    raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
-    xml_display_haze_player_info,	/* display_xml_player_func */
+    xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_haze_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
@@ -2939,7 +2939,7 @@ server_type builtin_types[] = {
     display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
-    xml_display_gs2_player_info,/* display_xml_player_func */
+    xml_display_player_info,/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
     send_ottd_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
@@ -3245,12 +3245,46 @@ server_type builtin_types[] = {
     display_server_rules,			/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    NULL,							/* display_xml_player_func */
+    xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
     send_mumble_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
-    deal_with_mumble_packet,			/* packet_func */
+    deal_with_mumble_packet,		/* packet_func */
+},
+{
+    /* TERRARIA PROTOCOL */
+    TERRARIA_PROTOCOL_SERVER,		/* id */
+    "TERRARIA",						/* type_prefix */
+    "terraria",						/* type_string */
+    "-terraria",					/* type_option */
+    "Terraria",						/* game_name */
+    0,								/* master */
+    TERRARIA_DEFAULT_PORT,			/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT,					/* flags */
+    "gametype",						/* game_rule */
+    "TERRARIPROTOCOL",				/* template_var */
+    terraria_serverstatus,			/* status_packet */
+    24,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_mumble_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_terraria_packet,		/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,	/* id */

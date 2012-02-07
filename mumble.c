@@ -12,7 +12,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef _WIN32
 #include <arpa/inet.h>
+#endif
 
 #include "debug.h"
 #include "qstat.h"
