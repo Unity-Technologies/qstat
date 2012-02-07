@@ -831,12 +831,6 @@ int calculate_armyops_score(struct player *player)
 	return score;
 }
 
-void display_haze_player_info(struct qserver *server)
-{
-	// ATM this looks like gs2 player info
-	display_gs2_player_info(server);
-}
-
 void display_gs2_player_info(struct qserver *server)
 {
 	struct player *player;
@@ -977,12 +971,6 @@ void display_doom3_player_info(struct qserver *server)
 			);
 		}
 	}
-}
-
-void display_hl2_player_info(struct qserver *server)
-{
-	// ATM this looks like halflife player info
-	display_halflife_player_info(server);
 }
 
 void display_ravenshield_player_info(struct qserver *server)
@@ -1526,18 +1514,6 @@ void raw_display_doom3_player_info(struct qserver *server)
 		}
 		fputs("\n", OF);
 	}
-}
-
-void raw_display_hl2_player_info(struct qserver *server)
-{
-	// ATM this looks like halflife player info
-	raw_display_halflife_player_info(server);
-}
-
-void raw_display_haze_player_info(struct qserver *server)
-{
-	// ATM this looks like gs2 player info
-	raw_display_gs2_player_info(server);
 }
 
 void raw_display_gs2_player_info(struct qserver *server)
@@ -2305,19 +2281,7 @@ void xml_display_doom3_player_info(struct qserver *server)
 	fprintf(OF, "\t\t</players>\n");
 }
 
-void xml_display_hl2_player_info(struct qserver *server)
-{
-	// ATM this looks like halflife player info
-	xml_display_halflife_player_info(server);
-}
-
-void xml_display_haze_player_info(struct qserver *server)
-{
-	// ATM this looks like gs2 player info
-	xml_display_gs2_player_info(server);
-}
-
-void xml_display_gs2_player_info(struct qserver *server)
+void xml_display_player_info(struct qserver *server)
 {
 	struct player *player;
 
@@ -2329,11 +2293,15 @@ void xml_display_gs2_player_info(struct qserver *server)
 		fprintf(OF, "\t\t\t<player>\n");
 
 		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		if (NA_INT != player->ping)
+		{
+			fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		}
 		if (NA_INT != player->score)
 		{
 			fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
-		} if (NA_INT != player->deaths)
+		}
+		if (NA_INT != player->deaths)
 		{
 			fprintf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
 		}
@@ -2345,7 +2313,7 @@ void xml_display_gs2_player_info(struct qserver *server)
 		{
 			fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
-		else
+		else if (NA_INT != player->team)
 		{
 			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
@@ -2378,7 +2346,7 @@ void xml_display_armyops_player_info(struct qserver *server)
 		player->score = calculate_armyops_score(player);
 	}
 
-	xml_display_gs2_player_info(server);
+	xml_display_player_info(server);
 }
 
 void xml_display_ts2_player_info(struct qserver *server)
@@ -8035,6 +8003,8 @@ struct player *add_player(struct qserver *server, int player_number)
 	player->number = player_number;
 	player->next = server->players;
 	player->n_info = 0;
+	player->ping = NA_INT;
+	player->team = NA_INT;
 	player->score = NA_INT;
 	player->deaths = NA_INT;
 	player->frags = NA_INT;
