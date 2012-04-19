@@ -861,7 +861,7 @@ char cube2_serverstatus[3] = {'\x80', '\x10', '\x27'};
 char mumble_serverstatus[12] = {'\x00', '\x00', '\x00', '\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08' };
 
 /* Terraria */
-char terraria_serverstatus[] = "GET /status HTTP/1.1\x0d\x0a\x0d\x0a";
+char terraria_serverstatus[] = "GET /v2/server/status HTTP/1.1\x0d\x0a\x0d\x0a";
 
 
 /* SERVER BUILTIN TYPES */
@@ -3266,7 +3266,7 @@ server_type builtin_types[] = {
     "gametype",						/* game_rule */
     "TERRARIPROTOCOL",				/* template_var */
     terraria_serverstatus,			/* status_packet */
-    24,								/* status_len */
+    sizeof(terraria_serverstatus),	/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
