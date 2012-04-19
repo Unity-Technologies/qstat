@@ -122,9 +122,15 @@ query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, 
 
 		s = strtok_ret( s, "\"", &varp );
 		key = strtok_ret( NULL, "\"", &varp );
-		sep = strtok_ret( NULL, "\"", &varp );
+		sep = strtok_ret( NULL, " ", &varp );
 		val = strtok_ret( NULL, "\"", &varp );
-		debug( 2, "var: %s = %s\n", key, val );
+		if ( NULL == val )
+		{
+			// world etc may be empty which results in NULL val
+			continue;
+		}
+		//if ( NULL == val && sep
+		debug( 2, "var: '%s' = '%s', sep: '%s'\n", key, val, sep );
 		if ( 0 == strcmp( key, "name" ) )
 		{
 			server->server_name = strdup( val );
@@ -139,7 +145,7 @@ query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, 
 		{
 			server->num_players = atoi( val );
 		}
-		else if ( 0 == strcmp( key, "playermax" ) )
+		else if ( 0 == strcmp( key, "maxplayers" ) )
 		{
 			server->max_players = atoi( val );
 		}
@@ -182,21 +188,6 @@ query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, 
 		}
 
 		s = strtok_ret( NULL, "\x0d\x0a", &linep );
-	}
-
-	// TODO: remove when it supports world
-	if ( NULL == server->map_name )
-	{
-		server->map_name = strdup( "Unknown" );
-	}
-
-	if ( 0 == server->max_players )
-	{
-		server->max_players = 10;
-	}
-	if ( server->max_players < server->num_players )
-	{
-		server->max_players = server->num_players;
 	}
 
 	gettimeofday( &server->packet_time1, NULL );
