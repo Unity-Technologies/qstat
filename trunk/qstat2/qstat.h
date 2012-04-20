@@ -11,7 +11,11 @@
 #define __H_QSTAT
 
 #ifdef HAVE_CONFIG_H
-#include "gnuconfig.h"
+    #include "gnuconfig.h"
+#else
+    #ifndef VERSION
+        #define VERSION "2.12"
+    #endif
 #endif
 
 #ifdef __EMX__

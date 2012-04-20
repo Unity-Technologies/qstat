@@ -17,17 +17,7 @@
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#ifdef HAVE_CONFIG_H
-	#include "gnuconfig.h"
-#else
-	#ifndef VERSION
-		#define VERSION "2.12"
-	#endif
-#endif
-
 #define RECV_BUF 204800
-
-char *qstat_version = VERSION;
 
 /* OS/2 defines */
 #ifdef __OS2__
@@ -153,6 +143,7 @@ char *qstat_version = VERSION;
 
 server_type *types;
 int n_server_types;
+char *qstat_version = VERSION;
 
 /*
  * Values set by command-line arguments
