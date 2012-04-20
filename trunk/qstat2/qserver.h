@@ -36,6 +36,7 @@ struct qserver {
     int fd;
     char *outfilename;
     char *query_arg;
+    char *challenge_string;
     struct query_param *params;
     unsigned long challenge;
     unsigned short port;
