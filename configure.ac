@@ -21,6 +21,31 @@ case $host in
 	;;
 esac
 
+dnl Check for strnstr including broken one on MacOSX 10.4 which crashes
+dnl
+AC_CACHE_CHECK(for strnstr, ac_cv_func_strnstr,
+  AC_TRY_RUN([
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+// we expect this to succeed, or crash on over-run.
+// if it passes otherwise we may need a better check.
+int main(int argc, char **argv)
+{
+    int size = 20;
+    char *str = malloc(size);
+    memset(str, 'x', size);
+    strnstr(str, "fubar", size);
+    return 0;
+}
+  ],ac_cv_func_strnstr="yes",ac_cv_func_strnstr="no")
+)
+if test "$ac_cv_func_strnstr" = "yes" ; then
+  AC_DEFINE(HAVE_STRNSTR,1,[Working strnstr])
+else
+  AC_DEFINE(HAVE_STRNSTR,0,[No or broken strnstr])
+fi
+
 dnl check if user wants debug
 AC_MSG_CHECKING([whether to enable optimization])
 AC_ARG_ENABLE(optimize,[  --disable-optimize         turn off optimization])
