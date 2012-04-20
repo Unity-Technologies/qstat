@@ -32,7 +32,8 @@ qstat_SOURCES = \
 	ventrilo.c ventrilo.h \
 	mumble.c mumble.h \
 	terraria.c terraria.h \
-	crysis.c crysis.h
+	crysis.c crysis.h \
+	utils.c utils.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)

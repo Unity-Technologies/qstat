@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "debug.h"
+#include "utils.h"
 #include "qstat.h"
 #include "md5.h"
 #include "packet_manip.h"
@@ -136,7 +137,7 @@ char* crysis_response( struct qserver *server, char *rawpkt, int pktlen )
 
 query_status_t deal_with_crysis_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *val, *line, *player_name = "unknown";
+	char *s, *val, *line;
 	query_status_t state = INPROGRESS;
 	debug( 2, "processing..." );
 
