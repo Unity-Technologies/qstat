@@ -100,6 +100,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "ventrilo.h"
 #include "mumble.h"
 #include "terraria.h"
+#include "crysis.h"
 
 /*
  * Various magic numbers.
@@ -156,6 +157,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define CUBE2_DEFAULT_PORT 28785
 #define MUMBLE_DEFAULT_PORT 64738
 #define TERRARIA_DEFAULT_PORT 7777
+#define CRYSIS_DEFAULT_PORT 64087
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -234,8 +236,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define CUBE2_SERVER 70
 #define MUMBLE_PROTOCOL_SERVER 71
 #define TERRARIA_PROTOCOL_SERVER 72
+#define CRYSIS_PROTOCOL_SERVER 73
 
-#define LAST_BUILTIN_SERVER  72
+#define LAST_BUILTIN_SERVER  73
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -3285,6 +3288,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_terraria_packet,		/* packet_func */
+},
+{
+    /* CRYSIS PROTOCOL */
+    CRYSIS_PROTOCOL_SERVER,			/* id */
+    "CRYSIS",						/* type_prefix */
+    "crysis",						/* type_string */
+    "-crysis",						/* type_option */
+    "Crysis",						/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT|TF_QUERY_ARG_REQUIRED|TF_QUERY_ARG,	/* flags */
+    "gamerules",					/* game_rule */
+    "CRYSISPROTOCOL",				/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_crysis_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_crysis_packet,		/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,	/* id */

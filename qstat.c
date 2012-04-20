@@ -6316,6 +6316,10 @@ void free_server(struct qserver *server)
 	{
 		free(server->query_arg);
 	}
+	if ( server->challenge_string )
+	{
+		free(server->challenge_string);
+	}
 
 	/* These fields are never malloc'd: outfilename
 	 */
