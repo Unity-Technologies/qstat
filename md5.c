@@ -379,3 +379,25 @@ md5_finish(md5_state_t *pms, md5_byte_t digest[16])
     for (i = 0; i < 16; ++i)
 	digest[i] = (md5_byte_t)(pms->abcd[i >> 2] >> ((i & 3) << 3));
 }
+
+static const char hexchar[] = "0123456789abcdef";
+
+char* md5_hex(const char *bytes, int nbytes)
+{
+	char out[32];
+    char* o = out+32;
+	char digest[16];
+	char *digestp = digest + 16;
+	md5_state_t md5;
+
+	md5_init(&md5);
+	md5_append(&md5, (unsigned char*)bytes, nbytes);
+	md5_finish(&md5, (unsigned char*)digest);
+    do
+    {
+        *--o = hexchar[*--digestp&0x0F];
+        *--o = hexchar[(*digestp>>4)&0x0F];
+    } while(o != out);
+
+	return strndup(out, 32);
+}
