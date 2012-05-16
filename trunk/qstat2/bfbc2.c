@@ -53,7 +53,7 @@ query_status_t send_bfbc2_request_packet( struct qserver *server )
 
 query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *end;
+	char *s, *end, *crlf;
 	int size, words, word = 0;
 	debug( 2, "processing..." );
 
@@ -97,6 +97,17 @@ query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int
 			break;
 		case 1:
 			// Server Name
+			// prevent CR & LF in the server name
+			crlf = strchr( s, '\015' );
+			if ( NULL != crlf )
+			{
+				*crlf = '\0';
+			}
+			crlf = strchr( s, '\012' );
+			if ( NULL != crlf )
+			{
+				*crlf = '\0';
+			}
 			server->server_name = strdup( s );
 			break;
 		case 2:
