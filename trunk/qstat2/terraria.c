@@ -127,6 +127,7 @@ query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, 
 		if ( NULL == val )
 		{
 			// world etc may be empty which results in NULL val
+			s = strtok_ret( NULL, "\x0d\x0a", &linep );
 			continue;
 		}
 		//if ( NULL == val && sep
