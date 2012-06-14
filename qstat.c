@@ -1165,7 +1165,7 @@ void raw_display_server(struct qserver *server)
 			server->arg, RD,
 			(hostname_lookup) ? server->host_name: server->arg, RD,
 			xform_name(server->server_name,	server), RD,
-			(server->map_name) ? server->map_name: "?", RD,
+			(server->map_name) ? xform_name(server->map_name, server): "?", RD,
 			server->max_players, RD,
 			server->num_players, RD,
 			ping_time, RD,
