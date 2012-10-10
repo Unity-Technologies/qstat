@@ -361,11 +361,11 @@ void standard_display_server(struct qserver *server)
 		prefix[0] = '\0';
 	}
 
-	if (server->server_name == DOWN)
+	if (server->server_name == DOWN || server->server_name == SYSERROR)
 	{
 		if (!up_servers_only)
 		{
-			fprintf(OF, "%s%-16s %10s\n", prefix, (hostname_lookup) ? server->host_name: server->arg, DOWN);
+			fprintf(OF, "%s%-16s %10s\n", prefix, (hostname_lookup) ? server->host_name: server->arg, server->server_name);
 		}
 		return ;
 	}
@@ -1054,7 +1054,7 @@ void raw_display_server(struct qserver *server)
 		ping_time = 999;
 	}
 
-	if (server->server_name == DOWN)
+	if (server->server_name == DOWN || server->server_name == SYSERROR)
 	{
 		if (!up_servers_only)
 		{
@@ -1064,7 +1064,7 @@ void raw_display_server(struct qserver *server)
 				raw_arg,
 				server->arg, RD,
 				(hostname_lookup) ? server->host_name : server->arg, RD,
-				DOWN
+				server->server_name
 			);
 		}
 		return ;
@@ -1723,7 +1723,8 @@ void xml_display_server(struct qserver *server)
 			fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), xml_escape(DOWN));
 			fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
 			fprintf(OF, "\t</server>\n");
-		} return ;
+		}
+		return;
 	}
 	if (server->server_name == TIMEOUT)
 	{
@@ -4196,8 +4197,11 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 
 	if ((ipaddr == INADDR_NONE || ipaddr == 0) && strcmp(arg, "255.255.255.255") != 0)
 	{
-		print_file_location();
-		fprintf(stderr, "%s: %s\n", arg, strherror(h_errno));
+		if (show_errors)
+		{
+			print_file_location();
+			fprintf(stderr, "%s: %s\n", arg, strherror(h_errno));
+		}
 		server = (struct qserver*)calloc(1, sizeof(struct qserver));
 		// NOTE: 0 != port to prevent infinite loop due to lack of range on unsigned short
 		for (; port <= port_max && 0 != port; ++port)
@@ -4738,7 +4742,11 @@ int bind_qserver(struct qserver *server)
 					ret = select( server->fd + 1, NULL, &connect_set, NULL, &tv );
 					if ( 0 > ret && errno != EINTR )
 					{ 
-						fprintf( stderr, "Error connecting %d - %s\n", errno, strerror(errno) ); 
+						if ( show_errors )
+						{
+							sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+							perror(error);
+						}
 						break;
 					} 
 					else if ( 0 < ret )
@@ -4748,7 +4756,11 @@ int bind_qserver(struct qserver *server)
 						unsigned int lon = sizeof(int); 
 						if ( 0 != getsockopt( server->fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) )
 						{ 
-							fprintf( stderr, "Error in getsockopt() %d - %s\n", errno, strerror(errno) ); 
+							if ( show_errors )
+							{
+								sprintf(error, "getsockopt:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+								perror(error);
+							}
 							break;
 						} 
 
@@ -4757,7 +4769,7 @@ int bind_qserver(struct qserver *server)
 						{ 
 							if ( show_errors )
 							{
-								fprintf( stderr, "Error in delayed connection() %d - %s (%d)\n", valopt, strerror(valopt), server->type->id ); 
+								sprintf(error, "Error in delayed connection(%s:%u) %d - %s (%d)\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), valopt, strerror(valopt), server->type->id ); 
 								perror(error);
 							}
 							server->server_name = SYSERROR;
@@ -4767,9 +4779,10 @@ int bind_qserver(struct qserver *server)
 						} 
 						ignore = 1;
 						break; 
-					} 
+					}
 					else
 					{ 
+						// Time limit expired
 						break;
 					} 
 				}
@@ -4901,6 +4914,10 @@ int bind_sockets()
 			else if (rc == -2 && ++retry_count > 2)
 			{
 				return -2;
+			}
+			else if (-1 == rc)
+			{
+				cleanup_qserver(server, FORCE);
 			}
 		}
 
