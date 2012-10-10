@@ -402,7 +402,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 						// clientsonline includes queryclientsonline so remove these from our count
 						server->num_players -= atoi( value );
 					}
-					else if ( 0 == strcmp( "virtualserver_status", key ) && ( 0 == strcmp( "virtual", value ) || 0 == strcmp( "none", value ) ) )
+					else if ( 0 == strcmp( "virtualserver_status", key ) && 0 != strcmp( "online", value ) )
 					{
 						// Server is actually offline to client so display as down
 						down = 1;
