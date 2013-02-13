@@ -149,12 +149,12 @@ char *qstat_version = VERSION;
  * Values set by command-line arguments
  */
 
-
 int hostname_lookup = 0; /* set if -H was specified */
 int new_style = 1; /* unset if -old was specified */
 int n_retries = DEFAULT_RETRIES;
 int retry_interval = DEFAULT_RETRY_INTERVAL;
 int master_retry_interval = DEFAULT_RETRY_INTERVAL * 4;
+int syncconnect = 0;
 int get_player_info = 0;
 int get_server_rules = 0;
 int up_servers_only = 0;
@@ -168,6 +168,7 @@ int player_address = 0;
 int hex_player_names = 0;
 int hex_server_names = 0;
 int name_xforms = 1;
+int name_xforms_strip_unprintable = 0; /* xform strips unprintable chars */
 int strip_carets = 1;
 int max_simultaneous = MAXFD_DEFAULT;
 int sendinterval = 5;
@@ -439,7 +440,7 @@ void standard_display_server(struct qserver *server)
 			server->num_spectators,
 			server->max_spectators,
 			map_name_width,
-			(server->map_name) ? server->map_name: "?",
+			(server->map_name) ? xform_name(server->map_name, server): "?",
 			server->n_requests ? server->ping_total / server->n_requests: 999,
 			server->n_retries,
 			game_width,
@@ -1763,7 +1764,7 @@ void xml_display_server(struct qserver *server)
 		fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
 		fprintf(OF, "\t\t<name>%s</name>\n", xml_escape(xform_name(server->server_name, server)));
 		fprintf(OF, "\t\t<gametype>%s</gametype>\n", xml_escape(get_qw_game(server)));
-		fprintf(OF, "\t\t<map>%s</map>\n", xml_escape(server->map_name));
+		fprintf(OF, "\t\t<map>%s</map>\n", xml_escape(xform_name(server->map_name, server)));
 		fprintf(OF, "\t\t<numplayers>%d</numplayers>\n", server->num_players);
 		fprintf(OF, "\t\t<maxplayers>%d</maxplayers>\n", server->max_players);
 		fprintf(OF, "\t\t<numspectators>%d</numspectators>\n", server->num_spectators);
@@ -2710,6 +2711,8 @@ void usage(char *msg, char **argv, char *a1)
 	printf("-htmlmode\tConvert <, >, and & to the equivalent HTML entities\n");
 	printf("-htmlnames\tColorize Quake 3 and Tribes 2 player names using html font tags\n");
 	printf("-nohtmlnames\tDo not colorize Quake 3 and Tribes 2 player names even if $HTML is used in an output template.\n");
+	printf("-syncconnect\tProcess connect initialisation synchronously.\n");
+	printf("-stripunprintable\tDisable stripping of unprintable characters.\n");
 	printf("-showgameport\tAlways display the game port in QStat output.\n");
 	printf("-noportoffset\tDont use builtin status port offsets ( assume query port was specified ).\n");
 	printf("-raw-arg\tWhen used with -raw, always display the server address as it appeared in a file or on the command-line.\n");
@@ -3788,6 +3791,14 @@ int main(int argc, char *argv[])
 				source_port_high = source_port;
 			}
 		}
+		else if (strcmp(argv[arg], "-syncconnect") == 0)
+		{
+			syncconnect = 1;
+		}
+		else if (strcmp(argv[arg], "-stripunprintable") == 0)
+		{
+			name_xforms_strip_unprintable = 1;
+		}
 		else if (strcmp(argv[arg], "-srcport") == 0)
 		{
 			arg++;
@@ -4268,6 +4279,7 @@ int add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg
 		server->type = type;
 		server->outfilename = outfilename;
 		server->flags = flags;
+		server->state = STATE_INIT;
 		if (query_arg)
 		{
 			server->query_arg = (port == port_max) ? query_arg : strdup(query_arg);
@@ -4502,7 +4514,8 @@ void init_qserver(struct qserver *server, server_type *type)
 	server->game = NULL;
 	server->num_players = 0;
 	server->num_spectators = 0;
-	server->fd = - 1;
+	server->fd = -1;
+	server->state = STATE_INIT;
 	if (server->flags &FLAG_BROADCAST)
 	{
 		server->retry1 = 1;
@@ -4525,7 +4538,7 @@ void init_qserver(struct qserver *server, server_type *type)
 
 	server->saved_data.data = NULL;
 	server->saved_data.datalen = 0;
-	server->saved_data.pkt_index = - 1;
+	server->saved_data.pkt_index = -1;
 	server->saved_data.pkt_max = 0;
 	server->saved_data.next = NULL;
 
@@ -4625,184 +4638,11 @@ void free_server_hash()
 }
 
 
-/* Functions for binding sockets to Quake servers
+/*
+ * Functions for binding sockets to Quake servers
  */
-int bind_qserver(struct qserver *server)
+int bind_qserver_post(struct qserver *server)
 {
-	struct sockaddr_in addr;
-	static int one = 1;
-	int sockbuf = RECV_BUF;
-
-	if (server->type->flags &TF_TCP_CONNECT)
-	{
-		server->fd = socket(AF_INET, SOCK_STREAM, 0);
-	}
-	else
-	{
-		server->fd = socket(AF_INET, SOCK_DGRAM, 0);
-	}
-
-	if (server->fd == INVALID_SOCKET)
-	{
-		if (sockerr() == EMFILE)
-		{
-			server->fd = - 1;
-			return -2;
-		}
-
-		perror("socket");
-		server->server_name = SYSERROR;
-		return -1;
-	}
-
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(source_ip);
-	if (server->type->id == Q2_MASTER)
-	{
-		addr.sin_port = htons(26500);
-	}
-	else if (source_port == 0)
-	{
-		addr.sin_port = 0;
-	}
-	else
-	{
-		addr.sin_port = htons(source_port);
-		source_port++;
-		if (source_port > source_port_high)
-		{
-			source_port = source_port_low;
-		}
-	}
-	memset(&(addr.sin_zero), 0, sizeof(addr.sin_zero));
-
-	if (bind(server->fd, (struct sockaddr*) &addr, sizeof(struct sockaddr)) == SOCKET_ERROR)
-	{
-		if (sockerr() != EADDRINUSE)
-		{
-			perror("bind");
-			server->server_name = SYSERROR;
-		}
-		close(server->fd);
-		server->fd = - 1;
-		return -1;
-	}
-
-	if (server->flags &FLAG_BROADCAST)
-	{
-		if ( -1 == setsockopt(server->fd, SOL_SOCKET, SO_BROADCAST, (char*) &one, sizeof(one)) )
-		{
-			perror( "Failed to set broadcast" );
-		}
-	}
-
-	// we need nonblocking always. poll on an udp socket would wake
-	// up and recv blocks if a packet with incorrect checksum is
-	// received
-	set_non_blocking(server->fd);
-
-	if (server->type->id != Q2_MASTER && !(server->flags &FLAG_BROADCAST))
-	{
-		addr.sin_family = AF_INET;
-		if (no_port_offset || server->flags &TF_NO_PORT_OFFSET)
-		{
-			addr.sin_port = htons(server->port);
-		}
-		else
-		{
-			addr.sin_port = htons((unsigned short)(server->port + server->type->port_offset));
-		}
-		addr.sin_addr.s_addr = server->ipaddr;
-		memset(&(addr.sin_zero), 0, sizeof(addr.sin_zero));
-
-		if ( server->type->flags & TF_TCP_CONNECT )
-		{
-			// TCP set packet_time1 so it can be used for ping calculations for protocols with an initial response
-			gettimeofday( &server->packet_time1, NULL );
-		}
-
-		if (connect(server->fd, (struct sockaddr*) &addr, sizeof(addr)) == SOCKET_ERROR)
-		{
-			int ignore = 0;
-			char error[50];
-			if ( connection_inprogress() )
-			{
-				while( 1 )
-				{
-					int ret;
-					struct timeval tv;
-					fd_set connect_set;
-
-					tv.tv_sec = retry_interval / 1000; 
-					tv.tv_usec = ( retry_interval % 1000 ) * 1000;
-					FD_ZERO( &connect_set ); 
-					FD_SET( server->fd, &connect_set );
-
-					// NOTE: We may need to check exceptfds here on windows instead of writefds
-					ret = select( server->fd + 1, NULL, &connect_set, NULL, &tv );
-					if ( 0 > ret && errno != EINTR )
-					{ 
-						if ( show_errors )
-						{
-							sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-							perror(error);
-						}
-						break;
-					} 
-					else if ( 0 < ret )
-					{ 
-						// Socket selected for write 
-						int valopt;
-						unsigned int lon = sizeof(int); 
-						if ( 0 != getsockopt( server->fd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) )
-						{ 
-							if ( show_errors )
-							{
-								sprintf(error, "getsockopt:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-								perror(error);
-							}
-							break;
-						} 
-
-						// Check the value returned... 
-						if (valopt)
-						{ 
-							if ( show_errors )
-							{
-								sprintf(error, "Error in delayed connection(%s:%u) %d - %s (%d)\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), valopt, strerror(valopt), server->type->id ); 
-								perror(error);
-							}
-							server->server_name = SYSERROR;
-							close(server->fd);
-							server->fd = - 1;
-							return -1;
-						} 
-						ignore = 1;
-						break; 
-					}
-					else
-					{ 
-						// Time limit expired
-						break;
-					} 
-				}
-			}
-
-			if ( ! ignore )
-			{
-				if ( show_errors )
-				{
-					sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-					perror(error);
-				}
-				server->server_name = SYSERROR;
-				close(server->fd);
-				server->fd = - 1;
-				return -1;
-			}
-		}
-	}
-
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
 		int one = 1;
@@ -4815,6 +4655,7 @@ int bind_qserver(struct qserver *server)
 	if ( server->type->id & MASTER_SERVER )
 	{
 		// Use a large buffer so we dont miss packets
+		int sockbuf = RECV_BUF;
 		if ( -1 == setsockopt(server->fd, SOL_SOCKET, SO_RCVBUF, (void*)&sockbuf, sizeof(sockbuf)) )
 		{
 			perror( "Failed to set socket buffer" );
@@ -4852,13 +4693,280 @@ int bind_qserver(struct qserver *server)
 	return 0;
 }
 
+void add_ms_to_timeval(struct timeval *a, unsigned long interval_ms, struct timeval *result)
+{
+    result->tv_sec = a->tv_sec + (interval_ms / 1000);
+    result->tv_usec = a->tv_usec + ((interval_ms % 1000) * 1000);
+    if (result->tv_usec > 1000000)
+	{
+        result->tv_usec -= 1000000;
+        result->tv_sec++;
+    }
+}
+
+void qserver_sockaddr(struct qserver *server, struct sockaddr_in *addr)
+{
+	addr->sin_family = AF_INET;
+	addr->sin_port = (no_port_offset || server->flags &TF_NO_PORT_OFFSET) ?
+		htons(server->port) :
+		htons((unsigned short)(server->port + server->type->port_offset));
+	addr->sin_addr.s_addr = server->ipaddr;
+	memset(&(addr->sin_zero), 0, sizeof(addr->sin_zero));
+}
+
+
+int connected_qserver(struct qserver *server, int polling)
+{
+	struct sockaddr_in addr;
+	char error[50];
+	int ret;
+	struct timeval tv, now, to;
+	fd_set connect_set;
+
+	error[0] = '\0';
+	gettimeofday(&now, NULL);
+	add_ms_to_timeval(&server->packet_time1, retry_interval * server->retry1, &to);
+
+	if (polling)
+	{
+		// No delay
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+	}
+	else
+	{
+		// Wait until the server would timeout
+		tv.tv_sec = to.tv_sec;
+		tv.tv_usec = to.tv_usec;
+	}
+
+	while( 1 )
+	{
+		FD_ZERO( &connect_set ); 
+		FD_SET( server->fd, &connect_set );
+
+		// NOTE: We may need to check exceptfds here on windows instead of writefds
+		ret = select( server->fd + 1, NULL, &connect_set, NULL, &tv );
+		if ( 0 == ret )
+		{ 
+			// Time limit expired
+			if (polling)
+			{
+				// Check if we have run out of time to connect
+				gettimeofday(&now, NULL);
+				if (0 < time_delta(&to, &now))
+				{
+					// We still have time to connect
+					return -2;
+				}
+			}
+
+			qserver_sockaddr(server, &addr);
+			sprintf(error, "connect:%s:%u - timeout", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+			server->server_name = TIMEOUT;
+			server->state = STATE_TIMEOUT;
+			goto connect_error;
+		} 
+		else if ( 0 < ret )
+		{ 
+			// Socket selected for write so either connected or error
+			int sockerr, orig_errno;
+			unsigned int lon = sizeof(int); 
+
+			orig_errno = errno;
+			if ( 0 != getsockopt( server->fd, SOL_SOCKET, SO_ERROR, (void*)(&sockerr), &lon) )
+			{ 
+				// Restore the original error
+				errno = orig_errno;
+				goto connect_error;
+			} 
+
+			if (sockerr)
+			{ 
+				// set the real error
+				errno = sockerr;
+				goto connect_error;
+			}
+
+			// Connection success
+			break; 
+		}
+		else
+		{
+			// select failed
+			if ( errno != EINTR )
+			{ 
+				goto connect_error;
+			}
+		} 
+	}
+
+	server->state = STATE_CONNECTED;
+
+	return bind_qserver_post(server);
+
+connect_error:
+	if (STATE_CONNECTING == server->state)
+	{
+		// Default error case
+		if (0 == strlen(error))
+		{
+			qserver_sockaddr(server, &addr);
+			sprintf(error, "connect: %s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+		}
+		server->server_name = SYSERROR;
+		server->state = STATE_SYS_ERROR;
+	}
+
+	if ( show_errors )
+	{
+		perror(error);
+	}
+	close(server->fd);
+	server->fd = -1;
+	connected--;
+
+	return -1;
+}
+
+int bind_qserver2(struct qserver *server, int wait)
+{
+	struct sockaddr_in addr;
+	static int one = 1;
+
+	if (server->type->flags &TF_TCP_CONNECT)
+	{
+		server->fd = socket(AF_INET, SOCK_STREAM, 0);
+	}
+	else
+	{
+		server->fd = socket(AF_INET, SOCK_DGRAM, 0);
+	}
+
+	if (server->fd == INVALID_SOCKET)
+	{
+		if (sockerr() == EMFILE)
+		{
+			// Per process descriptor table is full - retry
+			server->fd = -1;
+			return -2;
+		}
+
+		perror("socket");
+		server->server_name = SYSERROR;
+		server->state = STATE_SYS_ERROR;
+		return -1;
+	}
+
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(source_ip);
+	if (server->type->id == Q2_MASTER)
+	{
+		addr.sin_port = htons(26500);
+	}
+	else if (source_port == 0)
+	{
+		addr.sin_port = 0;
+	}
+	else
+	{
+		addr.sin_port = htons(source_port);
+		source_port++;
+		if (source_port > source_port_high)
+		{
+			source_port = source_port_low;
+		}
+	}
+	memset(&(addr.sin_zero), 0, sizeof(addr.sin_zero));
+
+	if (bind(server->fd, (struct sockaddr*) &addr, sizeof(struct sockaddr)) == SOCKET_ERROR)
+	{
+		perror("bind");
+		server->server_name = SYSERROR;
+		server->state = STATE_SYS_ERROR;
+		close(server->fd);
+		server->fd = -1;
+		return -1;
+	}
+
+	if (server->flags &FLAG_BROADCAST)
+	{
+		if ( -1 == setsockopt(server->fd, SOL_SOCKET, SO_BROADCAST, (char*) &one, sizeof(one)) )
+		{
+			perror( "Failed to set broadcast" );
+			server->server_name = SYSERROR;
+			server->state = STATE_SYS_ERROR;
+			close(server->fd);
+			server->fd = -1;
+			return -1;
+		}
+	}
+
+	// we need nonblocking always. poll on an udp socket would wake
+	// up and recv blocks if a packet with incorrect checksum is
+	// received
+	set_non_blocking(server->fd);
+
+	if (server->type->id != Q2_MASTER && !(server->flags &FLAG_BROADCAST))
+	{
+
+		if ( server->type->flags & TF_TCP_CONNECT )
+		{
+			// TCP set packet_time1 so it can be used for ping calculations for protocols with an initial response
+			gettimeofday( &server->packet_time1, NULL );
+		}
+
+		qserver_sockaddr(server, &addr);
+		server->state = STATE_CONNECTING;
+
+		if (connect(server->fd, (struct sockaddr*) &addr, sizeof(addr)) == SOCKET_ERROR)
+		{
+			if ( connection_inprogress() )
+			{
+				int ret;
+				if ( ! wait )
+				{
+					return -3;
+				}
+				ret = connected_qserver( server, 0 );
+				if (0 != ret)
+				{
+					return ret;
+				}
+			}
+			else
+			{
+				if ( show_errors )
+				{
+					char error[50];
+					sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+					perror(error);
+				}
+				server->server_name = SYSERROR;
+				server->state = STATE_SYS_ERROR;
+				close(server->fd);
+				server->fd = -1;
+				return -1;
+			}
+		}
+	}
+
+	return bind_qserver_post(server);
+}
+
+
+int bind_qserver(struct qserver *server)
+{
+	return bind_qserver2(server, 1);
+}
+
 static struct timeval t_lastsend = { 0, 0 };
 
 int bind_sockets()
 {
-	struct qserver *server, *next_server;
+	struct qserver *server, *next_server, *first_server, *last_server;
 	struct timeval now;
-	int rc, retry_count = 0;
+	int rc, retry_count = 0, inprogress = 0;
 
 	gettimeofday(&now, NULL);
 	if (connected && sendinterval && time_delta(&now, &t_lastsend) < sendinterval)
@@ -4878,6 +4986,8 @@ int bind_sockets()
 		server = servers;
 	}
 
+	first_server = server;
+
 	for (; server != NULL && connected < max_simultaneous; )
 	{
 		// note the next server for use as process_func can free the server
@@ -4890,7 +5000,7 @@ int bind_sockets()
 				continue;
 			}
 
-			if ((rc = bind_qserver(server)) == 0)
+			if ((rc = bind_qserver2(server, syncconnect ? 1 : 0)) == 0)
 			{
 				debug(1, "send %d.%d.%d.%d:%hu\n",
 					server->ipaddr &0xff,
@@ -4911,6 +5021,17 @@ int bind_sockets()
 				}
 				break;
 			}
+			else if (rc == -3)
+			{
+				// Connect in progress
+
+				// We add to increment connected as we need to know the total
+				// amount of connections in progress not just those that have
+				// successfuly completed their connection otherwise we could
+				// blow FD_SETSIZE
+				connected++;
+				inprogress++;
+			}
 			else if (rc == -2 && ++retry_count > 2)
 			{
 				return -2;
@@ -4924,8 +5045,48 @@ int bind_sockets()
 		server = next_server;
 	}
 
-	if (!connected && retry_count)
+	// Wait for all connections to succeed or fail
+	last_server = server;
+	while (inprogress)
 	{
+		inprogress = 0;
+		server = first_server;
+		for (; server != last_server;)
+		{
+			next_server = server->next;
+			if (STATE_CONNECTING == server->state)
+			{
+				rc = connected_qserver(server, 1);
+				switch(rc)
+				{
+				case 0:
+					// Connected
+					gettimeofday(&t_lastsend, NULL);
+					debug(2, "calling status_query_func for %p", server);
+					process_func_ret( server, server->type->status_query_func(server) );
+
+					// NOTE: connected is already incremented
+					if (!waiting_for_masters)
+					{
+						last_server_bind = server;
+					}
+					break;
+				case -2:
+					// In progress
+					inprogress++;
+					break;
+				case -1:
+					cleanup_qserver(server, FORCE);
+					break;
+				}
+			}
+			server = next_server;
+		}
+	}
+
+	if (NULL != last_server || (!connected && retry_count))
+	{
+		// Retry later, more to process
 		return -2;
 	}
 
@@ -12213,8 +12374,9 @@ static char *sof_colors[32] =
 
 char *xform_name(char *string, struct qserver *server)
 {
-	static char _buf1[2048], _buf2[2048];
+	static char _buf1[2048], _buf2[2048], _buf3[2048], _buf4[2048];
 	static char *_q = &_buf1[0];
+	static char *_q2 = &_buf3[0];
 	unsigned char *s = (unsigned char*)string;
 	char *q;
 	int is_server_name = (string == server->server_name);
@@ -12230,10 +12392,34 @@ char *xform_name(char *string, struct qserver *server)
 		return _q;
 	}
 
+	strcpy(_q, string);
 	if (!name_xforms)
 	{
-		strcpy(_q, string);
 		return _q;
+	}
+	if (name_xforms_strip_unprintable)
+	{
+		// We're double processing so need to use the second set of buffers
+		_q2 = (_q2 == _buf3) ? _buf4 : _buf3;
+		q = _q2;
+		for (; *s; s++)
+		{
+			if (isprint(*s))
+			{
+				*q = *s;
+				q++;
+			}
+		}
+		*q = '\0';
+		s = (unsigned char *)_q2;
+		q = _q;
+
+		if (*_q2 == '\0')
+		{
+			q[0] = '?';
+			q[1] = '\0';
+			return _q2;
+		}
 	}
 
 	if ((hex_player_names && !is_server_name) || (hex_server_names && is_server_name))
@@ -12405,6 +12591,8 @@ char *xform_name(char *string, struct qserver *server)
 	else if (server->type->flags &TF_TM_NAMES)
 	{
 		int open = 0;
+		char c1, c2, c3;
+
 		for (; *s; s++)
 		{
 			if (*s == '$')
@@ -12412,87 +12600,103 @@ char *xform_name(char *string, struct qserver *server)
 				s++;
 				switch (*s)
 				{
-					case 'i':
-					case 'I':
-						// italic
-						if (1 == html_names)
-						{
-							strcat(q, "<span style=\"font-style:italic\">");
-							q += 32;
-							open++;
-						}
-						break;
-					case 's':
-					case 'S':
-						// shadowed
-						break;
-					case 'w':
-					case 'W':
-						// wide
-						break;
-					case 'n':
-					case 'N':
-						// narrow
-						break;
-					case 'm':
-					case 'M':
-						// normal
-						if (1 == html_names)
-						{
-							strcat(q, "<span style=\"font-style:normal\">");
-							q += 32;
-							open++;
-						}
-						break;
-					case 'g':
-					case 'G':
-						// default color
+				case 'i':
+				case 'I':
+					// italic
+					if (1 == html_names)
+					{
+						strcat(q, "<span style=\"font-style:italic\">");
+						q += 32;
+						open++;
+					}
+					break;
+				case 's':
+				case 'S':
+					// shadowed
+					break;
+				case 'w':
+				case 'W':
+					// wide
+					break;
+				case 'n':
+				case 'N':
+					// narrow
+					break;
+				case 'm':
+				case 'M':
+					// normal
+					if (1 == html_names)
+					{
+						strcat(q, "<span style=\"font-style:normal\">");
+						q += 32;
+						open++;
+					}
+					break;
+				case 'o':
+				case 'O':
+					// bold
+					if (1 == html_names)
+					{
+						strcat(q, "<span style=\"font-style:bold\">");
+						q += 30;
+						open++;
+					}
+					break;
+				case 'g':
+				case 'G':
+					// default color
+					if (1 == html_names)
+					{
 						strcat(q, "<span style=\"color:black\">");
 						q += 26;
 						open++;
-						break;
-					case 'z':
-					case 'Z':
-						// reset all
-						while (open)
+					}
+					break;
+				case 'z':
+				case 'Z':
+					// reset all
+					while (open)
+					{
+						strcat(q, "</span>");
+						q += 7;
+						open--;
+					}
+					break;
+				case 't':
+				case 'T':
+					// capitalise
+					if (1 == html_names)
+					{
+						strcat(q, "<span style=\"text-transform:capitalize\">");
+						q += 40;
+						open++;
+					}
+					break;
+				case '$':
+					// literal $
+					*q++ = '$';
+					break;
+				case '\0':
+					// Unexpected end
+					break;
+				default:
+					// color
+					c3 = '\0';
+					c1 = *s;
+					s++;
+					c2 = *s;
+					if (c2)
+					{
+						s++;
+						c3 = *s;
+						if (c3 && 1 == html_names)
 						{
-							strcat(q, "</span>");
-							q += 7;
-							open--;
-						}
-						open = 0;
-						break;
-					case 't':
-					case 'T':
-						// capitalise
-						if (1 == html_names)
-						{
-							strcat(q, "<span style=\"text-transform:capitalize\">");
-							q += 40;
+							sprintf(q, "<span style=\"color:#%c%c%c%c%c%c\">", c1, c1, c2, c2, c3, c3);
+							q += 28;
 							open++;
 						}
-						break;
-					case '$':
-						// literal $
-						*q++ = '$';
-						break;
-					default:
-						// color
-						if (1 == html_names)
-						{
-							sprintf(q, "<span style=\"color:%c%c%c%c%c%c\">", *s, *s, *(s + 1), *(s + 1), *(s + 2), *(s + 2));
-							q += 27;
-							open++;
-						}
-						if (*(s + 1))
-						{
-							s++;
-						}
-						if (*(s + 1))
-						{
-							s++;
-						}
-						break;
+					}
+					break;
 				}
 			}
 			else
@@ -12561,10 +12765,6 @@ char *xform_name(char *string, struct qserver *server)
 			}
 		}
 		*q = '\0';
-	}
-	else
-	{
-		strcpy(_q, string);
 	}
 
 	if (font_tag)
