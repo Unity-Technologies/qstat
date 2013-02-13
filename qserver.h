@@ -27,6 +27,17 @@ typedef struct SavedData  {
     struct SavedData *next;
 } SavedData;
 
+typedef enum {
+    STATE_INIT			=  0,
+    STATE_CONNECTING	=  1,
+    STATE_CONNECTED		=  2,
+    STATE_QUERYING		=  3,
+    STATE_QUERIED		=  4,
+
+    STATE_TIMEOUT		= -1,
+    STATE_SYS_ERROR		= -2,
+} server_state_t;
+
 struct qserver {
     char *arg;
     char *host_name;
@@ -34,6 +45,7 @@ struct qserver {
     int flags;
     server_type * type;
     int fd;
+	server_state_t state;
     char *outfilename;
     char *query_arg;
     char *challenge_string;
