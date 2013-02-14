@@ -219,6 +219,7 @@ int type_option_compare(server_type *one, server_type *two);
 int type_string_compare(server_type *one, server_type *two);
 int process_func_ret( struct qserver *server, int ret );
 int connection_inprogress();
+void clear_socketerror();
 STATIC int u2xmp_html_color(short color, char *dest, int *font_tag);
 STATIC int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag);
 
@@ -4643,6 +4644,8 @@ void free_server_hash()
  */
 int bind_qserver_post(struct qserver *server)
 {
+	server->state = STATE_CONNECTED;
+
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
 		int one = 1;
@@ -4801,7 +4804,6 @@ int connected_qserver(struct qserver *server, int polling)
 		} 
 	}
 
-	server->state = STATE_CONNECTED;
 
 	return bind_qserver_post(server);
 
@@ -4833,6 +4835,15 @@ int bind_qserver2(struct qserver *server, int wait)
 {
 	struct sockaddr_in addr;
 	static int one = 1;
+
+	debug(1, "start %p @ %d.%d.%d.%d:%hu\n",
+		server,
+		server->ipaddr &0xff,
+		(server->ipaddr >> 8) &0xff,
+		(server->ipaddr >> 16) &0xff,
+		(server->ipaddr >> 24) &0xff,
+		server->port
+	);
 
 	if (server->type->flags &TF_TCP_CONNECT)
 	{
@@ -4924,8 +4935,13 @@ int bind_qserver2(struct qserver *server, int wait)
 			if ( connection_inprogress() )
 			{
 				int ret;
+
+				// Ensure we don't detect the same error twice, specifically on a different server
+				clear_socketerror();
+
 				if ( ! wait )
 				{
+					debug(2, "connect:%s:%u - in progress", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 					return -3;
 				}
 				ret = connected_qserver( server, 0 );
@@ -5011,7 +5027,7 @@ int bind_sockets()
 				);
 
 				gettimeofday(&t_lastsend, NULL);
-				debug(2, "calling status_query_func for %p", server);
+				debug(2, "calling status_query_func for %p - connect", server);
 				process_func_ret( server, server->type->status_query_func(server) );
 
 				connected++;
@@ -5062,7 +5078,7 @@ int bind_sockets()
 				case 0:
 					// Connected
 					gettimeofday(&t_lastsend, NULL);
-					debug(2, "calling status_query_func for %p", server);
+					debug(2, "calling status_query_func for %p - in progress", server);
 					process_func_ret( server, server->type->status_query_func(server) );
 
 					// NOTE: connected is already incremented
@@ -12915,6 +12931,15 @@ int connection_reset()
 	return WSAGetLastError() == WSAECONNRESET;
 #else
 	return errno == ECONNRESET;
+#endif
+}
+
+void clear_socketerror()
+{
+#ifdef _WIN32
+	WSASetLastError(0);
+#else
+	errno = 0;
 #endif
 }
 
