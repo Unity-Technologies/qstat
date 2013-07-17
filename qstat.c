@@ -204,6 +204,9 @@ int no_port_offset = 0;
 int output_bom = 0;
 int xml_display = 0;
 int xml_encoding = ENCODING_LATIN_1;
+int json_display = 0;
+int json_encoding = ENCODING_LATIN_1;
+int json_printed = 0;
 
 #define SUPPORTED_SERVER_SORT	"pgihn"
 #define SUPPORTED_PLAYER_SORT	"PFTNS"
@@ -301,6 +304,10 @@ void display_server(struct qserver *server)
 	else if (xml_display)
 	{
 		xml_display_server(server);
+	}
+	else if (json_display)
+	{
+		json_display_server(server);
 	}
 	else if (have_server_template())
 	{
@@ -2572,6 +2579,893 @@ void xml_display_tee_player_info(struct qserver *server)
 	xform_printf(OF, "\t\t</players>\n");
 }
 
+/**
+ * JSON output
+ * Contributed by Steve Teuber <steve@exprojects.org>
+ */
+void json_protocols()
+{
+	int i;
+	server_type *type;
+	server_type **sorted_types;
+
+	sorted_types = (server_type **)malloc(sizeof(server_type*) * n_server_types);
+	type = &types[0];
+	for (i = 0; type->id != Q_UNKNOWN_TYPE; type++, i++)
+	{
+		sorted_types[i] = type;
+	}
+
+	quicksort((void **)sorted_types, 0, n_server_types - 1, (int(*)(void *, void*))type_option_compare);
+
+	printf("{\n");
+	for (i = 0; i < n_server_types; i++)
+	{
+		type = sorted_types[i];
+		if (i) printf(",\n");
+		printf("\t\"%s\": \"%s\"", type->type_string, type->game_name);
+	}
+	printf("\n}\n");
+
+	exit(0);
+}
+
+void json_version()
+{
+	printf("{\n\t\"version\": \"%s\"\n}\n", VERSION);
+}
+
+void json_display_server(struct qserver *server)
+{
+	char *prefix;
+	prefix = server->type->type_string;
+
+	if (server->server_name == DOWN)
+	{
+		if (!up_servers_only)
+		{
+			fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+			fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+			fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("offline"));
+			fprintf(OF, "\t\t\"hostname\": \"%s\"\n", json_escape((hostname_lookup) ? server->host_name: server->arg));
+			fprintf(OF, "\t}");
+			json_printed = 1;
+		}
+		return;
+	}
+	if (server->server_name == TIMEOUT)
+	{
+		if (server->flags &FLAG_BROADCAST && server->n_servers)
+		{
+			fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+			fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+			fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("timeout"));
+			fprintf(OF, "\t\t\"servers\": %d\n", server->n_servers);
+			fprintf(OF, "\t}");
+			json_printed = 1;
+		}
+		else if (!up_servers_only)
+		{
+			fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+			fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+			fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("timeout"));
+			fprintf(OF, "\t\t\"hostname\": \"%s\"\n", json_escape((hostname_lookup) ? server->host_name: server->arg));
+			fprintf(OF, "\t}");
+			json_printed = 1;
+		}
+		return ;
+	}
+
+	if (server->error != NULL)
+	{
+		fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+		fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+		fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("error"));
+		fprintf(OF, "\t\t\"hostname\": \"%s\"\n", json_escape((hostname_lookup) ? server->host_name: server->arg));
+		fprintf(OF, "\t\t\"error\": \"%s\",\n", json_escape(server->error));
+		fprintf(OF, "\t}");
+		json_printed = 1;
+	}
+	else if (server->type->master)
+	{
+		fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+		fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+		fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("online"));
+		fprintf(OF, "\t\t\"servers\": %d,\n", server->n_servers);
+		json_printed = 1;
+	}
+	else
+	{
+		fprintf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		fprintf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
+		fprintf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
+		fprintf(OF, "\t\t\"status\": \"%s\",\n", json_escape("online"));
+		fprintf(OF, "\t\t\"hostname\": \"%s\",\n", json_escape((hostname_lookup) ? server->host_name: server->arg));
+		fprintf(OF, "\t\t\"name\": \"%s\",\n", json_escape(xform_name(server->server_name, server)));
+		fprintf(OF, "\t\t\"gametype\": \"%s\",\n", json_escape(get_qw_game(server)));
+		fprintf(OF, "\t\t\"map\": \"%s\",\n", json_escape(xform_name(server->map_name, server)));
+		fprintf(OF, "\t\t\"numplayers\": %d,\n", server->num_players);
+		fprintf(OF, "\t\t\"maxplayers\": %d,\n", server->max_players);
+		fprintf(OF, "\t\t\"numspectators\": %d,\n", server->num_spectators);
+		fprintf(OF, "\t\t\"maxspectators\": %d", server->max_spectators);
+		json_printed = 1;
+
+		if (!(server->type->flags &TF_RAW_STYLE_TRIBES))
+		{
+			fprintf(OF, ",\n\t\t\"ping\": %d,\n", server->n_requests ? server->ping_total / server->n_requests: 999);
+			fprintf(OF, "\t\t\"retries\": %d", server->n_retries);
+		}
+
+		if (server->type->flags &TF_RAW_STYLE_QUAKE)
+		{
+			fprintf(OF, ",\n\t\t\"address\": %s,\n", json_escape(server->address));
+			fprintf(OF, "\t\t\"protocolversion\": %d", server->protocol_version);
+		}
+	}
+
+	if (!server->type->master && server->error == NULL)
+	{
+		if (get_server_rules && NULL != server->type->display_json_rule_func )
+		{
+			server->type->display_json_rule_func(server);
+		}
+		if (get_player_info && NULL != server->type->display_json_player_func )
+		{
+			server->type->display_json_player_func(server);
+		}
+	}
+
+	fprintf(OF, "\n\t}");
+}
+
+void json_header()
+{
+	fprintf(OF, "[\n");
+}
+
+void json_footer()
+{
+	fprintf(OF, "\n]\n");
+}
+
+void json_display_server_rules(struct qserver *server)
+{
+	struct rule *rule;
+	int printed = 0;
+	rule = server->rules;
+
+	fprintf(OF, ",\n\t\t\"rules\": {\n");
+	for (; rule != NULL; rule = rule->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t\"%s\": \"%s\"", json_escape(rule->name), json_escape(rule->value));
+		printed = 1;
+	}
+	fprintf(OF, "\n\t\t}");
+}
+
+void json_display_q_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\"number\": %d,\n", player->number);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"address\": \"%s\",\n", json_escape(player->address));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_qw_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"skin\": \"%s\",\n", player->skin ? json_escape(player->skin): "");
+		fprintf(OF, "\t\t\t\t\"team\": \"%s\"\n", player->team_name ? json_escape(player->team_name): "");
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_q2_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		if (server->flags &FLAG_PLAYER_TEAMS)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		}
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_player_info_info(struct player *player)
+{
+	struct info *info;
+
+	for (info = player->info; info; info = info->next)
+	{
+		if (info->name)
+		{
+			char *name = json_escape(info->name);
+			char *value = json_escape(info->value);
+			fprintf(OF, "\t\t\t\t\"%s\": \"%s\",\n", name, value);
+		}
+	}
+}
+
+void json_display_unreal_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		if ( - 999 != player->deaths)
+		{
+			fprintf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
+		}
+		if (player->team_name)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		}
+		else if ( - 1 != player->team)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		}
+
+		// Some games dont provide
+		// so only display if they do
+		if (player->skin)
+		{
+			fprintf(OF, "\t\t\t\t\"skin\": \"%s\",\n", player->skin ? json_escape(player->skin): "");
+		}
+		if (player->mesh)
+		{
+			fprintf(OF, "\t\t\t\t\"mesh\": \"%s\",\n", player->mesh ? json_escape(player->mesh): "");
+		}
+		if (player->face)
+		{
+			fprintf(OF, "\t\t\t\t\"face\": \"%s\",\n", player->face ? json_escape(player->face): "");
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_halflife_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_fl_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_tribes_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"packetloss\": %d\n", player->packet_loss);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_tribes2_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+	char *type;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (player->team_name)
+		{
+			switch (player->type_flag)
+			{
+				case PLAYER_TYPE_BOT:
+					type = "Bot";
+					break;
+				case PLAYER_TYPE_ALIAS:
+					type = "Alias";
+					break;
+				default:
+					type = "";
+					break;
+			}
+
+			if (printed) fprintf(OF, ",\n");
+			fprintf(OF, "\t\t\t{\n");
+			fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+			fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+			fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+			fprintf(OF, "\t\t\t\t\"type\": \"%s\",\n", json_escape(type));
+			fprintf(OF, "\t\t\t\t\"clan\": \"%s\"\n", player->tribe_tag ? json_escape(xform_name(player->tribe_tag, server)): "");
+			fprintf(OF, "\t\t\t}");
+			printed = 1;
+		}
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_bfris_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
+		fprintf(OF, "\t\t\t\t\"frags\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"ship\": %d\n", player->ship);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_descent3_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"team\": %d\n", player->team);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_ravenshield_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+
+void json_display_ghostrecon_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
+		fprintf(OF, "\t\t\t\t\"team\": %d\n", player->team);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_eye_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
+		if (player->team_name)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		}
+		else
+		{
+			fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		}
+		if (player->skin)
+		{
+			fprintf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
+		}
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 1)));
+		}
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_doom3_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
+		if (player->tribe_tag)
+		{
+			fprintf(OF, "\t\t\t\t\"clan\": \"%s\",\n", player->tribe_tag ? json_escape(xform_name(player->tribe_tag, server)): "");
+		}
+		else
+		{
+			fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		}
+		if (player->skin)
+		{
+			fprintf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
+		}
+		if (player->type_flag)
+		{
+			fprintf(OF, "\t\t\t\t\"type\": \"%s\",\n", "bot");
+		}
+		else
+		{
+			fprintf(OF, "\t\t\t\t\"type\": \"%s\",\n", "player");
+		}
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		if (NA_INT != player->ping)
+		{
+			fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		}
+		if (NA_INT != player->score)
+		{
+			fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
+		}
+		if (NA_INT != player->deaths)
+		{
+			fprintf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
+		}
+		if (NA_INT != player->frags)
+		{
+			fprintf(OF, "\t\t\t\t\"frags\": %d,\n", player->frags);
+		}
+		if (player->team_name)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		}
+		else if (NA_INT != player->team)
+		{
+			fprintf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
+		}
+		if (player->skin)
+		{
+			fprintf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
+		}
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 1)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\"\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_armyops_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		player->score = calculate_armyops_score(player);
+	}
+
+	json_display_player_info(server);
+}
+
+void json_display_ts2_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_ts3_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\"\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_bfbc2_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\"\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_wic_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
+		fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		if ( player->tribe_tag )
+		{
+			fprintf(OF, "\t\t\t\t\"role\": \"%s\",\n", json_escape(player->tribe_tag));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"bot\": %d\n", player->type_flag);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_ventrilo_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
+		fprintf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_tm_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		if (player->connect_time)
+		{
+			fprintf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
+		}
+		json_display_player_info_info(player);
+		fprintf(OF, "\t\t\t\t\"ping\": %d\n", player->ping);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+
+void json_display_savage_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_farcry_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
+		fprintf(OF, "\t\t\t\t\"time\": \"%s\"\n", json_escape(play_time(player->connect_time, 2)));
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
+
+void json_display_tee_player_info(struct qserver *server)
+{
+	struct player *player;
+	int printed = 0;
+
+	fprintf(OF, ",\n\t\t\"players\": [\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		if (printed) fprintf(OF, ",\n");
+		fprintf(OF, "\t\t\t{\n");
+		fprintf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+		fprintf(OF, "\t\t\t\t\"score\": %d\n", player->score);
+		fprintf(OF, "\t\t\t}");
+		printed = 1;
+	}
+
+	fprintf(OF, "\n\t\t]");
+}
 
 void display_progress()
 {
@@ -2711,6 +3605,7 @@ void usage(char *msg, char **argv, char *a1)
 	printf("-raw <delim>\toutput in raw format using <delim> as delimiter\n");
 	printf("-mdelim <delim>\tFor rules with multi values use <delim> as delimiter\n");
 	printf("-xml\t\toutput status data as an XML document\n");
+	printf("-json\t\toutput status data as an JSON document\n");
 	printf("-Th,-Ts,-Tpt\toutput templates: header, server and player\n");
 	printf("-Tr,-Tt\t\toutput templates: rule, and trailer\n");
 	printf("-srcport <range>\tSend packets from these network ports\n");
@@ -3357,6 +4252,14 @@ int main(int argc, char *argv[])
 		{
 			usage(NULL, argv, NULL);
 		}
+		else if (strcmp(argv[arg], "--json-protocols") == 0)
+		{
+			json_protocols();
+		}
+		else if (strcmp(argv[arg], "--json-version") == 0)
+		{
+			json_version();
+		}
 		else if (strcmp(argv[arg], "-f") == 0)
 		{
 			arg++;
@@ -3487,6 +4390,14 @@ int main(int argc, char *argv[])
 			if (raw_display == 1)
 			{
 				usage("cannot specify both -raw and -xml\n", argv, NULL);
+			}
+		}
+		else if (strcmp(argv[arg], "-json") == 0)
+		{
+			json_display = 1;
+			if (raw_display == 1)
+			{
+				usage("cannot specify both -raw and -json\n", argv, NULL);
 			}
 		}
 		else if (strcmp(argv[arg], "-utf8") == 0)
@@ -3960,6 +4871,10 @@ int main(int argc, char *argv[])
 	{
 		xml_header();
 	}
+	else if (json_display)
+	{
+		json_header();
+	}
 	else if (new_style && !raw_display && !have_server_template())
 	{
 		display_header();
@@ -4044,6 +4959,10 @@ void finish_output()
 	if (xml_display)
 	{
 		xml_footer();
+	}
+	else if (json_display)
+	{
+		json_footer();
 	}
 	else if (have_trailer_template())
 	{
@@ -12268,6 +13187,225 @@ char *xml_escape(char *string)
 			}
 		}
 		else if (xml_encoding == ENCODING_UTF_8)
+		{
+			unsigned char tempbuf[10] =
+			{
+				0
+			};
+			unsigned char *buf = &tempbuf[0];
+			int bytes = 0;
+			int error = 1;
+
+			// Valid character ranges
+			if (
+				0x09 == c ||
+				0xA == c ||
+				0xD == c ||
+				( 0x20 <= c && 0xD7FF >= c ) ||
+				( 0xE000 <= c && 0xFFFD >= c ) ||
+				( 0x10000 <= c && 0x10FFFF >= c )
+			)
+			{
+				error = 0;
+			}
+
+			if (c < 0x80)
+			/* 0XXX XXXX one byte */
+			{
+				buf[0] = c;
+				bytes = 1;
+			}
+			else if (c < 0x0800)
+			/* 110X XXXX two bytes */
+			{
+				buf[0] = 0xC0 | (0x03 &(c >> 6));
+				buf[1] = 0x80 | (0x3F &c);
+				bytes = 2;
+			}
+			else if (c < 0x10000)
+			/* 1110 XXXX three bytes */
+			{
+				buf[0] = 0xE0 | (c >> 12);
+				buf[1] = 0x80 | ((c >> 6) &0x3F);
+				buf[2] = 0x80 | (c &0x3F);
+
+				bytes = 3;
+				if (c == UTF8BYTESWAPNOTACHAR || c == UTF8NOTACHAR)
+				{
+					error = 3;
+				}
+
+			}
+			else if (c < 0x10FFFF)
+			/* 1111 0XXX four bytes */
+			{
+				buf[0] = 0xF0 | (c >> 18);
+				buf[1] = 0x80 | ((c >> 12) &0x3F);
+				buf[2] = 0x80 | ((c >> 6) &0x3F);
+				buf[3] = 0x80 | (c &0x3F);
+				bytes = 4;
+				if (c > UTF8MAXFROMUCS4)
+				{
+					error = 4;
+				}
+
+			}
+			else if (c < 0x4000000)
+			/* 1111 10XX five bytes */
+			{
+				buf[0] = 0xF8 | (c >> 24);
+				buf[1] = 0x80 | (c >> 18);
+				buf[2] = 0x80 | ((c >> 12) &0x3F);
+				buf[3] = 0x80 | ((c >> 6) &0x3F);
+				buf[4] = 0x80 | (c &0x3F);
+				bytes = 5;
+				error = 5;
+			}
+			else if (c < 0x80000000)
+			/* 1111 110X six bytes */
+			{
+				buf[0] = 0xFC | (c >> 30);
+				buf[1] = 0x80 | ((c >> 24) &0x3F);
+				buf[2] = 0x80 | ((c >> 18) &0x3F);
+				buf[3] = 0x80 | ((c >> 12) &0x3F);
+				buf[4] = 0x80 | ((c >> 6) &0x3F);
+				buf[5] = 0x80 | (c &0x3F);
+				bytes = 6;
+				error = 6;
+			}
+			else
+			{
+				error = 7;
+			}
+
+			if (error)
+			{
+				int i;
+				fprintf(stderr, "UTF-8 encoding error (%d) for U+%x, D+%d : ", error, c, c);
+				for (i = 0; i < bytes; i++)
+				{
+					fprintf(stderr, "0x%02x ", buf[i]);
+				}
+				fprintf(stderr, "\n");
+			}
+			else
+			{
+				int i;
+				for (i = 0; i < bytes; ++i)
+				{
+					*b++ = buf[i];
+				}
+			}
+
+		}
+	}
+	*b = '\0';
+	return (char*)result;
+}
+
+char *json_escape(char *string)
+{
+	static unsigned char _buf[4][MAXSTRLEN + 8];
+	static int _buf_index = 0;
+	unsigned char *result, *b, *end;
+	unsigned int c;
+
+	if (string == NULL)
+	{
+		return "";
+	}
+
+	result = &_buf[_buf_index][0];
+	_buf_index = (_buf_index + 1) % 4;
+
+	end = &result[MAXSTRLEN];
+
+	b = result;
+	for (; *string && b < end; string++)
+	{
+		c = *string;
+		switch (c)
+		{
+			/*case '&':
+				*b++ = '&';
+				*b++ = 'a';
+				*b++ = 'm';
+				*b++ = 'p';
+				*b++ = ';';
+				continue;
+			case '\'':
+				*b++ = '&';
+				*b++ = 'a';
+				*b++ = 'p';
+				*b++ = 'o';
+				*b++ = 's';
+				*b++ = ';';
+				continue;
+			case '"':
+				*b++ = '&';
+				*b++ = 'q';
+				*b++ = 'u';
+				*b++ = 'o';
+				*b++ = 't';
+				*b++ = ';';
+				continue;
+			case '<':
+				*b++ = '&';
+				*b++ = 'l';
+				*b++ = 't';
+				*b++ = ';';
+				continue;
+			case '>':
+				*b++ = '&';
+				*b++ = 'g';
+				*b++ = 't';
+				*b++ = ';';
+				continue;*/
+			case '"':
+				*b++ = '\\';
+				*b++ = '"';
+				continue;
+			default:
+				break;
+		}
+
+		// Validate character
+		// http://www.w3.org/TR/2000/REC-xml-20001006#charsets
+		if ( !
+			(
+				0x09 == c ||
+				0xA == c ||
+				0xD == c ||
+				( 0x20 <= c && 0xD7FF >= c ) ||
+				( 0xE000 <= c && 0xFFFD >= c ) ||
+				( 0x10000 <= c && 0x10FFFF >= c )
+			)
+		)
+		{
+			if ( show_errors )
+			{
+				fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
+			}
+		}
+		else if (json_encoding == ENCODING_LATIN_1)
+		{
+			if (!name_xforms)
+			{
+				*b++ = c;
+			}
+			else
+			{
+				if (isprint(c))
+				{
+					*b++ = c;
+				}
+				else
+				{
+					b += sprintf( (char *)b, "&#%u;", c);
+				}
+			}
+		}
+		else if (json_encoding == ENCODING_UTF_8)
 		{
 			unsigned char tempbuf[10] =
 			{
