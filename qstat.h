@@ -389,6 +389,37 @@ void xml_display_ventrilo_player_info( struct qserver *server);
 void xml_display_starmade_player_info( struct qserver *server);
 char *xml_escape( char*);
 
+void json_display_server( struct qserver *server);
+void json_header();
+void json_footer();
+void json_display_server_rules( struct qserver *server);
+void json_display_player_info( struct qserver *server);
+void json_display_q_player_info( struct qserver *server);
+void json_display_qw_player_info( struct qserver *server);
+void json_display_q2_player_info( struct qserver *server);
+void json_display_unreal_player_info( struct qserver *server);
+void json_display_halflife_player_info( struct qserver *server);
+void json_display_tribes_player_info( struct qserver *server);
+void json_display_tribes2_player_info( struct qserver *server);
+void json_display_ravenshield_player_info( struct qserver *server);
+void json_display_savage_player_info( struct qserver *server);
+void json_display_farcry_player_info( struct qserver *server);
+void json_display_bfris_player_info( struct qserver *server);
+void json_display_descent3_player_info( struct qserver *server);
+void json_display_ghostrecon_player_info( struct qserver *server);
+void json_display_eye_player_info( struct qserver *server);
+void json_display_armyops_player_info( struct qserver *server);
+void json_display_player_info( struct qserver *server);
+void json_display_doom3_player_info( struct qserver *server);
+void json_display_ts2_player_info( struct qserver *server);
+void json_display_ts3_player_info( struct qserver *server);
+void json_display_bfbc2_player_info( struct qserver *server);
+void json_display_tm_player_info( struct qserver *server);
+void json_display_wic_player_info( struct qserver *server);
+void json_display_fl_player_info( struct qserver *server);
+void json_display_tee_player_info( struct qserver *server);
+char *json_escape( char*);
+
 query_status_t send_qserver_request_packet( struct qserver *server);
 query_status_t send_qwserver_request_packet( struct qserver *server);
 query_status_t send_ut2003_request_packet( struct qserver *server);
@@ -454,6 +485,8 @@ struct _server_type  {
     DisplayFunc display_raw_rule_func;
     DisplayFunc display_xml_player_func;
     DisplayFunc display_xml_rule_func;
+    DisplayFunc display_json_player_func;
+    DisplayFunc display_json_rule_func;
     QueryFunc status_query_func;
     QueryFunc rule_query_func;
     QueryFunc player_query_func;
@@ -921,6 +954,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -955,6 +990,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -989,6 +1026,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_qw_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_qw_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1023,6 +1062,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_qw_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_qw_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1057,6 +1098,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1091,6 +1134,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1125,6 +1170,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -1159,6 +1206,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_halflife_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_hl2_request_packet,		/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1193,6 +1242,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1227,6 +1278,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1261,6 +1314,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1295,6 +1350,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ut2003_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1329,6 +1386,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1363,6 +1422,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_halflife_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1397,6 +1458,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1431,6 +1494,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1465,6 +1530,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_tribes_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_tribes_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_tribes_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1499,6 +1566,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_bfris_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_bfris_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_bfris_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1533,6 +1602,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1567,6 +1638,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1601,6 +1674,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1635,6 +1710,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1669,6 +1746,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_tribes2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_tribes2_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_tribes2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1703,6 +1782,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1737,6 +1818,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1771,6 +1854,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1805,6 +1890,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ghostrecon_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ghostrecon_player_info,	/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1839,6 +1926,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_eye_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_eye_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1873,6 +1962,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1907,6 +1998,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_armyops_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_armyops_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1941,6 +2034,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ravenshield_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ravenshield_player_info,	/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1975,6 +2070,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_savage_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_savage_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_savage_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -2009,6 +2106,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_farcry_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_farcry_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_farcry_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -2046,6 +2145,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2080,6 +2181,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2114,6 +2217,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2148,6 +2253,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2182,6 +2289,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_doom3master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2216,6 +2325,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2250,6 +2361,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2284,6 +2397,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2318,6 +2433,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2352,6 +2469,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2386,6 +2505,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_gamespy_master_request,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2420,6 +2541,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_tribes2master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2454,6 +2577,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2488,6 +2613,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2523,6 +2650,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_ut2004master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2557,6 +2686,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_halflife_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_a2s_request_packet,		/* status_query_func */
     send_a2s_rule_request_packet,	/* rule_query_func */
     NULL,				/* player_query_func */
@@ -2591,6 +2722,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ut2003_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2625,6 +2758,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2659,6 +2794,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ts2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ts2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ts2_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2693,6 +2830,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2727,6 +2866,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_quake4master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2761,6 +2902,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2795,6 +2938,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2829,6 +2974,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_tm_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_tm_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_tm_request_packet,			/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2863,6 +3010,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2897,6 +3046,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_haze_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2931,6 +3082,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_wic_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_wic_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_wic_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2965,6 +3118,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_ottd_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2999,6 +3154,8 @@ server_type builtin_types[] = {
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_ottdmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -3033,6 +3190,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_fl_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_fl_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_fl_request_packet,			/* status_query_func */
     send_fl_rule_request_packet,	/* rule_query_func */
 	NULL,							/* player_query_func */
@@ -3067,6 +3226,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3101,6 +3262,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_tee_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_tee_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_tee_request_packet,			/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3135,6 +3298,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ts3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ts3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ts3_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3169,6 +3334,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_bfbc2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_bfbc2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_bfbc2_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3203,6 +3370,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,			/* display_raw_rule_func */
     xml_display_ventrilo_player_info,	/* display_xml_player_func */
     xml_display_server_rules,			/* display_xml_rule_func */
+    json_display_ventrilo_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ventrilo_request_packet,		/* status_query_func */
     NULL,								/* rule_query_func */
     NULL,								/* player_query_func */
@@ -3237,6 +3406,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,			/* display_raw_rule_func */
     NULL,								/* display_xml_player_func */
     xml_display_server_rules,			/* display_xml_rule_func */
+    NULL,                               /* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_cube2_request_packet,			/* status_query_func */
     NULL,								/* rule_query_func */
     NULL,								/* player_query_func */
@@ -3271,6 +3442,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_mumble_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3305,6 +3478,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_mumble_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3339,6 +3514,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_crysis_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3542,6 +3719,8 @@ server_type builtin_types[] = {
     NULL,			/* display_raw_rule_func */
     NULL,			/* display_xml_player_func */
     NULL,			/* display_xml_rule_func */
+    NULL,           /* display_json_player_func */
+    NULL,           /* display_json_rule_func */
     NULL,			/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
