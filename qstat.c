@@ -2611,6 +2611,7 @@ void json_protocols()
 void json_version()
 {
 	printf("{\n\t\"version\": \"%s\"\n}\n", VERSION);
+	exit(0);
 }
 
 void json_display_server(struct qserver *server)
