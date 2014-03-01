@@ -5,8 +5,10 @@ CPPFLAGS = -Dsysconfdir=\"$(sysconfdir)\" @CPPFLAGS@
 bin_PROGRAMS = qstat
 
 qstat_SOURCES = \
+	xform.c xform.h \
 	config.c config.h \
 	debug.c debug.h \
+	utils.c utils.h \
 	hcache.c \
 	md5.c md5.h \
 	qserver.c qserver.h \
@@ -33,7 +35,9 @@ qstat_SOURCES = \
 	mumble.c mumble.h \
 	terraria.c terraria.h \
 	crysis.c crysis.h \
-	utils.c utils.h
+	dirtybomb.c dirtybomb.h \
+	starmade.c starmade.h \
+	farmsim.c farmsim.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
