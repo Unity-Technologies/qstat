@@ -1,3 +1,24 @@
+Qstat version 2.14
+
+Summary of New Features
+-----------------------
+New protocols:
+	DirtyBomb aka Extraction [-dirtybomb]
+	Starmade [-starmade]
+	Farmsim [-farmsim]
+
+Refactored output splitting out xform processing into its own files improving various portions of it.
+
+Fixes
+-----
+hcache segv fixes
+packetmanip fixes for packet combining
+
+
+--
+Steven Harltand
+
+
 QStat version 2.11
 
 ** UPDATED for 2.11 **

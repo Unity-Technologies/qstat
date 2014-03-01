@@ -1,5 +1,5 @@
 /*
- * qstat 2.8
+ * qstat 2.14
  * by Steve Jankowski
  *
  * Crysis query protocol
@@ -192,6 +192,7 @@ query_status_t deal_with_crysis_packet( struct qserver *server, char *rawpkt, in
 	}
 
 	debug( 3, "packet: challenge = %ld", server->challenge );
+	s = NULL;
 	switch ( server->challenge )
 	{
 	case 1:

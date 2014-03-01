@@ -1,5 +1,5 @@
 /*
- * qstat 2.8
+ * qstat 2.14
  * by Steve Jankowski
  * steve@qstat.org
  * http://www.qstat.org
@@ -37,6 +37,7 @@
 #include "qstat.h"
 #include "packet_manip.h"
 #include "config.h"
+#include "xform.h"
 
 
 #ifndef _WIN32
@@ -165,14 +166,14 @@ int raw_display = 0;
 char *raw_delimiter = "\t";
 char *multi_delimiter = "|";
 int player_address = 0;
-int hex_player_names = 0;
-int hex_server_names = 0;
-int name_xforms = 1;
-int name_xforms_strip_unprintable = 0; /* xform strips unprintable chars */
-int strip_carets = 1;
 int max_simultaneous = MAXFD_DEFAULT;
 int sendinterval = 5;
-int html_names = -1;
+extern int xform_names;
+extern int xform_strip_unprintable;
+extern int xform_hex_player_names;
+extern int xform_hex_server_names;
+extern int xform_strip_carets;
+extern int xform_html_names;
 extern int html_mode;
 int raw_arg = 0;
 int show_game_in_raw = 0;
@@ -220,8 +221,6 @@ int type_string_compare(server_type *one, server_type *two);
 int process_func_ret( struct qserver *server, int ret );
 int connection_inprogress();
 void clear_socketerror();
-STATIC int u2xmp_html_color(short color, char *dest, int *font_tag);
-STATIC int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag);
 
 int show_errors = 0;
 static int noserverdups = 1;
@@ -277,44 +276,6 @@ static int decode_stefmaster_packet(struct qserver *server, char *pkt, int pktle
 static int decode_q3master_packet(struct qserver *server, char *ikt, int pktlen);
 
 char *ut2003_strdup(const char *string, const char *end, char **next);
-int html_entity(const char c, char *dest);
-
-static const char *unreal_colors[] =
-{
-	"AliceBlue", "AntiqueWhite", "Aqua", "Aquamarine", "Azure", "Beige", "Bisque", "Black", "BlanchedAlmond", "Blue", "BlueViolet",
-	"Brown", "BurlyWood", "CadetBlue", "Chartreuse", "Chocolate", "Coral", "CornflowerBlue", "Cornsilk", "Crimson", "Cyan",
-	"DarkBlue", "DarkCyan", "DarkGoldenrod", "DarkGray", "DarkGreen", "DarkKhaki", "DarkMagenta", "DarkOliveGreen", "DarkOrange",
-	"DarkOrchid", "DarkRed", "DarkSalmon", "DarkSeaGreen", "DarkSlateBlue", "DarkSlateGray", "DarkTurquoise", "DarkViolet",
-	"DeepPink", "DeepSkyBlue", "DimGray", "DodgerBlue", "FireBrick", "FloralWhite", "ForestGreen", "Fuchsia", "Gainsboro",
-	"GhostWhite", "Gold", "Goldenrod", "Gray", "Green", "GreenYellow", "Honeydew", "HotPink", "IndianRed", "Indigo", "Ivory",
-	"Khaki", "Lavender", "LavenderBlush", "LawnGreen", "LemonChiffon", "LightBlue", "LightCoral", "LightCyan",
-	"LightGoldenrodYellow", "LightGreen", "LightGrey", "LightPink", "LightSalmon", "LightSeaGreen", "LightSkyBlue",
-	"LightSlateGray", "LightSteelBlue", "LightYellow", "Lime", "LimeGreen", "Linen", "Magenta", "Maroon", "MediumAquamarine",
-	"MediumBlue", "MediumOrchid", "MediumPurple", "MediumSeaGreen", "MediumSlateBlue", "MediumSpringGreen", "MediumTurquoise",
-	"MediumVioletRed", "MidnightBlue", "MintCream", "MistyRose", "Moccasin", "NavajoWhite", "Navy", "OldLace", "Olive", "OliveDrab",
-	"Orange", "OrangeRed", "Orchid", "PaleGoldenrod", "PaleGreen", "PaleTurquoise", "PaleVioletRed", "PapayaWhip", "PeachPuff",
-	"Peru", "Pink", "Plum", "PowderBlue", "Purple", "Red", "RosyBrown", "RoyalBlue", "SaddleBrown", "Salmon", "SandyBrown",
-	"SeaGreen", "Seashell", "Sienna", "Silver", "SkyBlue", "SlateBlue", "SlateGray", "Snow", "SpringGreen", "SteelBlue", "Tan",
-	"Teal", "Thistle", "Tomato", "Turquoise", "Violet", "Wheat", "White", "WhiteSmoke", "Yellow", "YellowGreen",
-};
-
-static const char *unreal_rgb_colors[] =
-{
-	"#F0F8FF", "#FAEBD7", "#00FFFF", "#7FFFD4", "#F0FFFF", "#F5F5DC", "#FFE4C4", "#000000", "#FFEBCD", "#0000FF", "#8A2BE2", "#A52A2A",
-	"#DEB887", "#5F9EA0", "#7FFF00", "#D2691E", "#FF7F50", "#6495ED", "#FFF8DC", "#DC143C", "#00FFFF", "#00008B", "#008B8B",
-	"#B8860B", "#A9A9A9", "#006400", "#BDB76B", "#8B008B", "#556B2F", "#FF8C00", "#9932CC", "#8B0000", "#E9967A", "#8FBC8F",
-	"#483D8B", "#2F4F4F", "#00CED1", "#9400D3", "#FF1493", "#00BFFF", "#696969", "#1E90FF", "#B22222", "#FFFAF0", "#228B22",
-	"#FF00FF", "#DCDCDC", "#F8F8FF", "#FFD700", "#DAA520", "#808080", "#008000", "#ADFF2F", "#F0FFF0", "#FF69B4", "#CD5C5C",
-	"#4B0082", "#FFFFF0", "#F0E68C", "#E6E6FA", "#FFF0F5", "#7CFC00", "#FFFACD", "#ADD8E6", "#F08080", "#E0FFFF", "#FAFAD2",
-	"#90EE90", "#D3D3D3", "#FFB6C1", "#FFA07A", "#20B2AA", "#87CEFA", "#778899", "#B0C4DE", "#FFFFE0", "#00FF00", "#32CD32",
-	"#FAF0E6", "#FF00FF", "#800000", "#66CDAA", "#0000CD", "#BA55D3", "#9370DB", "#3CB371", "#7B68EE", "#00FA9A", "#48D1CC",
-	"#C71585", "#191970", "#F5FFFA", "#FFE4E1", "#FFE4B5", "#FFDEAD", "#000080", "#FDF5E6", "#808000", "#6B8E23", "#FFA500",
-	"#FF4500", "#DA70D6", "#EEE8AA", "#98FB98", "#AFEEEE", "#DB7093", "#FFEFD5", "#FFDAB9", "#CD853F", "#FFC0CB", "#DDA0DD",
-	"#B0E0E6", "#800080", "#FF0000", "#BC8F8F", "#4169E1", "#8B4513", "#FA8072", "#F4A460", "#2E8B57", "#FFF5EE", "#A0522D",
-	"#C0C0C0", "#87CEEB", "#6A5ACD", "#708090", "#FFFAFA", "#00FF7F", "#4682B4", "#D2B48C", "#008080", "#D8BFD8", "#FF6347",
-	"#40E0D0", "#EE82EE", "#F5DEB3", "#FFFFFF", "#F5F5F5", "#FFFF00", "#9ACD32",
-
-};
 
 void free_server(struct qserver *server);
 void free_player(struct player *player);
@@ -367,7 +328,7 @@ void standard_display_server(struct qserver *server)
 	{
 		if (!up_servers_only)
 		{
-			fprintf(OF, "%s%-16s %10s\n", prefix, (hostname_lookup) ? server->host_name: server->arg, server->server_name);
+			xform_printf(OF, "%s%-16s %10s\n", prefix, (hostname_lookup) ? server->host_name: server->arg, server->server_name);
 		}
 		return ;
 	}
@@ -376,11 +337,11 @@ void standard_display_server(struct qserver *server)
 	{
 		if (server->flags &FLAG_BROADCAST && server->n_servers)
 		{
-			fprintf(OF, "%s%-16s %d servers\n", prefix, server->arg, server->n_servers);
+			xform_printf(OF, "%s%-16s %d servers\n", prefix, server->arg, server->n_servers);
 		}
 		else if (!up_servers_only)
 		{
-			fprintf(OF, "%s%-16s no response\n", prefix, (hostname_lookup) ? server->host_name: server->arg);
+			xform_printf(OF, "%s%-16s no response\n", prefix, (hostname_lookup) ? server->host_name: server->arg);
 		}
 		return ;
 	}
@@ -403,7 +364,7 @@ void standard_display_server(struct qserver *server)
 
 	if (server->error != NULL)
 	{
-		fprintf(OF, "%s%-21s ERROR <%s>\n", prefix, (hostname_lookup) ? server->host_name: server->arg, server->error);
+		xform_printf(OF, "%s%-21s ERROR <%s>\n", prefix, (hostname_lookup) ? server->host_name: server->arg, server->error);
 		return ;
 	}
 
@@ -432,7 +393,7 @@ void standard_display_server(struct qserver *server)
 			default:
 				break;
 		}
-		fprintf(OF,
+		xform_printf(OF, 
 			"%s%-21s %2d/%-2d %2d/%-2d %*s %6d / %1d  %*s %s\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
@@ -461,7 +422,7 @@ void standard_display_server(struct qserver *server)
 	{
 		char name[512];
 		sprintf(name, "\"%s\"", server->server_name);
-		fprintf(OF,
+		xform_printf(OF, 
 			"%-16s %10s map %s at %22s %d/%d players %d ms\n",
 			(hostname_lookup) ? server->host_name: server->arg,
 			name,
@@ -481,7 +442,7 @@ void display_qwmaster(struct qserver *server)
 
 	if (server->error != NULL)
 	{
-		fprintf(OF,
+		xform_printf(OF, 
 			"%s %-17s ERROR <%s>\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
@@ -490,7 +451,7 @@ void display_qwmaster(struct qserver *server)
 	}
 	else
 	{
-		fprintf(OF,
+		xform_printf(OF, 
 			"%s %-17s %d servers %6d / %1d\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
@@ -505,7 +466,7 @@ void display_header()
 {
 	if (!no_header_display)
 	{
-		fprintf(OF, "%-16s %8s %8s %15s    %s\n", "ADDRESS", "PLAYERS", "MAP", "RESPONSE TIME", "NAME");
+		xform_printf(OF, "%-16s %8s %8s %15s    %s\n", "ADDRESS", "PLAYERS", "MAP", "RESPONSE TIME", "NAME");
 	}
 }
 
@@ -518,7 +479,7 @@ void display_server_rules(struct qserver *server)
 	{
 		if ((server->type->id != Q_SERVER && server->type->id != H2_SERVER) || !is_default_rule(rule))
 		{
-			fprintf(OF, "%c%s=%s", (printed) ? ',' : '\t', rule->name, rule->value);
+			xform_printf(OF, "%c%s=%s", (printed) ? ',' : '\t', rule->name, rule->value);
 			printed++;
 		}
 	}
@@ -556,7 +517,7 @@ void display_q_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			player->number,
 			player->frags,
 			play_time(player->connect_time, 1),
@@ -588,7 +549,7 @@ void display_qw_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			player->number,
 			player->frags,
 			play_time(player->connect_time, 0),
@@ -611,11 +572,11 @@ void display_q2_player_info(struct qserver *server)
 	{
 		if (server->flags &FLAG_PLAYER_TEAMS)
 		{
-			fprintf(OF,"\t%3d frags team#%d %8s  %s\n", player->frags, player->team, ping_time(player->ping), xform_name(player->name, server));
+			xform_printf(OF, "\t%3d frags team#%d %8s  %s\n", player->frags, player->team, ping_time(player->ping), xform_name(player->name, server));
 		}
 		else
 		{
-			fprintf(OF, "\t%3d frags %8s  %s\n", player->frags, ping_time(player->ping), xform_name(player->name, server));
+			xform_printf(OF, "\t%3d frags %8s  %s\n", player->frags, ping_time(player->ping), xform_name(player->name, server));
 		}
 	}
 }
@@ -638,7 +599,7 @@ void display_unreal_player_info(struct qserver *server)
 			// so we get details from halo
 			if (player->team_name)
 			{
-				fprintf(OF, fmt_team_name,
+				xform_printf(OF, fmt_team_name,
 					(player->score && NA_INT != player->score) ? player->score: player->frags,
 					player->team_name,
 					ping_time(player->ping),
@@ -647,7 +608,7 @@ void display_unreal_player_info(struct qserver *server)
 			}
 			else
 			{
-				fprintf(OF, fmt_team_number,
+				xform_printf(OF, fmt_team_number,
 					(player->score && NA_INT != player->score) ? player->score: player->frags,
 					player->team,
 					ping_time(player->ping),
@@ -657,7 +618,7 @@ void display_unreal_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, fmt_no_team, player->frags, ping_time(player->ping), xform_name(player->name, server));
+			xform_printf(OF, fmt_no_team, player->frags, ping_time(player->ping), xform_name(player->name, server));
 		}
 	}
 }
@@ -669,7 +630,7 @@ void display_shogo_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %s\n", player->frags, ping_time(player->ping), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %s\n", player->frags, ping_time(player->ping), xform_name(player->name, server));
 	}
 }
 
@@ -680,7 +641,7 @@ void display_halflife_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
 	}
 }
 
@@ -691,7 +652,7 @@ void display_fl_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %8s %s\n", player->frags, ping_time(player->ping), play_time(player->connect_time, 1), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %8s %s\n", player->frags, ping_time(player->ping), play_time(player->connect_time, 1), xform_name(player->name, server));
 	}
 }
 
@@ -702,7 +663,7 @@ void display_tribes_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%4d score team#%d %8s %s\n", player->frags, player->team, ping_time(player->ping), xform_name(player->name, server)
+		xform_printf(OF, "\t%4d score team#%d %8s %s\n", player->frags, player->team, ping_time(player->ping), xform_name(player->name, server)
 	);
 	}
 }
@@ -714,7 +675,7 @@ void display_tribes2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\tscore %4d %14s %s\n",
+		xform_printf(OF, "\tscore %4d %14s %s\n",
 			player->frags,
 			player->team_name ? player->team_name: (player->number == TRIBES_TEAM ?	"TEAM" : "?"),
 			xform_name(player->name, server)
@@ -729,7 +690,7 @@ void display_bfris_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\ttid: %d, ship: %d, team: %s, ping: %d, score: %d, kills: %d, name: %s\n",
+		xform_printf(OF, "\ttid: %d, ship: %d, team: %s, ping: %d, score: %d, kills: %d, name: %s\n",
 			player->number,
 			player->ship,
 			player->team_name,
@@ -748,7 +709,7 @@ void display_descent3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %3d deaths team#%-3d %7s %s\n",
+		xform_printf(OF, "\t%3d frags %3d deaths team#%-3d %7s %s\n",
 			player->frags,
 			player->deaths,
 			player->team,
@@ -765,7 +726,7 @@ void display_ghostrecon_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\tdead=%3d team#%-3d %s\n", player->deaths, player->team, xform_name(player->name, server));
+		xform_printf(OF, "\tdead=%3d team#%-3d %s\n", player->deaths, player->team, xform_name(player->name, server));
 	}
 }
 
@@ -777,7 +738,7 @@ void display_eye_player_info(struct qserver *server)
 	{
 		if (player->team_name)
 		{
-			fprintf(OF, "\tscore %4d %6s team %12s %s\n",
+			xform_printf(OF, "\tscore %4d %6s team %12s %s\n",
 				player->score,
 				ping_time(player->ping),
 				player->team_name,
@@ -786,7 +747,7 @@ void display_eye_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, "\tscore %4d %6s team#%d %s\n",
+			xform_printf(OF, "\tscore %4d %6s team#%d %s\n",
 				player->score,
 				ping_time(player->ping),
 				player->team,
@@ -832,7 +793,7 @@ void display_gs2_player_info(struct qserver *server)
 	{
 		if (player->team_name)
 		{
-			fprintf(OF, "\tscore %4d %6s team %12s %s\n",
+			xform_printf(OF, "\tscore %4d %6s team %12s %s\n",
 				player->score,
 				ping_time(player->ping),
 				player->team_name,
@@ -841,7 +802,7 @@ void display_gs2_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, "\tscore %4d %6s team#%d %s\n",
+			xform_printf(OF, "\tscore %4d %6s team#%d %s\n",
 				player->score,
 				ping_time(player->ping),
 				player->team,
@@ -870,7 +831,7 @@ void display_ts2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%6s %s\n", ping_time(player->ping), xform_name(player->name, server));
+		xform_printf(OF, "\t%6s %s\n", ping_time(player->ping), xform_name(player->name, server));
 	}
 }
 
@@ -880,7 +841,17 @@ void display_ts3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%s\n", xform_name(player->name, server));
+		xform_printf(OF, "\t%s\n", xform_name(player->name, server));
+	}
+}
+
+void display_starmade_player_info(struct qserver *server)
+{
+	struct player *player;
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		xform_printf(OF, "\t%s\n", xform_name(player->name, server));
 	}
 }
 
@@ -890,7 +861,7 @@ void display_bfbc2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%s\n", xform_name(player->name, server));
+		xform_printf(OF, "\t%s\n", xform_name(player->name, server));
 	}
 }
 
@@ -900,7 +871,7 @@ void display_wic_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t#%-4d score %4d team %12s role %12s %s\n",
+		xform_printf(OF, "\t#%-4d score %4d team %12s role %12s %s\n",
 			player->number,
 			player->score,
 			player->team_name,
@@ -916,7 +887,7 @@ void display_ventrilo_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t# %d ping %s time %d cid %i ch %s name %s\n",
+		xform_printf(OF, "\t# %d ping %s time %d cid %i ch %s name %s\n",
 			player->number,
 			ping_time(player->ping),
 			player->connect_time,
@@ -933,7 +904,7 @@ void display_tm_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%6s %s\n", ping_time(player->ping), xform_name(player->name, server));
+		xform_printf(OF, "\t%6s %s\n", ping_time(player->ping), xform_name(player->name, server));
 	}
 }
 
@@ -945,7 +916,7 @@ void display_doom3_player_info(struct qserver *server)
 	{
 		if (player->tribe_tag)
 		{
-			fprintf(OF, "\t#%-4d score %4d %6s team %12s %s\n",
+			xform_printf(OF, "\t#%-4d score %4d %6s team %12s %s\n",
 				player->number,
 				player->score,
 				ping_time(player->ping),
@@ -955,7 +926,7 @@ void display_doom3_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, "\t#%-4d score %4d %6s team#%d %s\n",
+			xform_printf(OF, "\t#%-4d score %4d %6s team#%d %s\n",
 				player->number,
 				player->score,
 				ping_time(player->ping),
@@ -971,7 +942,7 @@ void display_ravenshield_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
 	}
 }
 
@@ -981,7 +952,7 @@ void display_savage_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
 	}
 }
 
@@ -991,7 +962,7 @@ void display_farcry_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
+		xform_printf(OF, "\t%3d frags %8s %s\n", player->frags, play_time(player->connect_time, 1), xform_name(player->name, server));
 	}
 }
 
@@ -1002,7 +973,7 @@ void display_tee_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t%4d score %s\n", player->score, xform_name(player->name, server));
+		xform_printf(OF, "\t%4d score %s\n", player->score, xform_name(player->name, server));
 	}
 }
 
@@ -1060,7 +1031,7 @@ void raw_display_server(struct qserver *server)
 	{
 		if (!up_servers_only)
 		{
-			fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n",
+			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n",
 				prefix,
 				raw_arg, RD,
 				raw_arg,
@@ -1076,18 +1047,18 @@ void raw_display_server(struct qserver *server)
 	{
 		if (server->flags &FLAG_BROADCAST && server->n_servers)
 		{
-			fprintf(OF, "%s""%.*s%.*s""%s%s""%s%d\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, server->arg, RD, server->n_servers);
+			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%d\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, server->arg, RD, server->n_servers);
 		}
 		else if (!up_servers_only)
 		{
-			fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, (hostname_lookup) ? server->host_name : server->arg, RD, TIMEOUT);
+			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, (hostname_lookup) ? server->host_name : server->arg, RD, TIMEOUT);
 		}
 		return ;
 	}
 
 	if (server->error != NULL)
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1099,7 +1070,7 @@ void raw_display_server(struct qserver *server)
 	}
 	else if (server->type->flags &TF_RAW_STYLE_QUAKE)
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%s""%s%d""%s%d""%s%d""%s%d""%s%d""%s%d""%s%s",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%s""%s%d""%s%d""%s%d""%s%d""%s%d""%s%d""%s%s",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1121,7 +1092,7 @@ void raw_display_server(struct qserver *server)
 	}
 	else if (server->type->flags &TF_RAW_STYLE_TRIBES)
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1135,7 +1106,7 @@ void raw_display_server(struct qserver *server)
 	}
 	else if (server->type->flags &TF_RAW_STYLE_GHOSTRECON)
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1149,7 +1120,7 @@ void raw_display_server(struct qserver *server)
 	}
 	else if (server->type->master)
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%d",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%d",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1160,7 +1131,7 @@ void raw_display_server(struct qserver *server)
 	}
 	else
 	{
-		fprintf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d""%s%d""%s%d""%s%s",
+		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d""%s%d""%s%d""%s%s",
 			prefix,
 			raw_arg, RD,
 			raw_arg,
@@ -1212,12 +1183,12 @@ void raw_display_server_rules(struct qserver *server)
 			}
 		}
 
-		fprintf(OF, "%s%s=%s", (printed) ? RD : "", rule->name, rule->value);
+		xform_printf(OF, "%s%s=%s", (printed) ? RD : "", rule->name, rule->value);
 		printed++;
 	}
 	if (server->missing_rules)
 	{
-		fprintf(OF, "%s?", (printed) ? RD : "");
+		xform_printf(OF, "%s?", (printed) ? RD : "");
 	}
 	fputs("\n", OF);
 }
@@ -1230,7 +1201,7 @@ void raw_display_q_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			player->number, RD,
 			xform_name(player->name, server), RD,
 			player->address, RD,
@@ -1254,7 +1225,7 @@ void raw_display_qw_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			player->number, RD,
 			xform_name(player->name, server), RD,
 			player->frags, RD,
@@ -1280,11 +1251,11 @@ void raw_display_q2_player_info(struct qserver *server)
 	{
 		if (server->flags &FLAG_PLAYER_TEAMS)
 		{
-			fprintf(OF, fmt_team, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team);
+			xform_printf(OF, fmt_team, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team);
 		}
 		else
 		{
-			fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping);
+			xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping);
 		}
 		fputs("\n", OF);
 	}
@@ -1301,7 +1272,7 @@ void raw_display_unreal_player_info(struct qserver *server)
 	{
 		if (player->team_name)
 		{
-			fprintf(OF, fmt_team_name,
+			xform_printf(OF, fmt_team_name,
 				xform_name(player->name,server), RD,
 				player->frags, RD,
 				player->ping, RD,
@@ -1313,7 +1284,7 @@ void raw_display_unreal_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, fmt,
+			xform_printf(OF, fmt,
 				xform_name(player->name, server), RD,
 				player->frags, RD,
 				player->ping, RD,
@@ -1335,7 +1306,7 @@ void raw_display_halflife_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
 }
@@ -1368,7 +1339,7 @@ void raw_display_tribes_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team, RD, player->packet_loss);
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team, RD, player->packet_loss);
 		fputs("\n", OF);
 	}
 }
@@ -1394,7 +1365,7 @@ void raw_display_tribes2_player_info(struct qserver *server)
 				type = "";
 				break;
 		}
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			xform_name(player->name, server), RD,
 			player->frags, RD,
 			player->team, RD,
@@ -1414,7 +1385,7 @@ void raw_display_bfris_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			player->number, RD,
 			player->ship, RD,
 			player->team_name, RD,
@@ -1435,7 +1406,7 @@ void raw_display_descent3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->deaths, RD, player->ping, RD, player->team);
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->deaths, RD, player->ping, RD, player->team);
 		fputs("\n", OF);
 	}
 }
@@ -1448,7 +1419,7 @@ void raw_display_ghostrecon_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->deaths, RD, player->team);
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->deaths, RD, player->team);
 		fputs("\n", OF);
 	}
 }
@@ -1464,7 +1435,7 @@ void raw_display_eye_player_info(struct qserver *server)
 	{
 		if (player->team_name)
 		{
-			fprintf(OF, fmt_team_name,
+			xform_printf(OF, fmt_team_name,
 				xform_name(player->name,server), RD,
 				player->score, RD,
 				player->ping, RD,
@@ -1475,7 +1446,7 @@ void raw_display_eye_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, fmt,
+			xform_printf(OF, fmt,
 				xform_name(player->name, server), RD,
 				player->score, RD,
 				player->ping, RD,
@@ -1499,11 +1470,11 @@ void raw_display_doom3_player_info(struct qserver *server)
 	{
 		if (player->tribe_tag)
 		{
-			fprintf(OF, fmt_team_name, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->tribe_tag, RD, player->number);
+			xform_printf(OF, fmt_team_name, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->tribe_tag, RD, player->number);
 		}
 		else
 		{
-			fprintf(OF, fmt, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->team, RD, player->number);
+			xform_printf(OF, fmt, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->team, RD, player->number);
 		}
 		fputs("\n", OF);
 	}
@@ -1520,7 +1491,7 @@ void raw_display_gs2_player_info(struct qserver *server)
 	{
 		if (player->team_name)
 		{
-			fprintf(OF, fmt_team_name, xform_name(player->name, server), RD,
+			xform_printf(OF, fmt_team_name, xform_name(player->name, server), RD,
 				player->score, RD,
 				player->ping, RD,
 				player->team_name, RD,
@@ -1530,7 +1501,7 @@ void raw_display_gs2_player_info(struct qserver *server)
 		}
 		else
 		{
-			fprintf(OF, fmt,
+			xform_printf(OF, fmt,
 				xform_name(player->name,server), RD,
 				player->score, RD,
 				player->ping, RD,
@@ -1564,7 +1535,7 @@ void raw_display_ts2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->ping, RD,
 			player->skin ? player->skin: "", RD,
@@ -1582,7 +1553,24 @@ void raw_display_ts3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
+			xform_name(player->name,server), RD,
+			player->skin ? player->skin: "", RD,
+			play_time(player->connect_time, 1)
+		);
+		fputs("\n", OF);
+	}
+}
+
+void raw_display_starmade_player_info(struct qserver *server)
+{
+	static const char *fmt = "%s""%s%s""%s%s";
+	struct player *player;
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
 			play_time(player->connect_time, 1)
@@ -1599,7 +1587,7 @@ void raw_display_bfbc2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
 			play_time(player->connect_time, 1)
@@ -1616,7 +1604,7 @@ void raw_display_wic_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->score, RD,
 			player->team_name, RD,
@@ -1653,7 +1641,7 @@ void raw_display_tm_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt,
+		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->ping, RD,
 			player->skin ? player->skin: "", RD,
@@ -1671,7 +1659,7 @@ void raw_display_tee_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name,server) );
+		xform_printf(OF, fmt, xform_name(player->name,server) );
 		fputs("\n", OF);
 	}
 }
@@ -1682,7 +1670,7 @@ void raw_display_ravenshield_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
 }
@@ -1693,7 +1681,7 @@ void raw_display_savage_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
 }
@@ -1704,7 +1692,7 @@ void raw_display_farcry_player_info(struct qserver *server)
 	struct player *player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
+		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
 }
@@ -1722,9 +1710,9 @@ void xml_display_server(struct qserver *server)
 	{
 		if (!up_servers_only)
 		{
-			fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), xml_escape(DOWN));
-			fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
-			fprintf(OF, "\t</server>\n");
+			xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), xml_escape(DOWN));
+			xform_printf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
+			xform_printf(OF, "\t</server>\n");
 		}
 		return;
 	}
@@ -1732,55 +1720,55 @@ void xml_display_server(struct qserver *server)
 	{
 		if (server->flags &FLAG_BROADCAST && server->n_servers)
 		{
-			fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\" servers=\"%d\">\n",
+			xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\" servers=\"%d\">\n",
 				xml_escape(prefix),
 				xml_escape(server->arg),
 				xml_escape(TIMEOUT),
 				server->n_servers
 			);
-			fprintf(OF, "\t</server>\n");
+			xform_printf(OF, "\t</server>\n");
 		}
 		else if (!up_servers_only)
 		{
-			fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), xml_escape(TIMEOUT));
-			fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
-			fprintf(OF, "\t</server>\n");
+			xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), xml_escape(TIMEOUT));
+			xform_printf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
+			xform_printf(OF, "\t</server>\n");
 		}
 		return ;
 	}
 
 	if (server->error != NULL)
 	{
-		fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), "ERROR");
-		fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
-		fprintf(OF, "\t\t<error>%s</error>\n", xml_escape(server->error));
+		xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), "ERROR");
+		xform_printf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
+		xform_printf(OF, "\t\t<error>%s</error>\n", xml_escape(server->error));
 	}
 	else if (server->type->master)
 	{
-		fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\" servers=\"%d\">\n", xml_escape(prefix), xml_escape(server->arg), "UP", server->n_servers);
+		xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\" servers=\"%d\">\n", xml_escape(prefix), xml_escape(server->arg), "UP", server->n_servers);
 	}
 	else
 	{
-		fprintf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), "UP");
-		fprintf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
-		fprintf(OF, "\t\t<name>%s</name>\n", xml_escape(xform_name(server->server_name, server)));
-		fprintf(OF, "\t\t<gametype>%s</gametype>\n", xml_escape(get_qw_game(server)));
-		fprintf(OF, "\t\t<map>%s</map>\n", xml_escape(xform_name(server->map_name, server)));
-		fprintf(OF, "\t\t<numplayers>%d</numplayers>\n", server->num_players);
-		fprintf(OF, "\t\t<maxplayers>%d</maxplayers>\n", server->max_players);
-		fprintf(OF, "\t\t<numspectators>%d</numspectators>\n", server->num_spectators);
-		fprintf(OF, "\t\t<maxspectators>%d</maxspectators>\n", server->max_spectators);
+		xform_printf(OF, "\t<server type=\"%s\" address=\"%s\" status=\"%s\">\n", xml_escape(prefix), xml_escape(server->arg), "UP");
+		xform_printf(OF, "\t\t<hostname>%s</hostname>\n", xml_escape((hostname_lookup) ? server->host_name: server->arg));
+		xform_printf(OF, "\t\t<name>%s</name>\n", xml_escape(xform_name(server->server_name, server)));
+		xform_printf(OF, "\t\t<gametype>%s</gametype>\n", xml_escape(get_qw_game(server)));
+		xform_printf(OF, "\t\t<map>%s</map>\n", xml_escape(xform_name(server->map_name, server)));
+		xform_printf(OF, "\t\t<numplayers>%d</numplayers>\n", server->num_players);
+		xform_printf(OF, "\t\t<maxplayers>%d</maxplayers>\n", server->max_players);
+		xform_printf(OF, "\t\t<numspectators>%d</numspectators>\n", server->num_spectators);
+		xform_printf(OF, "\t\t<maxspectators>%d</maxspectators>\n", server->max_spectators);
 
 		if (!(server->type->flags &TF_RAW_STYLE_TRIBES))
 		{
-			fprintf(OF, "\t\t<ping>%d</ping>\n", server->n_requests ? server->ping_total / server->n_requests: 999);
-			fprintf(OF, "\t\t<retries>%d</retries>\n", server->n_retries);
+			xform_printf(OF, "\t\t<ping>%d</ping>\n", server->n_requests ? server->ping_total / server->n_requests: 999);
+			xform_printf(OF, "\t\t<retries>%d</retries>\n", server->n_retries);
 		}
 
 		if (server->type->flags &TF_RAW_STYLE_QUAKE)
 		{
-			fprintf(OF, "\t\t<address>%s</address>\n", xml_escape(server->address));
-			fprintf(OF, "\t\t<protocolversion>%d</protocolversion>\n", server->protocol_version);
+			xform_printf(OF, "\t\t<address>%s</address>\n", xml_escape(server->address));
+			xform_printf(OF, "\t\t<protocolversion>%d</protocolversion>\n", server->protocol_version);
 		}
 	}
 
@@ -1796,28 +1784,28 @@ void xml_display_server(struct qserver *server)
 		}
 	}
 
-	fprintf(OF, "\t</server>\n");
+	xform_printf(OF, "\t</server>\n");
 }
 
 void xml_header()
 {
 	if (xml_encoding == ENCODING_LATIN_1)
 	{
-		fprintf(OF, "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<qstat>\n");
+		xform_printf(OF, "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<qstat>\n");
 	}
 	else if (output_bom)
 	{
-		fprintf(OF, "%c%c%c<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n", 0xEF, 0xBB, 0xBF);
+		xform_printf(OF, "%c%c%c<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n", 0xEF, 0xBB, 0xBF);
 	}
 	else
 	{
-		fprintf(OF, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n");
+		xform_printf(OF, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<qstat>\n");
 	}
 }
 
 void xml_footer()
 {
-	fprintf(OF, "</qstat>\n");
+	xform_printf(OF, "</qstat>\n");
 }
 
 void xml_display_server_rules(struct qserver *server)
@@ -1825,107 +1813,107 @@ void xml_display_server_rules(struct qserver *server)
 	struct rule *rule;
 	rule = server->rules;
 
-	fprintf(OF, "\t\t<rules>\n");
+	xform_printf(OF, "\t\t<rules>\n");
 	for (; rule != NULL; rule = rule->next)
 	{
-		fprintf(OF, "\t\t\t<rule name=\"%s\">%s</rule>\n", xml_escape(rule->name), xml_escape(rule->value));
+		xform_printf(OF, "\t\t\t<rule name=\"%s\">%s</rule>\n", xml_escape(rule->name), xml_escape(rule->value));
 	}
-	fprintf(OF, "\t\t</rules>\n");
+	xform_printf(OF, "\t\t</rules>\n");
 }
 
 void xml_display_q_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
+		xform_printf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<address>%s</address>\n", xml_escape(player->address));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<address>%s</address>\n", xml_escape(player->address));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		if (color_names)
 		{
-			fprintf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", xml_escape(quake_color(player->shirt_color)));
-			fprintf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", xml_escape(quake_color(player->pants_color)));
+			xform_printf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", xml_escape(quake_color(player->shirt_color)));
+			xform_printf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", xml_escape(quake_color(player->pants_color)));
 		}
 		else
 		{
-			fprintf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", quake_color(player->shirt_color));
-			fprintf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", quake_color(player->pants_color));
+			xform_printf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", quake_color(player->shirt_color));
+			xform_printf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", quake_color(player->pants_color));
 		}
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_qw_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
+		xform_printf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
 		if (color_names)
 		{
-			fprintf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", xml_escape(quake_color(player->shirt_color)));
-			fprintf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", xml_escape(quake_color(player->pants_color)));
+			xform_printf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", xml_escape(quake_color(player->shirt_color)));
+			xform_printf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", xml_escape(quake_color(player->pants_color)));
 		}
 		else
 		{
-			fprintf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", quake_color(player->shirt_color));
-			fprintf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", quake_color(player->pants_color));
+			xform_printf(OF, "\t\t\t\t<color for=\"shirt\">%s</color>\n", quake_color(player->shirt_color));
+			xform_printf(OF, "\t\t\t\t<color for=\"pants\">%s</color>\n", quake_color(player->pants_color));
 		}
 
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<skin>%s</skin>\n", player->skin ? xml_escape(player->skin): "");
-		fprintf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name ? xml_escape(player->team_name): "");
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<skin>%s</skin>\n", player->skin ? xml_escape(player->skin): "");
+		xform_printf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name ? xml_escape(player->team_name): "");
 
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_q2_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
 		if (server->flags &FLAG_PLAYER_TEAMS)
 		{
-			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_player_info_info(struct player *player)
@@ -1938,7 +1926,7 @@ void xml_display_player_info_info(struct player *player)
 		{
 			char *name = xml_escape(info->name);
 			char *value = xml_escape(info->value);
-			fprintf(OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name);
+			xform_printf(OF, "\t\t\t\t<%s>%s</%s>\n", name, value, name);
 		}
 	}
 }
@@ -1947,116 +1935,116 @@ void xml_display_unreal_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
 		if ( - 999 != player->deaths)
 		{
-			fprintf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
-		} fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+			xform_printf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+		} xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 
 		if (player->team_name)
 		{
-			fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+			xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
 		else if ( - 1 != player->team)
 		{
-			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
 
 		// Some games dont provide
 		// so only display if they do
 		if (player->skin)
 		{
-			fprintf(OF, "\t\t\t\t<skin>%s</skin>\n", player->skin ? xml_escape(player->skin): "");
+			xform_printf(OF, "\t\t\t\t<skin>%s</skin>\n", player->skin ? xml_escape(player->skin): "");
 		}
 		if (player->mesh)
 		{
-			fprintf(OF, "\t\t\t\t<mesh>%s</mesh>\n", player->mesh ? xml_escape(player->mesh): "");
+			xform_printf(OF, "\t\t\t\t<mesh>%s</mesh>\n", player->mesh ? xml_escape(player->mesh): "");
 		}
 		if (player->face)
 		{
-			fprintf(OF, "\t\t\t\t<face>%s</face>\n", player->face ? xml_escape(player->face): "");
+			xform_printf(OF, "\t\t\t\t<face>%s</face>\n", player->face ? xml_escape(player->face): "");
 		}
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_halflife_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_fl_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_tribes_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<packetloss>%d</packetloss>\n", player->packet_loss);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<packetloss>%d</packetloss>\n", player->packet_loss);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_tribes2_player_info(struct qserver *server)
@@ -2064,7 +2052,7 @@ void xml_display_tribes2_player_info(struct qserver *server)
 	struct player *player;
 	char *type;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
@@ -2084,87 +2072,87 @@ void xml_display_tribes2_player_info(struct qserver *server)
 					break;
 			}
 
-			fprintf(OF, "\t\t\t<player>\n");
+			xform_printf(OF, "\t\t\t<player>\n");
 
-			fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-			fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-			fprintf(OF, "\t\t\t\t<team number=\"%d\">%s</team>\n", player->team, xml_escape(player->team_name));
-			fprintf(OF, "\t\t\t\t<type>%s</type>\n", xml_escape(type));
-			fprintf(OF, "\t\t\t\t<clan>%s</clan>\n", player->tribe_tag ? xml_escape(xform_name(player->tribe_tag, server)): "");
+			xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+			xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+			xform_printf(OF, "\t\t\t\t<team number=\"%d\">%s</team>\n", player->team, xml_escape(player->team_name));
+			xform_printf(OF, "\t\t\t\t<type>%s</type>\n", xml_escape(type));
+			xform_printf(OF, "\t\t\t\t<clan>%s</clan>\n", player->tribe_tag ? xml_escape(xform_name(player->tribe_tag, server)): "");
 
-			fprintf(OF, "\t\t\t</player>\n");
+			xform_printf(OF, "\t\t\t</player>\n");
 		}
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_bfris_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
+		xform_printf(OF, "\t\t\t<player number=\"%d\">\n", player->number);
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score type=\"score\">%d</score>\n", player->score);
-		fprintf(OF, "\t\t\t\t<score type=\"frags\">%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<ship>%d</ship>\n", player->ship);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score type=\"score\">%d</score>\n", player->score);
+		xform_printf(OF, "\t\t\t\t<score type=\"frags\">%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<ship>%d</ship>\n", player->ship);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_descent3_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_ravenshield_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 
@@ -2172,162 +2160,162 @@ void xml_display_ghostrecon_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
-		fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+		xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_eye_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 		if (player->team_name)
 		{
-			fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+			xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
 		else
 		{
-			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
 		if (player->skin)
 		{
-			fprintf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
+			xform_printf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
 		}
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
 		}
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_doom3_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<number>%u</number>\n", player->number);
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<number>%u</number>\n", player->number);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 		if (player->tribe_tag)
 		{
-			fprintf(OF, "\t\t\t\t<clan>%s</clan>\n", player->tribe_tag ? xml_escape(xform_name(player->tribe_tag, server)): "");
+			xform_printf(OF, "\t\t\t\t<clan>%s</clan>\n", player->tribe_tag ? xml_escape(xform_name(player->tribe_tag, server)): "");
 		}
 		else
 		{
-			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
 		if (player->skin)
 		{
-			fprintf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
+			xform_printf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
 		}
 		if (player->type_flag)
 		{
-			fprintf(OF, "\t\t\t\t<type>bot</type>\n");
+			xform_printf(OF, "\t\t\t\t<type>bot</type>\n");
 		}
 		else
 		{
-			fprintf(OF, "\t\t\t\t<type>player</type>\n");
+			xform_printf(OF, "\t\t\t\t<type>player</type>\n");
 		}
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		if (NA_INT != player->ping)
 		{
-			fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+			xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 		}
 		if (NA_INT != player->score)
 		{
-			fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+			xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
 		}
 		if (NA_INT != player->deaths)
 		{
-			fprintf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
+			xform_printf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
 		}
 		if (NA_INT != player->frags)
 		{
-			fprintf(OF, "\t\t\t\t<frags>%d</frags>\n", player->frags);
+			xform_printf(OF, "\t\t\t\t<frags>%d</frags>\n", player->frags);
 		}
 		if (player->team_name)
 		{
-			fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+			xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
 		else if (NA_INT != player->team)
 		{
-			fprintf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
+			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
 
 		if (player->skin)
 		{
-			fprintf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
+			xform_printf(OF, "\t\t\t\t<skin>%s</skin>\n", xml_escape(player->skin));
 		}
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
 		}
 
 		xml_display_player_info_info(player);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_armyops_player_info(struct qserver *server)
@@ -2347,151 +2335,176 @@ void xml_display_ts2_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_ts3_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
+}
+
+void xml_display_starmade_player_info(struct qserver *server)
+{
+	struct player *player;
+
+	xform_printf(OF, "\t\t<players>\n");
+
+	player = server->players;
+	for (; player != NULL; player = player->next)
+	{
+		xform_printf(OF, "\t\t\t<player>\n");
+
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+
+		if (player->connect_time)
+		{
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		}
+
+		xml_display_player_info_info(player);
+		xform_printf(OF, "\t\t\t</player>\n");
+	}
+
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_bfbc2_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_wic_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
-		fprintf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name);
-		fprintf(OF, "\t\t\t\t<bot>%d</bot>\n", player->type_flag );
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		xform_printf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name);
+		xform_printf(OF, "\t\t\t\t<bot>%d</bot>\n", player->type_flag );
 		if ( player->tribe_tag )
 		{
-			fprintf(OF, "\t\t\t\t<role>%s</role>\n", player->tribe_tag );
+			xform_printf(OF, "\t\t\t\t<role>%s</role>\n", player->tribe_tag );
 		}
 
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_ventrilo_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
-		fprintf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_tm_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
 
 		if (player->connect_time)
 		{
-			fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 		}
 
 		xml_display_player_info_info(player);
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 
@@ -2499,62 +2512,62 @@ void xml_display_savage_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_farcry_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		fprintf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 2)));
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
+		xform_printf(OF, "\t\t\t\t<time>%su</time>\n", xml_escape(play_time(player->connect_time, 2)));
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 void xml_display_tee_player_info(struct qserver *server)
 {
 	struct player *player;
 
-	fprintf(OF, "\t\t<players>\n");
+	xform_printf(OF, "\t\t<players>\n");
 
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		fprintf(OF, "\t\t\t<player>\n");
+		xform_printf(OF, "\t\t\t<player>\n");
 
-		fprintf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
-		fprintf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
+		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
+		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
 
-		fprintf(OF, "\t\t\t</player>\n");
+		xform_printf(OF, "\t\t\t</player>\n");
 	}
 
-	fprintf(OF, "\t\t</players>\n");
+	xform_printf(OF, "\t\t</players>\n");
 }
 
 
@@ -3479,7 +3492,7 @@ int main(int argc, char *argv[])
 		else if (strcmp(argv[arg], "-utf8") == 0)
 		{
 			xml_encoding = ENCODING_UTF_8;
-			name_xforms = 0;
+			xform_names = 0;
 		}
 		else if (strcmp(argv[arg], "-ncn") == 0)
 		{
@@ -3495,11 +3508,11 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-nx") == 0)
 		{
-			name_xforms = 1;
+			xform_names = 1;
 		}
 		else if (strcmp(argv[arg], "-nnx") == 0)
 		{
-			name_xforms = 0;
+			xform_names = 0;
 		}
 		else if (strcmp(argv[arg], "-tc") == 0)
 		{
@@ -3519,11 +3532,11 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-hpn") == 0)
 		{
-			hex_player_names = 1;
+			xform_hex_player_names = 1;
 		}
 		else if (strcmp(argv[arg], "-hsn") == 0)
 		{
-			hex_server_names = 1;
+			xform_hex_server_names = 1;
 		}
 		else if (strncmp(argv[arg], "-maxsimultaneous", 7) == 0)
 		{
@@ -3749,11 +3762,11 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-htmlnames") == 0)
 		{
-			html_names = 1;
+			xform_html_names = 1;
 		}
 		else if (strcmp(argv[arg], "-nohtmlnames") == 0)
 		{
-			html_names = 0;
+			xform_html_names = 0;
 		}
 		else if (strcmp(argv[arg], "-htmlmode") == 0)
 		{
@@ -3761,7 +3774,7 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-carets") == 0)
 		{
-			strip_carets = 0;
+			xform_strip_carets = 0;
 		}
 		else if (strcmp(argv[arg], "-d") == 0)
 		{
@@ -3798,7 +3811,7 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-stripunprintable") == 0)
 		{
-			name_xforms_strip_unprintable = 1;
+			xform_strip_unprintable = 1;
 		}
 		else if (strcmp(argv[arg], "-srcport") == 0)
 		{
@@ -4484,7 +4497,7 @@ void add_servers_from_masters()
 			}
 			else if (server_type == NULL)
 			{
-				fprintf(OF, "%d.%d.%d.%d:%hu\n", (ipaddr >> 24) &0xff, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
+				xform_printf(OF, "%d.%d.%d.%d:%hu\n", (ipaddr >> 24) &0xff, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
 			}
 			else
 			{
@@ -5200,7 +5213,7 @@ void send_packets()
 				continue;
 			}
 
-			if (!server->retry1)
+			if (server->retry1 < 1)
 			{
 				// No more retries
 				cleanup_qserver( server, FORCE );
@@ -5226,7 +5239,7 @@ void send_packets()
 				continue;
 			}
 
-			if (!server->retry1)
+			if (server->retry1 < 1)
 			{
 				// no more retries
 				server->next_rule = NULL;
@@ -5234,6 +5247,7 @@ void send_packets()
 				cleanup_qserver( server, NO_FORCE );
 				continue;
 			}
+			debug(3, "send_rule_request_packet1");
 			send_rule_request_packet(server);
 			gettimeofday(&t_lastsend, NULL);
 			n_sent++;
@@ -5266,7 +5280,7 @@ void send_packets()
 		{
 			// we didnt send any additional queries
 			debug(2, "no queries sent: %d %d", time_delta(&now, &server->packet_time1), (interval *(n_retries + 1)));
-			if (!server->retry1)
+			if (server->retry1 < 1)
 			{
 				// no retries left
 				if (time_delta(&now, &server->packet_time1) > (interval *(n_retries + 1)))
@@ -6724,6 +6738,7 @@ query_status_t deal_with_qw_packet(struct qserver *server, char *rawpkt, int pkt
 		ret = deal_with_q2_packet(server, rawpkt, pktlen );
 		if ( DONE_AUTO == ret && ( get_player_info || get_server_rules ) )
 		{
+			debug(3, "send_rule_request_packet2");
 			send_rule_request_packet( server);
 			server->retry1= n_retries-1;
 			return INPROGRESS;
@@ -7683,12 +7698,12 @@ char *display_tribes2_string_list(unsigned char *pkt)
 		{
 			if (raw_display)
 			{
-				fprintf(OF, "%s%.*s", delim, (int)len, pkt);
+				xform_printf(OF, "%s%.*s", delim, (int)len, pkt);
 				delim = raw_delimiter;
 			}
 			else
 			{
-				fprintf(OF, "%.*s\n", (int)len, pkt);
+				xform_printf(OF, "%.*s\n", (int)len, pkt);
 			}
 		}
 		pkt += len;
@@ -7712,22 +7727,22 @@ query_status_t deal_with_tribes2master_packet(struct qserver *server, char *pkt,
 		pkt += 6;
 		if (raw_display)
 		{
-			fprintf(OF, "%s%s%s%s", server->type->type_prefix, raw_delimiter, server->arg, raw_delimiter);
+			xform_printf(OF, "%s%s%s%s", server->type->type_prefix, raw_delimiter, server->arg, raw_delimiter);
 		}
 		else
 		{
-			fprintf(OF, "Game Types\n");
-			fprintf(OF, "----------\n");
+			xform_printf(OF, "Game Types\n");
+			xform_printf(OF, "----------\n");
 		}
 		pkt = display_tribes2_string_list((unsigned char*)pkt);
 		if (raw_display)
 		{
-			fprintf(OF, "%s%s%s%s", server->type->type_prefix, raw_delimiter, server->arg, raw_delimiter);
+			xform_printf(OF, "%s%s%s%s", server->type->type_prefix, raw_delimiter, server->arg, raw_delimiter);
 		}
 		else
 		{
-			fprintf(OF, "\nMission Types\n");
-			fprintf(OF, "-------------\n");
+			xform_printf(OF, "\nMission Types\n");
+			xform_printf(OF, "-------------\n");
 		}
 		display_tribes2_string_list((unsigned char*)pkt);
 
@@ -7818,6 +7833,7 @@ int server_info_packet(struct qserver *server, struct q_packet *pkt, int datalen
 
 	if (get_server_rules)
 	{
+		debug(3, "send_rule_request_packet3");
 		send_rule_request_packet(server);
 	}
 	if (get_player_info)
@@ -7975,6 +7991,7 @@ int rule_info_packet(struct qserver *server, struct q_packet *pkt, int datalen)
 	server->n_rules++;
 	server->next_rule = rule->name;
 	server->retry1 = n_retries;
+	debug(3, "send_rule_request_packet4");
 	send_rule_request_packet(server);
 
 	return 0;
@@ -8073,9 +8090,11 @@ struct info *player_add_info(struct player *player, char *key, char *value, int 
 	return info;
 }
 
-struct rule *add_rule(struct qserver *server, char *key, char *value, int flags)
+struct rule *
+add_rule(struct qserver *server, char *key, char *value, int flags)
 {
 	struct rule *rule;
+	debug(3, "key: %s, value: %s, flags: %d", key, value, flags);
 	if ( flags & OVERWITE_DUPLICATES )
 	{
 		for (rule = server->rules; rule; rule = rule->next)
@@ -8832,6 +8851,7 @@ query_status_t deal_with_ut2003_packet(struct qserver *server, char *rawpkt, int
 					server->next_rule = "";
 					server->retry1 = n_retries;
 					server->retry2 = 0; // don't wait for player packet
+					debug(3, "send_rule_request_packet5");
 					send_rule_request_packet(server);
 					server->n_requests = requests; // would produce wrong ping
 				}
@@ -9124,6 +9144,7 @@ query_status_t deal_with_halflife_packet(struct qserver *server, char *rawpkt, i
 			int requests = server->n_requests;
 			server->next_rule = "";
 			server->retry1 = n_retries;
+			debug(3, "send_rule_request_packet6");
 			send_rule_request_packet(server);
 			server->n_requests = requests; // prevent wrong ping
 		}
@@ -11917,6 +11938,7 @@ query_status_t deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pk
 			if (get_server_rules)
 			{
 				int requests = server->n_requests;
+				debug(3, "send_rule_request_packet7");
 				send_rule_request_packet(server);
 				server->n_requests = requests; // prevent wrong ping
 				n_sent++;
@@ -12241,7 +12263,7 @@ char *xml_escape(char *string)
 		}
 		else if (xml_encoding == ENCODING_LATIN_1)
 		{
-			if (!name_xforms)
+			if (!xform_names)
 			{
 				*b++ = c;
 			}
@@ -12375,445 +12397,6 @@ char *xml_escape(char *string)
 }
 
 
-static char *quake3_escape_colors[8] =
-{
-	"black", "red", "green", "yellow", "blue", "cyan", "magenta", "white"
-};
-
-static char *sof_colors[32] =
-{
-	"FFFFFF", "FFFFFF", "FF0000", "00FF00", "FFFF00", "0000FF", "FF00FF", "00FFFF", "000000", "7F7F7F", "702D07", "7F0000", "007F00",
-	"FFFFFF", "007F7F", "00007F", "564D28", "4C5E36", "370B65", "005572", "54647E", "1E2A63", "66097B", "705E61", "980053",
-	"960018", "702D07", "54492A", "61A997", "CB8F39", "CF8316", "FF8020"
-};
-
-
-char *xform_name(char *string, struct qserver *server)
-{
-	static char _buf1[2048], _buf2[2048], _buf3[2048], _buf4[2048];
-	static char *_q = &_buf1[0];
-	static char *_q2 = &_buf3[0];
-	unsigned char *s = (unsigned char*)string;
-	char *q;
-	int is_server_name = (string == server->server_name);
-	int font_tag = 0;
-
-	_q = _q == _buf1 ? _buf2 : _buf1;
-	q = _q;
-
-	if (s == NULL)
-	{
-		q[0] = '?';
-		q[1] = '\0';
-		return _q;
-	}
-
-	strcpy(_q, string);
-	if (!name_xforms)
-	{
-		return _q;
-	}
-	if (name_xforms_strip_unprintable)
-	{
-		// We're double processing so need to use the second set of buffers
-		_q2 = (_q2 == _buf3) ? _buf4 : _buf3;
-		q = _q2;
-		for (; *s; s++)
-		{
-			if (isprint(*s))
-			{
-				*q = *s;
-				q++;
-			}
-		}
-		*q = '\0';
-		s = (unsigned char *)_q2;
-		q = _q;
-
-		if (*_q2 == '\0')
-		{
-			q[0] = '?';
-			q[1] = '\0';
-			return _q2;
-		}
-	}
-
-	if ((hex_player_names && !is_server_name) || (hex_server_names && is_server_name))
-	{
-		for (; *s; s++, q += 2)
-		{
-			sprintf(q, "%02x", *s);
-		}
-		*q = '\0';
-		return _q;
-	}
-	if (server->type->flags &TF_QUAKE3_NAMES)
-	{
-		for (; *s; s++)
-		{
-			if (*s == '^' && *(s + 1) != '^')
-			{
-				if (*(s + 1) == '\0')
-				{
-					break;
-				}
-				if (html_names == 1)
-				{
-					q += sprintf(q, "%s<font color=\"%s\">", font_tag ? "</font>" : "", quake3_escape_colors[*(s + 1) &0x7]);
-					s++;
-					font_tag = 1;
-				}
-				else if (strip_carets)
-				{
-					s++;
-				}
-				else
-				{
-					*q++ = *s;
-				}
-			}
-			else
-			{
-				int inc = html_entity(*s, q);
-				if (0 != inc)
-				{
-					q += inc;
-				}
-				else if (isprint(*s))
-				{
-					*q++ = *s;
-				}
-				else if (*s == '\033'){}
-				else if (*s == 0x80)
-				{
-					*q++ = '(';
-				}
-				else if (*s == 0x81)
-				{
-					*q++ = '=';
-				}
-				else if (*s == 0x82)
-				{
-					*q++ = ')';
-				}
-				else if (*s == 0x10 || *s == 0x90)
-				{
-					*q++ = '[';
-				}
-				else if (*s == 0x11 || *s == 0x91)
-				{
-					*q++ = ']';
-				}
-				else if (*s >= 0x92 && *s <= 0x9a)
-				{
-					*q++ = *s - 98;
-				}
-				else if (*s >= 0xa0 && *s <= 0xe0)
-				{
-					*q++ = *s - 128;
-				}
-				else if (*s >= 0xe1 && *s <= 0xfa)
-				{
-					*q++ = *s - 160;
-				}
-				else if (*s >= 0xfb && *s <= 0xfe)
-				{
-					*q++ = *s - 128;
-				}
-			}
-		}
-		*q = '\0';
-	}
-	else if (!is_server_name && (server->type->flags &TF_TRIBES2_NAMES))
-	{
-		for (; *s; s++)
-		{
-			int inc = html_entity(*s, q);
-			if (0 != inc)
-			{
-				q += inc;
-				continue;
-			}
-			else if (isprint(*s))
-			{
-				*q++ = *s;
-				continue;
-			}
-			if (html_names == 1 && s[1] != '\0')
-			{
-				char *font_color;
-				switch (*s)
-				{
-					case 0x8:
-						font_color = "white";
-						break; /* normal */
-					case 0xb:
-						font_color = "yellow";
-						break; /* tribe tag */
-					case 0xc:
-						font_color = "blue";
-						break; /* alias */
-					case 0xe:
-						font_color = "green";
-						break; /* bot */
-					default:
-						font_color = NULL;
-				}
-				if (font_color)
-				{
-					q += sprintf(q, "%s<font color=\"%s\">", font_tag ? "</font>" : "", font_color);
-					font_tag = 1;
-				}
-			}
-		}
-		*q = '\0';
-	}
-	else if (server->type->flags &TF_U2_NAMES)
-	{
-		for (; *s; s++)
-		{
-			if (0 == memcmp(s, "^\1", 2))
-			{
-				// xmp Color follows
-				s += 2;
-				q += u2xmp_html_color((unsigned char) *s, q, &font_tag);
-			}
-			else if (0 == memcmp(s, "\x1b", 1))
-			{
-				// Color follows
-				s += 1;
-				q += ut2k4_html_color(s, q, &font_tag);
-				s += 2;
-			}
-			else
-			{
-				int inc = html_entity(*s, q);
-				if (0 != inc)
-				{
-					q += inc;
-				}
-				else if (isprint(*s))
-				{
-					*q++ = *s;
-				}
-				else if (0xa0 == *s)
-				{
-					*q++ = ' ';
-				}
-			}
-		}
-		*q = '\0';
-	}
-	else if (server->type->flags &TF_TM_NAMES)
-	{
-		int open = 0;
-		char c1, c2, c3;
-
-		for (; *s; s++)
-		{
-			if (*s == '$')
-			{
-				s++;
-				switch (*s)
-				{
-				case 'i':
-				case 'I':
-					// italic
-					if (1 == html_names)
-					{
-						strcat(q, "<span style=\"font-style:italic\">");
-						q += 32;
-						open++;
-					}
-					break;
-				case 's':
-				case 'S':
-					// shadowed
-					break;
-				case 'w':
-				case 'W':
-					// wide
-					break;
-				case 'n':
-				case 'N':
-					// narrow
-					break;
-				case 'm':
-				case 'M':
-					// normal
-					if (1 == html_names)
-					{
-						strcat(q, "<span style=\"font-style:normal\">");
-						q += 32;
-						open++;
-					}
-					break;
-				case 'o':
-				case 'O':
-					// bold
-					if (1 == html_names)
-					{
-						strcat(q, "<span style=\"font-style:bold\">");
-						q += 30;
-						open++;
-					}
-					break;
-				case 'g':
-				case 'G':
-					// default color
-					if (1 == html_names)
-					{
-						strcat(q, "<span style=\"color:black\">");
-						q += 26;
-						open++;
-					}
-					break;
-				case 'z':
-				case 'Z':
-					// reset all
-					while (open)
-					{
-						strcat(q, "</span>");
-						q += 7;
-						open--;
-					}
-					break;
-				case 't':
-				case 'T':
-					// capitalise
-					if (1 == html_names)
-					{
-						strcat(q, "<span style=\"text-transform:capitalize\">");
-						q += 40;
-						open++;
-					}
-					break;
-				case '$':
-					// literal $
-					*q++ = '$';
-					break;
-				case '\0':
-					// Unexpected end
-					break;
-				default:
-					// color
-					c3 = '\0';
-					c1 = *s;
-					s++;
-					c2 = *s;
-					if (c2)
-					{
-						s++;
-						c3 = *s;
-						if (c3 && 1 == html_names)
-						{
-							sprintf(q, "<span style=\"color:#%c%c%c%c%c%c\">", c1, c1, c2, c2, c3, c3);
-							q += 28;
-							open++;
-						}
-					}
-					break;
-				}
-			}
-			else
-			{
-				*q++ = *s;
-			}
-		}
-
-		while (open)
-		{
-			strcat(q, "</span>");
-			q += 7;
-			open--;
-		}
-		*q = '\0';
-	}
-	else if (!is_server_name || server->type->flags &TF_SOF_NAMES)
-	{
-		// Catch all for NOT is_server_name OR TF_SOF_NAMES
-		// The may not be the intention but is needed for q1 at least
-		for (; *s; s++)
-		{
-			int inc = html_entity(*s, q);
-			if (0 != inc)
-			{
-				q += inc;
-				continue;
-			}
-
-			if (*s < ' ')
-			{
-				if (html_names == 1)
-				{
-					q += sprintf(q, "%s<font color=\"#%s\">", font_tag ? "</font>" : "", sof_colors[*(s)]);
-					font_tag = 1;
-				}
-			}
-			else if (isprint(*s))
-			{
-				*q++ = *s;
-			}
-			// ## more fixes below; double check against real sof servers
-			else if (*s >= 0xa0)
-			{
-				*q++ = *s &0x7f;
-			}
-			else if (*s >= 0x92 && *s < 0x9c)
-			{
-				*q++ = '0' + (*s - 0x92);
-			}
-			else if (*s >= 0x12 && *s < 0x1c)
-			{
-				*q++ = '0' + (*s - 0x12);
-			}
-			else if (*s == 0x90 || *s == 0x10)
-			{
-				*q++ = '[';
-			}
-			else if (*s == 0x91 || *s == 0x11)
-			{
-				*q++ = ']';
-			}
-			else if (*s == 0xa || *s == 0xc || *s == 0xd)
-			{
-				*q++ = ']';
-			}
-		}
-		*q = '\0';
-	}
-
-	if (font_tag)
-	{
-		q += sprintf(q, "</font>");
-	}
-
-	return _q;
-}
-int u2xmp_html_color(short color, char *dest, int *font_tag)
-{
-	if (1 == html_names)
-	{
-		int len = sprintf(dest, "%s<font color=\"%s\">", *font_tag ? "</font>" : "", unreal_rgb_colors[color - 1]);
-		*font_tag = 1;
-
-		return len;
-	}
-	return 0;
-}
-
-int ut2k4_html_color(const unsigned char *color, char *dest, int *font_tag)
-{
-	if (1 == html_names)
-	{
-		int len = sprintf(dest, "%s<font color=\"#%02hhx%02hhx%02hhx\">", *font_tag ? "</font>" : "", color[0], color[1], color[2]);
-		*font_tag = 1;
-
-		return len;
-	}
-	return 0;
-}
-
 int is_default_rule(struct rule *rule)
 {
 	if (strcmp(rule->name, "sv_maxspeed") == 0)
@@ -12843,29 +12426,6 @@ int is_default_rule(struct rule *rule)
 	{
 		return strcmp(rule->value, Q_DEFAULT_FRAGLIMIT) == 0;
 	}
-	return 0;
-}
-
-int html_entity(const char c, char *dest)
-{
-	if (html_mode)
-	{
-		switch (c)
-		{
-			case '<':
-				strcpy(dest, "&lt;");
-				return 4;
-			case '>':
-				strcpy(dest, "&gt;");
-				return 4;
-			case '&':
-				strcpy(dest, "&amp;");
-				return 5;
-			default:
-				break;
-		}
-	}
-
 	return 0;
 }
 
@@ -13021,23 +12581,6 @@ char *quake_color(int color)
 	}
 }
 
-
-const char *unreal_color(int color)
-{
-	if (color_names)
-	{
-		if (color_names == 1)
-		{
-			return unreal_colors[color &0xf];
-		}
-		else
-		{
-			return unreal_rgb_colors[color &0xf];
-		}
-	}
-
-	return (char*)(unsigned long)color;
-}
 
 #define FMT_HOUR_1	"%2dh"
 #define FMT_HOUR_2	"%dh"

@@ -14,7 +14,7 @@
     #include "gnuconfig.h"
 #else
     #ifndef VERSION
-        #define VERSION "2.13"
+        #define VERSION "2.14"
     #endif
 #endif
 
@@ -105,6 +105,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "mumble.h"
 #include "terraria.h"
 #include "crysis.h"
+#include "dirtybomb.h"
+#include "starmade.h"
+#include "farmsim.h"
 
 /*
  * Various magic numbers.
@@ -162,6 +165,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define MUMBLE_DEFAULT_PORT 64738
 #define TERRARIA_DEFAULT_PORT 7777
 #define CRYSIS_DEFAULT_PORT 64087
+#define DIRTYBOMB_DEFAULT_PORT 7877
+#define STARMADE_DEFAULT_PORT 4242
+#define FARMSIM_DEFAULT_PORT 10828
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -241,8 +247,11 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define MUMBLE_PROTOCOL_SERVER 71
 #define TERRARIA_PROTOCOL_SERVER 72
 #define CRYSIS_PROTOCOL_SERVER 73
+#define DIRTYBOMB_PROTOCOL_SERVER 74
+#define STARMADE_PROTOCOL_SERVER 75
+#define FARMSIM_PROTOCOL_SERVER 76
 
-#define LAST_BUILTIN_SERVER  73
+#define LAST_BUILTIN_SERVER  76
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -309,6 +318,7 @@ void display_wic_player_info( struct qserver *server);
 void display_fl_player_info( struct qserver *server);
 void display_tee_player_info( struct qserver *server);
 void display_ventrilo_player_info( struct qserver *server);
+void display_starmade_player_info( struct qserver *server);
 
 void raw_display_server( struct qserver *server);
 void raw_display_server_rules( struct qserver *server);
@@ -338,6 +348,7 @@ void raw_display_wic_player_info( struct qserver *server);
 void raw_display_fl_player_info( struct qserver *server);
 void raw_display_tee_player_info( struct qserver *server);
 void raw_display_ventrilo_player_info( struct qserver *server);
+void raw_display_starmade_player_info( struct qserver *server);
 
 void xml_display_server( struct qserver *server);
 void xml_header();
@@ -369,8 +380,8 @@ void xml_display_wic_player_info( struct qserver *server);
 void xml_display_fl_player_info( struct qserver *server);
 void xml_display_tee_player_info( struct qserver *server);
 void xml_display_ventrilo_player_info( struct qserver *server);
+void xml_display_starmade_player_info( struct qserver *server);
 char *xml_escape( char*);
-char *str_replace( char *, char *, char *);
 
 query_status_t send_qserver_request_packet( struct qserver *server);
 query_status_t send_qwserver_request_packet( struct qserver *server);
@@ -3326,6 +3337,108 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_crysis_packet,		/* packet_func */
+},
+{
+    /* DIRTYBOMB PROTOCOL */
+    DIRTYBOMB_PROTOCOL_SERVER,		/* id */
+    "DIRTYBOMB",					/* type_prefix */
+    "dirtybomb",					/* type_string */
+    "-dirtybomb",					/* type_option */
+    "DirtyBomb",					/* game_name */
+    0,								/* master */
+    DIRTYBOMB_DEFAULT_PORT,			/* default_port */
+    0,								/* port_offset */
+    0,								/* flags */
+    "gamerules",					/* game_rule */
+    "DIRYTBOMBPROTOCOL",			/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_dirtybomb_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_dirtybomb_packet,		/* packet_func */
+},
+{
+    /* STARMADE PROTOCOL */
+    STARMADE_PROTOCOL_SERVER,		/* id */
+    "STARMADE",						/* type_prefix */
+    "starmade",						/* type_string */
+    "-starmade",					/* type_option */
+    "StarMade",						/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT,					/* flags */
+    "N/A",							/* game_rule */
+    "STARMADEPROTOCOL",				/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    display_starmade_player_info,	/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    raw_display_starmade_player_info,	/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_starmade_player_info,	/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_starmade_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_starmade_packet,		/* packet_func */
+},
+{
+    /* FARMSIM PROTOCOL */
+    FARMSIM_PROTOCOL_SERVER,		/* id */
+    "FARMSIM",						/* type_prefix */
+    "farmsim",						/* type_string */
+    "-farmsim",						/* type_option */
+    "FarmingSimulator",				/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT|TF_QUERY_ARG_REQUIRED|TF_QUERY_ARG,	/* flags */
+    "gamerules",					/* game_rule */
+    "FARMSIMPROTOCOL",				/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_farmsim_request_packet,	/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_farmsim_packet,		/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,	/* id */

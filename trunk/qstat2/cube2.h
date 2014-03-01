@@ -1,5 +1,5 @@
 /*
- * qstat 2.12
+ * qstat 2.14
  * by Steve Jankowski
  *
  * Cube 2 / Sauerbraten protocol

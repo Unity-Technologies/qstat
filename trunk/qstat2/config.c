@@ -1,5 +1,5 @@
 /*
- * qstat 2.6
+ * qstat 2.14
  * by Steve Jankowski
  * steve@qstat.org
  * http://www.qstat.org

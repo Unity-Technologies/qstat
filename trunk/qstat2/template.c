@@ -1,5 +1,5 @@
 /*
- * qstat 2.6
+ * qstat 2.14
  * by Steve Jankowski
  * steve@qstat.org
  * http://www.qstat.org
@@ -31,6 +31,7 @@
 
 
 #include "qstat.h"
+#include "xform.h"
 
 #ifdef _WIN32
 #define strcasecmp	stricmp
@@ -61,8 +62,8 @@ extern int num_servers_timed_out;
 extern int num_servers_down;
 extern int num_players_total;
 extern int max_players_total;
-extern int html_names;
-extern int hex_player_names;
+extern int xform_html_names;
+extern int xform_hex_player_names;
 extern FILE *OF;		/* output file */
 
 static char *server_template;
@@ -715,13 +716,13 @@ display_player_var( struct player *player, int var, struct qserver *server)
 	fputs( xform_name( player->name, server), OF);
 	break;
     case V_HTMLPLAYERNAME:  {
-	int save_html_names= html_names;
-	int save_hex_player_names= hex_player_names;
-	html_names= 1;
-	hex_player_names= 0;
+	int save_html_names= xform_html_names;
+	int save_hex_player_names= xform_hex_player_names;
+	xform_html_names= 1;
+	xform_hex_player_names= 0;
 	fputs( xform_name( player->name, server), OF);
-	html_names= save_html_names;
-	hex_player_names= save_hex_player_names;
+	xform_html_names= save_html_names;
+	xform_hex_player_names= save_hex_player_names;
 	}
 	break;
     case V_TRIBETAG:
@@ -837,8 +838,8 @@ display_generic_var( int var)
 	break;
     case V_HTML:
 	html_mode^= 1;
-	if ( html_mode && html_names == -1)
-	    html_names= 1;
+	if ( html_mode && xform_html_names == -1)
+	    xform_html_names= 1;
 	break;
     case V_CLEARNEWLINES:
 	clear_newlines_mode^= 1;

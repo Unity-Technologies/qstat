@@ -1,5 +1,5 @@
 /*
- * qstat 2.4
+ * qstat 2.14
  * by Steve Jankowski
  * steve@activesw.com
  * http://www.activesw.com/people/steve/qstat.html
@@ -23,6 +23,7 @@
 #include <errno.h>
 
 #include "qstat.h"
+#include "debug.h"
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -57,7 +58,6 @@ static int n_entry;
 static int max_entry;
 static char *last_filename;
 static int n_changes;
-static int debug;
 
 static void write_file(FILE *file);
 static cache_entry * init_entry( unsigned long ipaddr, char *hostname,
@@ -81,7 +81,7 @@ hcache_open( char *filename, int update)
     file= fopen( filename, update?"r+":"r");
     if ( file == NULL)  {
 	if ( errno == ENOENT)  {
-	    fprintf( stderr, "Creating new host cache \"%s\"\n", filename);
+		debug(2, "Creating new host cache \"%s\"\n", filename);
 	    last_filename= filename;
 	    return 0;
 	}
@@ -362,7 +362,7 @@ hcache_lookup_hostname( char *hostname)
 {
     cache_entry *entry;
     int e, h;
-if ( debug) printf( "looking up %s\n", hostname);
+	debug(1, "looking up %s\n", hostname);
     for ( e= 0; e < n_entry; e++)  {
 	for ( h= 0; h < 5; h++)  {
 	    if ( hcache[e].hostname[h] &&
@@ -372,13 +372,15 @@ if ( debug) printf( "looking up %s\n", hostname);
     }
     entry= init_entry( 0, hostname, NULL);
     if ( entry->ipaddr == 0)  {
-if ( debug) printf( "validating %s\n", hostname);
+	debug(2, "validating %s\n", hostname);
 	entry= validate_entry( entry);
 	n_changes++;
     }
-if ( debug) printf( "returning %lx\n", entry->ipaddr);
-    if ( entry != NULL && entry->ipaddr)
+    if ( entry != NULL && entry->ipaddr) {
+	debug(2, "returning %lx\n", entry->ipaddr);
 	return entry->ipaddr;
+    }
+	
     return INADDR_NONE;
 }
 
@@ -391,7 +393,7 @@ hcache_lookup_ipaddr( unsigned long ipaddr)
 	if ( hcache[e].ipaddr == ipaddr)
 	    return hcache[e].hostname[0];
     entry= init_entry( ipaddr, 0, NULL);
-if ( debug) printf( "validating %lx\n", ipaddr);
+	debug(1, "validating %lx\n", ipaddr);
     validate_entry( entry);
     n_changes++;
     return entry ? entry->hostname[0] : NULL;
