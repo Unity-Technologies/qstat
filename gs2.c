@@ -1,5 +1,5 @@
 /*
- * qstat 2.8
+ * qstat 2.14
  * by Steve Jankowski
  *
  * New Gamespy v2 query protocol

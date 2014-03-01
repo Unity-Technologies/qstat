@@ -1,5 +1,5 @@
 /*
- * qstat 2.8
+ * qstat 2.14
  * by Steve Jankowski
  *
  * Teamspeak 3 query protocol
@@ -23,6 +23,7 @@
 
 #include "debug.h"
 #include "qstat.h"
+#include "utils.h"
 #include "packet_manip.h"
 
 char *decode_ts3_val( char *val )
@@ -39,23 +40,6 @@ char *decode_ts3_val( char *val )
 	val = str_replace( val, "\\t", "\011" );
 
 	return str_replace( val, "\\v", "\013" );
-}
-
-// NOTE: replace must be smaller or equal in size to find
-char *str_replace( char *source, char *find, char *replace )
-{
-	char *s = strstr( source, find );
-	int rlen = strlen( replace );
-	int flen = strlen( find );
-	while( NULL != s )
-	{
-		strncpy( s, replace, rlen );
-		strcpy( s + rlen, s + flen );
-		s += rlen;
-		s = strstr( s, find );
-	}
-
-	return source;
 }
 
 int all_ts3_servers( struct qserver *server )
@@ -187,6 +171,7 @@ int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
 	if ( 0 == strncmp( "TS3", s, 3 ) )
 	{
 		// Challenge
+		server->master_pkt_len = 3;
 		return 1;
 	}
 
@@ -198,6 +183,7 @@ int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
 			// end cmd response
 			if ( 0 == strncmp( "error id=0", s, 9 ) )
 			{
+				server->master_pkt_len = s - rawpkt + 9;
 				return 1;
 			}
 			else
@@ -248,7 +234,32 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 			server->n_requests++;
 		}
 
-		valid_response = valid_ts3_response( server, rawpkt, pktlen );
+		if ( server->n_servers >= server->challenge )
+		{
+			// response fragment recieved
+			int pkt_id;
+			int pkt_max;
+
+			// We're expecting more to come
+			debug( 5, "fragment recieved..." );
+			pkt_id = packet_count( server );
+			pkt_max = pkt_id + 1;
+			rawpkt[pktlen-1] = last_char; // restore the last character
+			if ( ! add_packet( server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1 ) )
+			{
+				// fatal error e.g. out of memory
+				return MEM_ERROR;
+			}
+
+			// combine_packets will call us recursively
+			return combine_packets( server );
+		}
+	}
+	else
+	{
+		valid_response = valid_ts3_response( server, rawpkt + server->master_pkt_len, pktlen - server->master_pkt_len );
+
+		debug(2, "combined packet: valid_response: %d, challenge: %ld, n_servers: %d, offset: %d", valid_response, server->challenge, server->n_servers, server->master_pkt_len );
 
 		if ( 0 > valid_response )
 		{
@@ -256,10 +267,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 			return valid_response;
 		}
 
-		// only update on the original packed not on a combined call
 		server->challenge += valid_response;
-
-		debug( 3, "new packet: valid_response = %d, challenge = %ld, n_servers = %d", valid_response, server->challenge, server->n_servers );
 
 		if ( valid_response )
 		{
@@ -273,31 +281,10 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 			}
 		}
 
-		if ( server->n_servers >= server->challenge )
-		{
-			// response fragment recieved
-			int pkt_id;
-			int pkt_max;
-
-			// We're expecting more to come
-			debug( 5, "fragment recieved..." );
-			pkt_id = packet_count( server );
-			pkt_max = ( 0 == pkt_id ) ? 2 : pkt_id + 1;
-			rawpkt[pktlen-1] = last_char; // restore the last character
-			if ( ! add_packet( server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1 ) )
-			{
-				// fatal error e.g. out of memory
-				return MEM_ERROR;
-			}
-
-			// combine_packets will call us recursively
-			return combine_packets( server );
+		if ( server->n_servers > server->challenge ) {
+			// recursive call which is still incomplete
+			return INPROGRESS;
 		}
-	}
-	else if ( server->n_servers > server->challenge )
-	{
-		// recursive call which is still incomplete
-		return INPROGRESS;
 	}
 
 	// Correct ping
@@ -311,7 +298,7 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 	// NOTE: id=XXX and msg=XXX will be processed by the mod following the one they where the response of
 	while ( NULL != s )
 	{
-		debug( 2, "LINE: %d, %s\n", mode, s );
+		debug( 4, "LINE: %d, %s\n", mode, s );
 		switch ( mode )
 		{
 		case 0:

@@ -1,5 +1,5 @@
 /*
- * qstat 2.8
+ * qstat 2.14
  * by Steve Jankowski
  *
  * Packet module
@@ -50,7 +50,7 @@ int combine_packets( struct qserver *server )
 		{
 			// we only deal up to MAX_FAGMENTS packet fragment
 			fprintf( stderr, "Too many fragments %d for packetid %d max %d\n", sdata->pkt_index, sdata->pkt_id, MAX_FAGMENTS );
-			continue;
+			return PKT_ERROR;
 		}
 
 		for ( i = 0; i < n_ids; i++ )
@@ -69,7 +69,7 @@ int combine_packets( struct qserver *server )
 			{
 				// we only deal up to MAX_PACKETS packetids
 				fprintf( stderr, "Too many distinct packetids %d max %d\n", n_ids, MAX_PACKETS );
-				continue;
+				return PKT_ERROR;
 			}
 			ids[n_ids]= sdata->pkt_id;
 			maxes[n_ids]= sdata->pkt_max;
@@ -99,7 +99,9 @@ int combine_packets( struct qserver *server )
 	for ( pkt_id_index = 0; pkt_id_index < n_ids; pkt_id_index++ )
 	{
 		char *combined;
-		int datalen= 0;
+		int datalen = 0;
+		int combinedlen;
+
 		if ( counts[pkt_id_index] != maxes[pkt_id_index] )
 		{
 			// we dont have all the expected packets yet
@@ -108,7 +110,8 @@ int combine_packets( struct qserver *server )
 		}
 
 		// combine all the segments
-		combined = (char*)malloc( lengths[pkt_id_index] );
+		combinedlen = lengths[pkt_id_index];
+		combined = (char*)malloc(combinedlen);
 		for ( p = 0; p < counts[pkt_id_index]; p++ )
 		{
 			if ( segments[pkt_id_index][p] == NULL )
@@ -118,6 +121,14 @@ int combine_packets( struct qserver *server )
 				pkt_id_index = -1;
 				free( combined );
 				return INPROGRESS;
+			}
+			if (datalen + segments[pkt_id_index][p]->datalen > combinedlen) {
+				fprintf(stderr, "Data length %d > combined length %d\n",
+					datalen + segments[pkt_id_index][p]->datalen, combinedlen);
+				// reset to be unusable
+				pkt_id_index = -1;
+				free(combined);
+				return MEM_ERROR;
 			}
 			memcpy( combined + datalen, segments[pkt_id_index][p]->data, segments[pkt_id_index][p]->datalen );
 			datalen += segments[pkt_id_index][p]->datalen;
@@ -160,14 +171,20 @@ int add_packet( struct qserver *server, unsigned int pkt_id, int pkt_index, int 
 {
 	SavedData *sdata;
 
+	// safety net for bad data
+	if (datalen == 0) {
+		debug(1, "Empty packet received!");
+		return 0;
+	}
+
 	if ( server->saved_data.data == NULL )
 	{
-		debug( 4, "first packet" );
+		debug( 4, "first packet: %d id, %d index, %d max, %d calc_max", pkt_id, pkt_index, pkt_max, calc_max );
 		sdata = &server->saved_data;
 	}
 	else
 	{
-		debug( 4, "another packet" );
+		debug( 4, "another packet: %d id, %d index, %d max, %d calc_max", pkt_id, pkt_index, pkt_max, calc_max );
 		if ( calc_max )
 		{
 			// check we have the correct max
