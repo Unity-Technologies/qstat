@@ -73,6 +73,11 @@ query_status_t send_a2s_rule_request_packet(struct qserver *server)
 		return DONE_FORCE;
 	}
 
+	if (server->retry1 < 0) {
+		debug(3, "too may retries");
+		return DONE_FORCE;
+	}
+
 	while( 1 )
 	{
 		if(!status->have_challenge)
@@ -255,6 +260,7 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 		}
 		status->have_challenge = 1;
 		debug(3, "challenge %x", status->challenge);
+		send_a2s_rule_request_packet(server);
 		break;
 
 	case A2S_INFORESPONSE_HL1:
@@ -494,6 +500,7 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 		if ( 1 <= pktlen )
 		{
 			unsigned char edf = *pkt;
+			debug(1, "EDF: 0x%02hhx", edf);
 			pkt++;
 			pktlen--;
 			if ( edf & 0x80 )
@@ -508,6 +515,15 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 				change_server_port( server, gameport, 0 );
 				pkt += 2;
 				pktlen -= 2;
+			}
+
+			if (edf & 0x10) {
+				// SteamId (long long)
+				if (pktlen <8 ) {
+					goto out_too_short;
+				}
+				pkt += 8;
+				pktlen -= 8;
 			}
 
 			if ( edf & 0x40 )
@@ -531,12 +547,35 @@ query_status_t deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pk
 
 			if ( edf & 0x20 )
 			{
-				// game tag
+				// Keywords
 				str = memchr(pkt, '\0', pktlen);
 				if(!str) goto out_too_short;
-				add_rule(server, "game_tag", pkt, 0);
+				add_rule(server, "game_tags", pkt, 0);
+				if (strncmp(pkt, "rust", 4) == 0) {
+					// Rust is comma seperated tags
+					char *keyword = strtok(pkt, ",");
+					while (keyword != NULL) {
+						if (strncmp(keyword, "cp", 2) == 0) {
+							// current players override
+							server->num_players = atoi(keyword+2);
+						} else if (strncmp(keyword, "mp", 2) == 0) {
+							// max players override
+							server->max_players = atoi(keyword+2);
+						}
+						keyword = strtok(NULL, ",");
+					}
+				}
 				pktlen -= str-pkt+1;
 				pkt += str-pkt+1;
+			}
+	
+			if (edf & 0x01) {
+				// GameId (long long)
+				if (pktlen <8 ) {
+					goto out_too_short;
+				}
+				pkt += 8;
+				pktlen -= 8;
 			}
 		}
 		
