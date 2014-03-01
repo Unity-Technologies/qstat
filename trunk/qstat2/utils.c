@@ -68,3 +68,53 @@ qstat_strnstr(const char *s, const char *find, size_t slen)
 }
 
 #endif /* HAVE_STRNSTR */
+
+#if !HAVE_ERR_H
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+void
+err(int eval, const char *fmt, ...) 
+{ 
+	va_list list; 
+
+	va_start(list, fmt); 
+	warn(fmt, list); 
+	va_end(list); 
+
+	exit(eval); 
+}
+
+void
+warn(const char *fmt, ...) 
+{ 
+	va_list list; 
+
+	va_start(list, fmt); 
+	if (fmt)
+		fprintf(stderr, fmt, list); 
+	fprintf(stderr, "%s\n", strerror(errno)); 
+	va_end(list); 
+} 
+#endif /* HAVE_ERR_H */
+
+#include <string.h>
+
+// NOTE: replace must be smaller or equal in size to find
+char *str_replace(char *source, char *find, char *replace)
+{
+    char *s = strstr(source, find);
+    int rlen = strlen(replace);
+    int flen = strlen(find);
+
+    while(NULL != s) {
+		strncpy(s, replace, rlen);
+		strcpy(s + rlen, s + flen);
+		s += rlen;
+		s = strstr(s, find);
+   	}
+
+	return source;
+}
