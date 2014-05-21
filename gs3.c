@@ -163,7 +163,7 @@ query_status_t deal_with_gs3_packet( struct qserver *server, char *rawpkt, int p
 		{
 			// Guess that we have more to come
 			pkt_max++;
-			debug( 2, "more to come 0x%hxx 0x%hhx 0x%hhx", rawpkt[pktlen-3], rawpkt[pktlen-2], rawpkt[pktlen-1] );
+			debug( 2, "more to come 0x%hhx 0x%hhx 0x%hhx", rawpkt[pktlen-3], rawpkt[pktlen-2], rawpkt[pktlen-1] );
 		}
 
 		debug( 2, "pkt_max %d", pkt_max );
