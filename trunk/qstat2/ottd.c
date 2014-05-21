@@ -136,7 +136,7 @@ query_status_t deal_with_ottd_packet(struct qserver *server, char *rawpkt, int p
 	ver = ptr[3];
 	ptr += 4;
 
-	debug(3, "len %hu type %hhu ver %hhu", swap_short_from_little(rawpkt), type, ver);
+	debug(3, "len %hu type %hhu ver %u", swap_short_from_little(rawpkt), type, ver);
 
 	FAIL_IF(ver != 4 && ver != 5, "only version 4 and 5 servers are supported");
 

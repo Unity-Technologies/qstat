@@ -355,7 +355,7 @@ query_status_t deal_with_fl_packet(struct qserver *server, char *rawpkt, int pkt
 
 		// RoundSeconds
 		tmp_short = ((unsigned short)pkt[0] <<8 ) | ((unsigned short)pkt[1]);
-		sprintf( buf, "%hhu", tmp_short );
+		sprintf( buf, "%hu", tmp_short );
 		add_rule(server, "roundseconds", buf , 0);
 		pkt += 2;
 

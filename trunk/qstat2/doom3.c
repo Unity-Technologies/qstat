@@ -553,12 +553,12 @@ x
 
 			if ( 0xa0011 <= protocolver ) // clan tag since 10.17
 			{
-				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu, clan %s",
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hu, clan %s",
 					num_players, player->name, ping, rate, player_id, player->type_flag, player->tribe_tag);
 			}
 			else
 			{
-				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hhu",
+				debug( 2, "Player[%d] = %s, ping %hu, rate %u, id %hhu, bot %hu",
 					num_players, player->name, ping, rate, player_id, player->type_flag );
 			}
 			break;

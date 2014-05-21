@@ -371,6 +371,15 @@ unpack_msgpack(struct qserver *server, unsigned char *s, unsigned char *l)
 
 			server->game = str_val;
 			add_rule(server, "gametype", str_val, NO_FLAGS);
+
+		} else if (0 == strcmp(var, "SFT")) {
+			// Current Frametime in ms
+			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0))
+				return 0;
+
+		} else {
+			debug(4, "Unknown setting '%s'\n", var);
+			s++;
 		}
 
 		free(var);

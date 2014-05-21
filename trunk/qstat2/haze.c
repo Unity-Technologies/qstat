@@ -129,14 +129,9 @@ query_status_t deal_with_haze_packet( struct qserver *server, char *rawpkt, int 
 	ptr++;
 
 	// Query Length
-	//len = (unsigned short)ptr[0] | ((unsigned short)ptr[1] << 8);
-	//len = swap_short_from_little( ptr );
-	debug( 1, "%04hx, %04hx", (unsigned short)ptr[0], ((unsigned short)ptr[1] << 8) );
-	//len = (unsigned short)(unsigned short)ptr[0] | ((unsigned short)ptr[1] << 8);
+	debug( 1, "%04hx, %04hx", (unsigned short)ptr[0], (unsigned short)(ptr[1] << 8));
 	// TODO: fix this crap
 	memcpy( &len, ptr+1, 1 );
-	//memcpy( &len+1, ptr, 1 );
-	//memcpy( &len, ptr, 2 );
 	ptr += 2;
 
 	debug( 1, "pkt_index = %d, pkt_max = %d, len = %d", pkt_index, pkt_max, len );
