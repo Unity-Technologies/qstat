@@ -1,3 +1,9 @@
+Qstat version 2.15
+Summary of New Features
+-----------------------
+New protocols:
+	KSP [-ksp]
+
 Qstat version 2.14
 
 Summary of New Features

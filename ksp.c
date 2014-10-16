@@ -2,8 +2,8 @@
  * qstat
  * by Steve Jankowski
  *
- * Crysis query protocol
- * Copyright 2012 Steven Hartland
+ * KSP query protocol
+ * Copyright 2014 Steven Hartland
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  *
@@ -27,25 +27,24 @@
 #include "md5.h"
 #include "packet_manip.h"
 
-char *decode_farmsim_val(char *val)
+char *decode_ksp_val(char *val)
 {
 	// Very basic html conversion
 	val = str_replace(val, "&quot;", "\"");
 	return str_replace(val, "&amp;", "&");
 }
 
-query_status_t send_farmsim_request_packet(struct qserver *server)
+query_status_t send_ksp_request_packet(struct qserver *server)
 {
-	char buf[256], *code;
+	char buf[256];
 
 	server->saved_data.pkt_max = -1;
-	code = get_param_value(server, "code", "");
-	sprintf(buf, "GET /feed/dedicated-server-stats.xml?code=%s HTTP/1.1\015\012User-Agent: qstat\015\012\015\012", code);
+	sprintf(buf, "GET / HTTP/1.1\015\012User-Agent: qstat\015\012Host: %s:%d\015\012\015\012", server->host_name, server->port);
 
 	return send_packet(server, buf, strlen(buf));
 }
 
-query_status_t valid_farmsim_response(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t valid_ksp_response(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s;
 	int len;
@@ -89,7 +88,7 @@ query_status_t valid_farmsim_response(struct qserver *server, char *rawpkt, int 
 	return DONE_FORCE;
 }
 
-char *farmsim_xml_attrib(char *line, char *name)
+char *ksp_json_attrib(char *line, char *name)
 {
 	char *q, *p, *val;
 
@@ -99,14 +98,23 @@ char *farmsim_xml_attrib(char *line, char *name)
 	}
 
 	p += strlen(name);
-	if (strlen(p) < 4) {
+	if (strlen(p) < 3) {
 		return NULL;
 	}
 	p += 2;
-
-	q = strchr(p, '"');
-	if (q == NULL) {
-		return NULL;
+	if (*p == '"') {
+		// String
+		p++;
+		q = strchr(p, '"');
+		if (q == NULL) {
+			return NULL;
+		}
+	} else {
+		// Integer, bool etc
+		q = strchr(p, ',');
+		if (q == NULL) {
+			return NULL;
+		}
 	}
 	*q = '\0';
 	
@@ -117,14 +125,14 @@ char *farmsim_xml_attrib(char *line, char *name)
 	return val;
 }
 
-query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *val, *line;
 	query_status_t state = INPROGRESS;
 	debug(2, "processing...");
 
 	if (!server->combined) {
-		state = valid_farmsim_response(server, rawpkt, pktlen);
+		state = valid_ksp_response(server, rawpkt, pktlen);
 		server->retry1 = n_retries;
 		if (server->n_requests == 0) {
 			server->ping_total = time_delta(&packet_recv_time, &server->packet_time1);
@@ -157,7 +165,7 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 	}
 
 	if (state != DONE_FORCE) {
-		state = valid_farmsim_response(server, rawpkt, pktlen);
+		state = valid_ksp_response(server, rawpkt, pktlen);
 		switch (state) {
 		case DONE_FORCE:
 			break; // actually process
@@ -175,26 +183,32 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 	s = rawpkt;
 	// Ensure we're null terminated (will only loose the last \x0a)
 	s[pktlen - 1] = '\0';
-	s = decode_farmsim_val(s);
+	s = decode_ksp_val(s);
 	line = strtok(s, "\012");
 
 	// NOTE: id=XXX and msg=XXX will be processed by the mod following the one they where the response of
 	while (line != NULL) {
 		debug(4, "LINE: %s\n", line);
-		if (strstr(line, "<Server") != NULL) {
-			debug(1, "<Server...");
-			// <Server
-			// game="Farming Simulator 2013"
-			// version="2.0.0.5 Public Beta 3"
-			// server="International"
-			// name="Multiplay :: liv3dz0r"
-			// mapName="Hagenstedt"
-			// money="5993"
-			// dayTime="24687375"
-			// mapOverviewFilename="data/maps/map01/pda_map.png">
+		if (strstr(line, "{") != NULL) {
+			debug(1, "{...");
+			// {
+			// "cheats":true,
+			// "game_mode":"SANDBOX",
+			// "lastPlayerActivity":81403,
+			// "max_players":12,
+			// "modControlSha":"e46569487926a3273f58e06a080b0747b0ae702ec1877906511fe2c29816528b",
+			// "mod_control":1,
+			// "player_count":0,
+			// "players":"",
+			// "port":6752,
+			// "protocol_version":25,
+			// "server_name":"Multiplay :: Online - Clanserver",
+			// "universeSize":96576,
+			// "version":"v0.1.5.6"
+			// }
 
 			// Server Name
-			val = farmsim_xml_attrib(line, "name");
+			val = ksp_json_attrib(line, "server_name");
 			if (val != NULL) {
 				server->server_name = val;
 			} else {
@@ -202,26 +216,24 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 			}
 
 			// Map Name
-			val = farmsim_xml_attrib(line, "mapName");
+			val = ksp_json_attrib(line, "mapName");
 			if (val != NULL) {
 				server->map_name = val;
 			} else {
 				server->map_name = strdup("Default");
 			}
-		} else if (strstr(line, "<Slots") != NULL) {
-			// <Slots capacity="16" numUsed="1">
-			debug(1, "<Slots...");
 
 			// Max Players
-			val = farmsim_xml_attrib(line, "capacity");
+			val = ksp_json_attrib(line, "max_players");
 			if (val != NULL) {
 				server->max_players = atoi(val);
 				free(val);
 			} else {
-				server->max_players = get_param_ui_value(server, "maxplayers", 1);
+				server->max_players = get_param_ui_value(server, "max_players", 1);
 			}
+
 			// Num Players
-			val = farmsim_xml_attrib(line, "numUsed");
+			val = ksp_json_attrib(line, "player_count");
 			if (val != NULL) {
 				server->num_players = atoi(val);
 				free(val);

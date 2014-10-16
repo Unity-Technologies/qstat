@@ -37,7 +37,8 @@ qstat_SOURCES = \
 	crysis.c crysis.h \
 	dirtybomb.c dirtybomb.h \
 	starmade.c starmade.h \
-	farmsim.c farmsim.h
+	farmsim.c farmsim.h \
+	ksp.c ksp.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
