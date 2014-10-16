@@ -1,5 +1,5 @@
 /*
- * qstat 2.14
+ * qstat
  * by Steve Jankowski
  *
  * Frontlines-Fuel of War protocol

@@ -1,5 +1,5 @@
 /*
- * qstat 2.14
+ * qstat
  * by Steve Jankowski
  *
  * Doom3 / Quake4 protocol

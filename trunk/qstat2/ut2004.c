@@ -1,5 +1,5 @@
 /*
- * qstat 2.14
+ * qstat
  * by Steve Jankowski
  *
  * UT2004 master query functions

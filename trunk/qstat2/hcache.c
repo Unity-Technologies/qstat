@@ -1,5 +1,5 @@
 /*
- * qstat 2.14
+ * qstat
  * by Steve Jankowski
  * steve@activesw.com
  * http://www.activesw.com/people/steve/qstat.html

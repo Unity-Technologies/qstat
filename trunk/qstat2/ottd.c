@@ -1,5 +1,5 @@
 /*
- * qstat 2.14
+ * qstat
  *
  * opentTTD protocol
  * Copyright 2007 Ludwig Nussel

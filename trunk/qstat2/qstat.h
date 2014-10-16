@@ -14,7 +14,7 @@
     #include "gnuconfig.h"
 #else
     #ifndef VERSION
-        #define VERSION "2.14"
+        #define VERSION "2.15"
     #endif
 #endif
 
@@ -108,6 +108,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "dirtybomb.h"
 #include "starmade.h"
 #include "farmsim.h"
+#include "ksp.h"
 
 /*
  * Various magic numbers.
@@ -168,6 +169,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define DIRTYBOMB_DEFAULT_PORT 7877
 #define STARMADE_DEFAULT_PORT 4242
 #define FARMSIM_DEFAULT_PORT 10828
+#define KSP_DEFAULT_PORT 6702
 
 
 #define Q_UNKNOWN_TYPE 0
@@ -250,8 +252,9 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #define DIRTYBOMB_PROTOCOL_SERVER 74
 #define STARMADE_PROTOCOL_SERVER 75
 #define FARMSIM_PROTOCOL_SERVER 76
+#define KSP_PROTOCOL_SERVER 77
 
-#define LAST_BUILTIN_SERVER  76
+#define LAST_BUILTIN_SERVER  77
 
 #define TF_SINGLE_QUERY		(1<<1)
 #define TF_OUTFILE		(1<<2)
@@ -3439,6 +3442,40 @@ server_type builtin_types[] = {
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_farmsim_packet,		/* packet_func */
+},
+{
+    /* KSP PROTOCOL */
+    KSP_PROTOCOL_SERVER,			/* id */
+    "KSP",							/* type_prefix */
+    "ksp",							/* type_string */
+    "-ksp",							/* type_option */
+    "Kerbal Space Program",			/* game_name */
+    0,								/* master */
+    0,								/* default_port */
+    0,								/* port_offset */
+    TF_TCP_CONNECT,					/* flags */
+    "gamerules",					/* game_rule */
+    "KSPPROTOCOL",					/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
+    NULL,							/* player_packet */
+    0,								/* player_len */
+    NULL,							/* rule_packet */
+    0,								/* rule_len */
+    NULL,							/* master_packet */
+    0,								/* master_len */
+    NULL,							/* master_protocol */
+    NULL,							/* master_query */
+    NULL,							/* display_player_func */
+    display_server_rules,			/* display_rule_func */
+    NULL,							/* display_raw_player_func */
+    raw_display_server_rules,		/* display_raw_rule_func */
+    xml_display_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,		/* display_xml_rule_func */
+    send_ksp_request_packet,		/* status_query_func */
+    NULL,							/* rule_query_func */
+    NULL,							/* player_query_func */
+    deal_with_ksp_packet,			/* packet_func */
 },
 {
     Q_UNKNOWN_TYPE,	/* id */
