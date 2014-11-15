@@ -591,7 +591,7 @@ char q2_masterquery[] = { 'q', 'u', 'e', 'r', 'y', '\n', '\0' };
 /* QUAKE 3 MASTER */
 char q3_master_query_template[] = "\377\377\377\377getservers %s %s";
 char q3_master_default_protocol[] = "68";
-char q3_master_default_query[] = "empty full demo\n";
+char q3_master_default_query[] = "empty full\n";
 
 /* RETURN TO CASTLE WOLFENSTEIN */
 char rtcw_master_default_protocol[] = "60";
