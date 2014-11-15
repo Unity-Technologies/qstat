@@ -215,9 +215,9 @@ unpack_msgpack_raw_len(struct qserver *server, char **valp, unsigned char **data
 
 	debug(4, "raw_len: 0x%lu\n", (unsigned long)len);
 
-    if (*datap + len > last) {
+	if (*datap + len > last) {
 		malformed_packet(server, "packet too small");
-        return 0;
+		return 0;
 	}
 
 	if (NULL == (data = malloc(len + 1))) {
@@ -239,9 +239,9 @@ unpack_msgpack_raw(struct qserver *server, char **valp, unsigned char **datap, u
 {
 	unsigned char type, len;
 
-    if (*datap + 1 > last) {
+	if (*datap + 1 > last) {
 		malformed_packet(server, "packet too small");
-        return 0;
+		return 0;
 	}
 
 	type = (**datap & 0xa0);
@@ -259,9 +259,10 @@ int
 unpack_msgpack_raw16(struct qserver *server, char **valp, unsigned char **datap, unsigned char *last)
 {
 	uint16_t len;
-    if (*datap + 3 > last) {
+
+	if (*datap + 3 > last) {
 		malformed_packet(server, "packet too small");
-        return 0;
+		return 0;
 	}
 	(*datap)++;
 
@@ -276,9 +277,9 @@ unpack_msgpack_raw32(struct qserver *server, char **valp, unsigned char **datap,
 {
 	uint32_t len;
 
-    if (*datap + 5 > last) {
+	if (*datap + 5 > last) {
 		malformed_packet(server, "packet too small");
-        return 0;
+		return 0;
 	}
 	(*datap)++;
 
