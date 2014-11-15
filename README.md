@@ -28,6 +28,7 @@ New game types can be defined as a variation on an existing game type. Most new 
 
 qstat comes with a default configuration file called 'qstat.cfg'. If this file is found in the directory where qstat is run, the file will be loaded. Configuration files can also be specified with the QSTAT_CONFIG environment variable and the -cfg command-line option. See Appendix B for a description of the configuration file format.
 
-## History
-The old sourceforge repo, which is now unmaintained can be found here:
-http://sourceforge.net/projects/qstat/
+## Migration to Github
+I've been the only active maintainer for the old [qstat sourceforge repo](http://sourceforge.net/projects/qstat/) for a while now. Unfortunately I don't have full admin their and have been unable to contact the original qstat project creator [Steve Jankowski](https://sourceforge.net/u/stevejankowski/profile/) for some time, so I've decided to move the project to github.
+
+Hence for all intensive purposes https://github.com/multiplay/qstat is the new official home of the qstat repro.
