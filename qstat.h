@@ -870,10 +870,6 @@ char ottd_serverdetails[] = {
 	0x02,		// packet type
 };
 
-/* Teeworlds */
-
-char tee_serverstatus[14] = { '\x20', '\0', '\0', '\0', '\0', '\0', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', 'f' };
-
 /* Cube2 */
 
 char cube2_serverstatus[3] = {'\x80', '\x10', '\x27'};
@@ -3072,18 +3068,18 @@ server_type builtin_types[] = {
 {
     /* Teeworlds */
     TEE_SERVER,						/* id */
-    "TEE",							/* type_prefix */
-    "tee",							/* type_string */
-    "-tee",							/* type_option */
-    "Teeworlds",		/* game_name */
+    "TEES",							/* type_prefix */
+    "tees",							/* type_string */
+    "-tees",						/* type_option */
+    "Teeworlds",					/* game_name */
     0,								/* master */
     35515,							/* default_port */
     0,								/* port_offset */
-    0,				/* flags */
-    "gametype",							/* game_rule */
-    "TEE",							/* template_var */
-    tee_serverstatus,						/* status_packet */
-    sizeof(tee_serverstatus),					/* status_len */
+    0,								/* flags */
+    "gametype",						/* game_rule */
+    "TEEWORLDS",					/* template_var */
+    NULL,							/* status_packet */
+    0,								/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -3092,16 +3088,16 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_tee_player_info,			/* display_player_func */
+    display_tee_player_info,		/* display_player_func */
     display_server_rules,			/* display_rule_func */
-    raw_display_tee_player_info,		/* display_raw_player_func */
+    raw_display_tee_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_tee_player_info,		/* display_xml_player_func */
+    xml_display_tee_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
-    send_tee_request_packet,			/* status_query_func */
+    send_teeserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
-    deal_with_tee_packet,			/* packet_func */
+    deal_with_teeserver_packet,		/* packet_func */
 },
 {
     /* TEAMSPEAK 3 PROTOCOL */
