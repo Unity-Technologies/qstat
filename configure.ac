@@ -21,6 +21,9 @@ case $host in
 	;;
 esac
 
+AC_CHECK_FUNCS([strndup], [HAVE_STRNDUP=yes], [HAVE_STRNDUP=no])
+AM_CONDITIONAL(NEED_STRNDUP, [test x$HAVE_STRNDUP = xno])
+
 dnl Check for strnstr including broken one on MacOSX 10.4 which crashes
 dnl
 AC_CACHE_CHECK(for strnstr, ac_cv_func_strnstr,

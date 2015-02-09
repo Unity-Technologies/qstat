@@ -1,0 +1,17 @@
+*.in
+aclocal.m4
+autom4te.cache
+compile
+config.guess
+config.sub
+config.log
+config.status
+configure
+depcomp
+install-sh
+missing
+.deps
+Makefile
+gnuconfig.h
+stamp-h1
+

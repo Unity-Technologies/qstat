@@ -67,7 +67,25 @@ qstat_strnstr(const char *s, const char *find, size_t slen)
 	return ((char *)s);
 }
 
-#endif /* HAVE_STRNSTR */
+#endif /* !HAVE_STRNSTR */
+
+#if !HAVE_STRNDUP
+
+#include <stdlib.h>
+#include <string.h>
+
+char *
+strndup(const char *string, size_t len)
+{
+	char *result;
+	result = (char*)malloc(len + 1);
+	memcpy(result, string, len);
+	result[len] = '\0';
+
+	return result;
+}
+
+#endif /* !HAVE_STRNDUP */
 
 #if !HAVE_ERR_H
 

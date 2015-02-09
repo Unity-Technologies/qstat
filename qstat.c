@@ -2630,7 +2630,6 @@ static int big_endian;
 unsigned int swap_long(void*);
 unsigned short swap_short(void*);
 float swap_float_from_little(void *f);
-char *strndup(const char *string, size_t len);
 #define FORCE 1
 
 /* Print an error message and the program usage notes
@@ -9751,7 +9750,6 @@ static const char GrPacketHead[] =
 {
 	'\xc0', '\xde', '\xf1', '\x11'
 };
-static const char PacketStart = '\x42';
 static char Dat2Reply1_2_10[] =
 {
 	'\xf4', '\x03', '\x14', '\x02', '\x0a', '\x41', '\x02', '\x0a', '\x41', '\x00', '\x00', '\x78', '\x30', '\x63'
@@ -12106,15 +12104,6 @@ query_status_t deal_with_gamespy_master_response(struct qserver *server, char *r
 
 /* Misc utility functions
  */
-
-char *strndup(const char *string, size_t len)
-{
-	char *result;
-	result = (char*)malloc(len + 1);
-	memcpy(result, string, len);
-	result[len] = '\0';
-	return result;
-}
 
 unsigned int swap_long(void *l)
 {

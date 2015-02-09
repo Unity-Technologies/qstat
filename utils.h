@@ -6,6 +6,7 @@
  */
 #ifndef QSTAT_UTILS_H
 #define QSTAT_UTILS_H
+#include "gnuconfig.h"
 
 // BSD has strnstr
 #if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__OpenBSD__)
@@ -24,6 +25,11 @@
 #include <string.h>
 char * qstat_strnstr(const char *s, const char *find, size_t slen);
 #define strnstr(s,find,slen) qstat_strnstr(s,find,slen)
+#endif
+
+#if !HAVE_STRNDUP
+#include <string.h>
+char *strndup(const char *string, size_t len);
 #endif
 
 #ifndef EX_OSERR
