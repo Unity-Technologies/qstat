@@ -418,6 +418,8 @@ void json_display_tm_player_info( struct qserver *server);
 void json_display_wic_player_info( struct qserver *server);
 void json_display_fl_player_info( struct qserver *server);
 void json_display_tee_player_info( struct qserver *server);
+void json_display_ventrilo_player_info( struct qserver *server);
+void json_display_starmade_player_info( struct qserver *server);
 char *json_escape( char*);
 
 query_status_t send_qserver_request_packet( struct qserver *server);
@@ -3546,6 +3548,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_dirtybomb_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3580,6 +3584,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_starmade_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_starmade_player_info,		/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_starmade_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3614,6 +3620,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_farmsim_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3648,6 +3656,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ksp_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
