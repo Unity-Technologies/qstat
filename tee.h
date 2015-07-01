@@ -15,5 +15,7 @@
 // Packet processing methods
 query_status_t send_teeserver_request_packet(struct qserver *server);
 query_status_t deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int pktlen);
+query_status_t send_teemaster_request_packet(struct qserver *server);
+query_status_t deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int pktlen);
 
 #endif
