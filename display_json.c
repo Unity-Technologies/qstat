@@ -1068,6 +1068,10 @@ char
 				*b++ = '\\';
 				*b++ = '"';
 				continue;
+			case '\\':
+				*b++ = '\\';
+				*b++ = '\\';
+				continue;
 			default:
 				break;
 		}
