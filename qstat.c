@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
@@ -2629,6 +2630,29 @@ unsigned short swap_short(void*);
 float swap_float_from_little(void *f);
 #define FORCE 1
 
+
+/* Print an argument definition
+ */
+
+void printf_opt(const char* opt, const char* desc_format, ... ) {
+	va_list args;
+	int i;
+
+	printf("    %s", opt);
+
+	for (i = strlen(opt); i < 20; i++)
+	{
+		printf(" ");
+	}
+	printf(" ");
+
+	va_start(args, desc_format);
+	vprintf(desc_format, args);
+	va_end(args);
+	printf("\n");
+}
+
+
 /* Print an error message and the program usage notes
  */
 
@@ -2643,9 +2667,16 @@ void usage(char *msg, char **argv, char *a1)
 		fprintf(stderr, msg, a1);
 	}
 
-	printf("Usage: %s [options ...]\n", argv[0]);
-	printf("\t[-default server-type] [-cfg file] [-f file] [host[:port]] ...\n");
-	printf("Where host is an IP address or host name\n");
+	printf("Usage: %s ", argv[0]);
+	printf("[options] [-default server-type] [-cfg file] [-f file] [host[:port]] ...\n");
+	printf("Where host is an IP address or host name\n\n");
+
+	printf("Configuration options:\n");
+	printf_opt("-cfg", "Read the extended types from given file not the default one");
+	printf_opt("-nocfg", "Ignore qstat configuration loaded from any default location. Must be the first option on the command-line.");
+	printf("\n");
+
+	printf("Game query options:\n");
 
 	sorted_types = (server_type **)malloc(sizeof(server_type*) * n_server_types);
 	type = &types[0];
@@ -2658,8 +2689,10 @@ void usage(char *msg, char **argv, char *a1)
 	for (i = 0; i < n_server_types; i++)
 	{
 		type = sorted_types[i];
-		printf("%s\t\tquery %s server\n", type->type_option, type->game_name);
+		printf_opt(type->type_option, "Query %s server", type->game_name);
 	}
+	printf_opt("-default", "Set default server type");
+	printf("\n");
 
 	printf("-default\tset default server type:");
 	for (i = 0; i < n_server_types; i++)
@@ -2667,70 +2700,92 @@ void usage(char *msg, char **argv, char *a1)
 		type = sorted_types[i];
 		printf(" %s", type->type_string);
 	}
+	printf("\n\n");
 
-	puts("");
-	printf("-nocfg\t\tIgnore qstat configuration loaded from any default location. Must be the first option on the command-line.\n");
-	printf("-cfg\t\tread the extended types from given file not the default one\n");
-	printf("-f\t\tread hosts from file\n");
-	printf("-R\t\tfetch and display server rules\n");
-	printf("-P\t\tfetch and display player info\n");
-	printf("-sort\t\tsort servers and/or players\n");
-	printf("-u\t\tonly display servers that are up\n");
-	printf("-nf\t\tdo not display full servers\n");
-	printf("-ne\t\tdo not display empty servers\n");
-	printf("-nh\t\tdo not display header line.\n");
-	printf("-cn\t\tdisplay color names instead of numbers\n");
-	printf("-ncn\t\tdisplay color numbers instead of names\n");
-	printf("-hc\t\tdisplay colors in #rrggbb format\n");
-	printf("-tc\t\tdisplay time in clock format (DhDDmDDs)\n");
-	printf("-tsw\t\tdisplay time in stop-watch format (DD:DD:DD)\n");
-	printf("-ts\t\tdisplay time in seconds\n");
-	printf("-pa\t\tdisplay player address\n");
-	printf("-hpn\t\tdisplay player names in hex\n");
-	printf("-hsn\t\tdisplay server names in hex\n");
-	printf("-nh\t\tdo not display header\n");
-	printf("-old\t\told style display\n");
-	printf("-progress\tdisplay progress meter (text only)\n");
-	printf("-retry\t\tnumber of retries, default is %d\n", DEFAULT_RETRIES);
-	printf("-interval\tinterval between retries, default is %.2f seconds\n", DEFAULT_RETRY_INTERVAL / 1000.0);
-	printf("-mi\t\tinterval between master server retries, default is %.2f seconds\n", (DEFAULT_RETRY_INTERVAL *4) / 1000.0);
-	printf("-timeout\ttotal time in seconds before giving up\n");
-	printf("-maxsim\t\tset maximum simultaneous queries\n");
-	printf("-sendinterval\t\tset time in ms between sending packets, default %u\n", sendinterval);
-	printf("-errors\t\tdisplay errors\n");
-	printf("-allowserverdups\t\tallow adding multiple servers with same ip:port (needed for ts2)\n");
-	printf("-of\t\toutput file\n");
-	printf("-af\t\tLike -of, but append to the file\n");
-	printf("-raw <delim>\toutput in raw format using <delim> as delimiter\n");
-	printf("-mdelim <delim>\tFor rules with multi values use <delim> as delimiter\n");
-	printf("-xml\t\toutput status data as an XML document\n");
-	printf("-json\t\toutput status data as an JSON document\n");
-	printf("-Th,-Ts,-Tpt\toutput templates: header, server and player\n");
-	printf("-Tr,-Tt\t\toutput templates: rule, and trailer\n");
-	printf("-srcport <range>\tSend packets from these network ports\n");
-	printf("-srcip <IP>\tSend packets using this IP address\n");
-	printf("-H\t\tresolve host names\n");
-	printf("-Hcache\t\thost name cache file\n");
-	printf("-carets\t\tDisplay carets in Quake 3 player names\n");
-	printf("-d\t\tEnable debug options. Specify multiple times to increase debug level.\n");
+	printf("Content options:\n");
+	printf_opt("-sort", "Sort servers and/or players");
+	printf_opt("-u", "Only display servers that are up");
+	printf_opt("-nf", "Do not display full servers");
+	printf_opt("-ne", "Do not display empty servers");
+	printf_opt("-R", "Fetch and display server rules");
+	printf_opt("-P", "Fetch and display player info");
+	printf("\n");
+
+	printf("Format options:\n");
+	printf_opt("-cn", "Display color names instead of numbers");
+	printf_opt("-ncn", "Display color numbers instead of names");
+	printf_opt("-hc", "Display colors in #rrggbb format");
+	printf_opt("-htmlmode", "Convert <, >, and & to the equivalent HTML entities");
+	printf_opt("-htmlnames", "Colorize Quake 3 and Tribes 2 player names using html font tags");
+	printf_opt("-nohtmlnames", "Do not colorize Quake 3 and Tribes 2 player names even if $HTML is used in an output template.");
+	printf_opt("-carets", "Display carets in Quake 3 player names");
+	printf_opt("-hpn", "Display player names in hex");
+	printf_opt("-hsn", "Display server names in hex");
+	printf_opt("-tc", "Display time in clock format (DhDDmDDs)");
+	printf_opt("-tsw", "Display time in stop-watch format (DD:DD:DD)");
+	printf_opt("-ts", "Display time in seconds");
+	printf_opt("-pa", "Display player address");
+	printf("\n");
+
+	printf("Display options:\n");
+	printf_opt("-raw <delim>", "Output in raw format using <delim> as delimiter");
+	printf_opt("-raw-arg", "When used with -raw, always display the server address as it appeared in a file or on the command-line.");
+	printf_opt("-old", "Old style display");
+	printf_opt("-nh", "Do not display header");
+	printf_opt("-nx", "Enable name transformations, -nx is set by default");
+	printf_opt("-nnx", "Disable name transformations, -utf8 option implies -nnx");
+	printf_opt("-xml", "Output status data as an XML document");
+	printf_opt("-bom", "Output Byte-Order-Mark for XML output.");
+	printf_opt("-utf8", "Use the UTF-8 character encoding for XML output");
+	printf_opt("-json", "Output status data as an UTF-8 JSON document");
+	printf_opt("-Th,-Ts,-Tpt", "Output templates: header, server and player");
+	printf_opt("-Tr,-Tt", "Output templates: rule, and trailer");
+	printf_opt("-showgameport", "Always display the game port in QStat output.");
+	printf_opt("-stripunprintable", "Disable stripping of unprintable characters.");
+	printf_opt("-errors", "Display errors");
+	printf_opt("-progress", "Display progress meter on stderr (text only)");
+	printf("\n");
+
+	printf("Output options:\n");
+	printf_opt("-of", "Output file");
+	printf_opt("-af", "Like -of, but append to the file");
+	printf("\n");
+
+	printf("Query options:\n");
+	printf_opt("-f", "Read hosts from file");
+	printf_opt("-mdelim <delim>", "For rules with multi values use <delim> as delimiter");
+	printf_opt("-retry", "Number of retries, default is %d", DEFAULT_RETRIES);
+	printf_opt("-interval", "Interval between retries, default is %.2f seconds", DEFAULT_RETRY_INTERVAL / 1000.0);
+	printf_opt("-mi", "Interval between master server retries, default is %.2f seconds", (DEFAULT_RETRY_INTERVAL *4) / 1000.0);
+	printf_opt("-timeout", "Total time in seconds before giving up");
+	printf_opt("-maxsim", "Set maximum simultaneous queries");
+	printf_opt("-sendinterval", "Set time in ms between sending packets, default %u", sendinterval);
+	printf_opt("-allowserverdups", "Allow adding multiple servers with same ip:port (needed for ts2)");
+	printf_opt("-srcport <range>", "Send packets from these network ports");
+	printf_opt("-srcip <IP>", "Send packets using this IP address");
+	printf_opt("-H", "Resolve host names");
+	printf_opt("-Hcache", "Host name cache file");
+	printf("\n");
+
+	printf("Advanced options:\n");
+	printf_opt("-d", "Enable debug options. Specify multiple times to increase debug level.");
 #ifdef ENABLE_DUMP
-	printf("-dump\t\twrite received raw packets to dumpNNN files which must not exist before\n");
-	printf("-pkt <file>\tuse file as server reply instead of quering the server. Works only with TF_SINGLE_QUERY servers\n");
+	printf_opt("-dump", "Write received raw packets to dumpNNN files which must not exist before");
+	printf_opt("-pkt <file>", "Use file as server reply instead of quering the server. Works only with TF_SINGLE_QUERY servers");
 #endif
-	printf("-htmlmode\tConvert <, >, and & to the equivalent HTML entities\n");
-	printf("-htmlnames\tColorize Quake 3 and Tribes 2 player names using html font tags\n");
-	printf("-nohtmlnames\tDo not colorize Quake 3 and Tribes 2 player names even if $HTML is used in an output template.\n");
-	printf("-syncconnect\tProcess connect initialisation synchronously.\n");
-	printf("-stripunprintable\tDisable stripping of unprintable characters.\n");
-	printf("-showgameport\tAlways display the game port in QStat output.\n");
-	printf("-noportoffset\tDont use builtin status port offsets ( assume query port was specified ).\n");
-	printf("-raw-arg\tWhen used with -raw, always display the server address as it appeared in a file or on the command-line.\n");
-	printf("-utf8\t\tUse the UTF-8 character encoding for XML output.\n");
-	printf("-bom\t\tOutput Byte-Order-Mark for XML output.\n");
+	printf_opt("-syncconnect", "Process connect initialisation synchronously.");
+	printf_opt("-noportoffset", "Dont use builtin status port offsets (assume query port was specified).");
 #ifdef _WIN32
-	printf("-noconsole\t\tFree the console\n");
+	printf_opt("-noconsole", "Free the console");
 #endif
 	printf("\n");
+
+	printf("Help options:\n");
+	printf_opt("-h, --help", "Print this help");
+	printf_opt("-protocols", "Print the protocol list (json display format only)");
+	printf_opt("-v", "Print qstat version (can be displayed with -json format)");
+	printf("\n");
+
 	printf("Sort keys:\n");
 	printf("  servers: p=by-ping, g=by-game, i=by-IP-address, h=by-hostname, n=by-#-players, l=by-list-order\n");
 	printf("  players: P=by-ping, F=by-frags, T=by-team, N=by-name\n");
@@ -3351,13 +3406,28 @@ int main(int argc, char *argv[])
 		{
 			usage(NULL, argv, NULL);
 		}
-		else if (strcmp(argv[arg], "-json-protocols") == 0)
+		else if (strcmp(argv[arg], "-h") == 0)
 		{
-			json_protocols();
+			usage(NULL, argv, NULL);
 		}
-		else if (strcmp(argv[arg], "-json-version") == 0)
+		else if (strcmp(argv[arg], "-protocols") == 0)
 		{
-			json_version();
+			if (json_display == 1) { 
+				json_protocols();
+			}
+			else {
+				fprintf(stderr, "must be used with -json\n");
+				exit(1);
+			}
+		}
+		else if (strcmp(argv[arg], "-v") == 0)
+		{
+			if (json_display == 1) { 
+				json_version();
+			}
+			else {
+				printf("%s\n", VERSION);
+			}
 		}
 		else if (strcmp(argv[arg], "-f") == 0)
 		{
