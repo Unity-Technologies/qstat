@@ -1286,6 +1286,7 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[arg], "-utf8") == 0)
 		{
+			// json is always utf8, other formats are latin1, xml can be latin1 or utf8
 			xml_encoding = ENCODING_UTF_8;
 			xform_names = 0;
 		}

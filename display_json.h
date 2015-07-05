@@ -23,7 +23,6 @@
 #define MAXSTRLEN 2048
 
 int json_display;
-int json_encoding;
 int json_printed;
 
 void json_footer();

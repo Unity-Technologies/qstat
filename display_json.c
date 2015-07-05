@@ -17,7 +17,6 @@
 #include "display_json.h"
 
 int json_display = 0;
-int json_encoding = ENCODING_LATIN_1;
 int json_printed = 0;
 
 void
@@ -1094,25 +1093,7 @@ char
 				fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
 			}
 		}
-		else if (json_encoding == ENCODING_LATIN_1)
-		{
-			if (!xform_names)
-			{
-				*b++ = c;
-			}
-			else
-			{
-				if (isprint(c))
-				{
-					*b++ = c;
-				}
-				else
-				{
-					b += sprintf((char *)b, "&#%u;", c);
-				}
-			}
-		}
-		else if (json_encoding == ENCODING_UTF_8)
+		else
 		{
 			unsigned char tempbuf[10] =
 			{
