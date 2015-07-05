@@ -322,7 +322,7 @@ json_display_unreal_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
 		}
-		if (player->team_name)
+		if (player->team_name != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
 		}
@@ -331,15 +331,15 @@ json_display_unreal_player_info(struct qserver *server)
 			xform_printf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
 		}
 
-		if (player->skin)
+		if (player->skin != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"skin\": \"%s\",\n", player->skin ? json_escape(player->skin): "");
 		}
-		if (player->mesh)
+		if (player->mesh != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"mesh\": \"%s\",\n", player->mesh ? json_escape(player->mesh): "");
 		}
-		if (player->face)
+		if (player->face != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"face\": \"%s\",\n", player->face ? json_escape(player->face): "");
 		}
@@ -446,7 +446,7 @@ json_display_tribes2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (player->team_name)
+		if (player->team_name != NULL)
 		{
 			switch (player->type_flag)
 			{
@@ -608,7 +608,7 @@ json_display_eye_player_info(struct qserver *server)
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
-		if (player->team_name)
+		if (player->team_name != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
 		}
@@ -616,11 +616,11 @@ json_display_eye_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
 		}
-		if (player->skin)
+		if (player->skin != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
 		}
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 1)));
 		}
@@ -651,7 +651,7 @@ json_display_doom3_player_info(struct qserver *server)
 		xform_printf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
-		if (player->tribe_tag)
+		if (player->tribe_tag != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"clan\": \"%s\",\n", player->tribe_tag ? json_escape(xform_name(player->tribe_tag, server)): "");
 		}
@@ -659,11 +659,11 @@ json_display_doom3_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
 		}
-		if (player->skin)
+		if (player->skin != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
 		}
-		if (player->type_flag)
+		if (player->type_flag != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"type\": \"%s\",\n", "bot");
 		}
@@ -671,7 +671,7 @@ json_display_doom3_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"type\": \"%s\",\n", "player");
 		}
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
@@ -716,7 +716,7 @@ json_display_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"frags\": %d,\n", player->frags);
 		}
-		if (player->team_name)
+		if (player->team_name != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
 		}
@@ -724,11 +724,11 @@ json_display_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
 		}
-		if (player->skin)
+		if (player->skin != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"skin\": \"%s\",\n", json_escape(player->skin));
 		}
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 1)));
 		}
@@ -772,7 +772,7 @@ json_display_ts2_player_info(struct qserver *server)
 		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
@@ -801,7 +801,7 @@ json_display_ts3_player_info(struct qserver *server)
 			xform_printf(OF, ",\n");
 		}
 		xform_printf(OF, "\t\t\t{\n");
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
@@ -830,7 +830,7 @@ json_display_bfbc2_player_info(struct qserver *server)
 			xform_printf(OF, ",\n");
 		}
 		xform_printf(OF, "\t\t\t{\n");
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
@@ -862,7 +862,7 @@ json_display_wic_player_info(struct qserver *server)
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
 		xform_printf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(player->team_name));
-		if (player->tribe_tag)
+		if (player->tribe_tag != NULL)
 		{
 			xform_printf(OF, "\t\t\t\t\"role\": \"%s\",\n", json_escape(player->tribe_tag));
 		}
@@ -919,7 +919,7 @@ json_display_tm_player_info(struct qserver *server)
 		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
@@ -1027,7 +1027,7 @@ json_display_starmade_player_info(struct qserver *server)
 		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
-		if (player->connect_time)
+		if (player->connect_time != 0)
 		{
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 2)));
 		}
