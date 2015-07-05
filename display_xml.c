@@ -94,11 +94,11 @@ xml_display_server(struct qserver *server)
 
 	if (!server->type->master && server->error == NULL)
 	{
-		if (get_server_rules && NULL != server->type->display_xml_rule_func )
+		if (get_server_rules && NULL != server->type->display_xml_rule_func)
 		{
 			server->type->display_xml_rule_func(server);
 		}
-		if (get_player_info && NULL != server->type->display_xml_player_func )
+		if (get_player_info && NULL != server->type->display_xml_player_func)
 		{
 			server->type->display_xml_player_func(server);
 		}
@@ -272,7 +272,7 @@ xml_display_unreal_player_info(struct qserver *server)
 
 		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->frags);
-		if ( - 999 != player->deaths)
+		if (player->deaths != -999)
 		{
 			xform_printf(OF, "\t\t\t\t<deaths>%d</deaths>\n", player->deaths);
 		} xform_printf(OF, "\t\t\t\t<ping>%d</ping>\n", player->ping);
@@ -281,7 +281,7 @@ xml_display_unreal_player_info(struct qserver *server)
 		{
 			xform_printf(OF, "\t\t\t\t<team>%s</team>\n", xml_escape(player->team_name));
 		}
-		else if ( - 1 != player->team)
+		else if (-1 != player->team)
 		{
 			xform_printf(OF, "\t\t\t\t<team>%d</team>\n", player->team);
 		}
@@ -791,10 +791,10 @@ xml_display_wic_player_info(struct qserver *server)
 		xform_printf(OF, "\t\t\t\t<name>%s</name>\n", xml_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t<score>%d</score>\n", player->score);
 		xform_printf(OF, "\t\t\t\t<team>%s</team>\n", player->team_name);
-		xform_printf(OF, "\t\t\t\t<bot>%d</bot>\n", player->type_flag );
-		if ( player->tribe_tag )
+		xform_printf(OF, "\t\t\t\t<bot>%d</bot>\n", player->type_flag);
+		if (player->tribe_tag)
 		{
-			xform_printf(OF, "\t\t\t\t<role>%s</role>\n", player->tribe_tag );
+			xform_printf(OF, "\t\t\t\t<role>%s</role>\n", player->tribe_tag);
 		}
 
 
@@ -987,18 +987,18 @@ char
 
 		// Validate character
 		// http://www.w3.org/TR/2000/REC-xml-20001006#charsets
-		if ( !
+		if (!
 			(
 				0x09 == c ||
 				0xA == c ||
 				0xD == c ||
-				( 0x20 <= c && 0xD7FF >= c ) ||
-				( 0xE000 <= c && 0xFFFD >= c ) ||
-				( 0x10000 <= c && 0x10FFFF >= c )
+				(0x20 <= c && 0xD7FF >= c) ||
+				(0xE000 <= c && 0xFFFD >= c) ||
+				(0x10000 <= c && 0x10FFFF >= c)
 			)
 		)
 		{
-			if ( show_errors )
+			if (show_errors)
 			{
 				fprintf(stderr, "Encoding error (%d) for U+%x, D+%d\n", 1, c, c);
 			}
@@ -1017,7 +1017,7 @@ char
 				}
 				else
 				{
-					b += sprintf( (char *)b, "&#%u;", c);
+					b += sprintf((char *)b, "&#%u;", c);
 				}
 			}
 		}
@@ -1036,9 +1036,9 @@ char
 				0x09 == c ||
 				0xA == c ||
 				0xD == c ||
-				( 0x20 <= c && 0xD7FF >= c ) ||
-				( 0xE000 <= c && 0xFFFD >= c ) ||
-				( 0x10000 <= c && 0x10FFFF >= c )
+				(0x20 <= c && 0xD7FF >= c) ||
+				(0xE000 <= c && 0xFFFD >= c) ||
+				(0x10000 <= c && 0x10FFFF >= c)
 			)
 			{
 				error = 0;

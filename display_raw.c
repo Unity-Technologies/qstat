@@ -5,7 +5,7 @@
  * http://www.qstat.org
  *
  * Inspired by QuakePing by Len Norton
- * 
+ *
  * RAW Output
  *
  * Copyright 1996,1997,1998,1999,2000,2001,2002,2003,2004 by Steve Jankowski
@@ -164,7 +164,7 @@ raw_display_server(struct qserver *server)
 		return ;
 	}
 
-	if (get_server_rules && NULL != server->type->display_raw_rule_func )
+	if (get_server_rules && NULL != server->type->display_raw_rule_func)
 	{
 		server->type->display_raw_rule_func(server);
 	}
@@ -692,7 +692,7 @@ raw_display_tee_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		xform_printf(OF, fmt, xform_name(player->name,server) );
+		xform_printf(OF, fmt, xform_name(player->name,server));
 		fputs("\n", OF);
 	}
 }

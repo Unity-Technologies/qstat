@@ -1077,7 +1077,7 @@ display_string(char *str)
 		for (; *str; str++)
 			switch (*str)
 			{
-				case '<': 
+				case '<':
 					fputs("&lt;", OF);
 					break;
 				case '>':
