@@ -5,7 +5,7 @@
  * http://www.qstat.org
  *
  * Inspired by QuakePing by Len Norton
- * 
+ *
  * RAW Output
  *
  * Copyright 1996,1997,1998,1999,2000,2001,2002,2003,2004 by Steve Jankowski
@@ -27,19 +27,15 @@ raw_display_server(struct qserver *server)
 	int ping_time;
 	prefix = server->type->type_prefix;
 
-	if (server->n_requests)
-	{
+	if (server->n_requests) {
 		ping_time = server->ping_total / server->n_requests;
 	}
-	else
-	{
+	else {
 		ping_time = 999;
 	}
 
-	if (server->server_name == DOWN || server->server_name == SYSERROR)
-	{
-		if (!up_servers_only)
-		{
+	if (server->server_name == DOWN || server->server_name == SYSERROR) {
+		if (!up_servers_only) {
 			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n",
 				prefix,
 				raw_arg, RD,
@@ -52,21 +48,17 @@ raw_display_server(struct qserver *server)
 		return ;
 	}
 
-	if (server->server_name == TIMEOUT)
-	{
-		if (server->flags &FLAG_BROADCAST && server->n_servers)
-		{
+	if (server->server_name == TIMEOUT) {
+		if (server->flags &FLAG_BROADCAST && server->n_servers) {
 			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%d\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, server->arg, RD, server->n_servers);
 		}
-		else if (!up_servers_only)
-		{
+		else if (!up_servers_only) {
 			xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s\n\n", prefix, raw_arg, RD, raw_arg, server->arg, RD, (hostname_lookup) ? server->host_name : server->arg, RD, TIMEOUT);
 		}
 		return ;
 	}
 
-	if (server->error != NULL)
-	{
+	if (server->error != NULL) {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s",
 			prefix,
 			raw_arg, RD,
@@ -77,8 +69,7 @@ raw_display_server(struct qserver *server)
 			server->error
 		);
 	}
-	else if (server->type->flags &TF_RAW_STYLE_QUAKE)
-	{
+	else if (server->type->flags &TF_RAW_STYLE_QUAKE) {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%s""%s%d""%s%d""%s%d""%s%d""%s%d""%s%d""%s%s",
 			prefix,
 			raw_arg, RD,
@@ -99,8 +90,7 @@ raw_display_server(struct qserver *server)
 			show_game_in_raw ? get_qw_game(server): ""
 		);
 	}
-	else if (server->type->flags &TF_RAW_STYLE_TRIBES)
-	{
+	else if (server->type->flags &TF_RAW_STYLE_TRIBES) {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
 			prefix,
 			raw_arg, RD,
@@ -113,8 +103,7 @@ raw_display_server(struct qserver *server)
 			server->max_players
 		);
 	}
-	else if (server->type->flags &TF_RAW_STYLE_GHOSTRECON)
-	{
+	else if (server->type->flags &TF_RAW_STYLE_GHOSTRECON) {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d",
 			prefix,
 			raw_arg, RD,
@@ -127,8 +116,7 @@ raw_display_server(struct qserver *server)
 			server->max_players
 		);
 	}
-	else if (server->type->master)
-	{
+	else if (server->type->master) {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%d",
 			prefix,
 			raw_arg, RD,
@@ -138,8 +126,7 @@ raw_display_server(struct qserver *server)
 			server->n_servers
 		);
 	}
-	else
-	{
+	else {
 		xform_printf(OF, "%s""%.*s%.*s""%s%s""%s%s""%s%s""%s%d""%s%d""%s%d""%s%d""%s%s",
 			prefix,
 			raw_arg, RD,
@@ -158,18 +145,15 @@ raw_display_server(struct qserver *server)
 	}
 	fputs("\n", OF);
 
-	if (server->type->master || server->error != NULL)
-	{
+	if (server->type->master || server->error != NULL) {
 		fputs("\n", OF);
 		return ;
 	}
 
-	if (get_server_rules && NULL != server->type->display_raw_rule_func )
-	{
+	if (get_server_rules && NULL != server->type->display_raw_rule_func) {
 		server->type->display_raw_rule_func(server);
 	}
-	if (get_player_info && NULL != server->type->display_raw_player_func)
-	{
+	if (get_player_info && NULL != server->type->display_raw_player_func) {
 		server->type->display_raw_player_func(server);
 	}
 	fputs("\n", OF);
@@ -181,14 +165,11 @@ raw_display_server_rules(struct qserver *server)
 	struct rule *rule;
 	int printed = 0;
 	rule = server->rules;
-	for (; rule != NULL; rule = rule->next)
-	{
-		if (server->type->id == TRIBES2_SERVER)
-		{
+	for (; rule != NULL; rule = rule->next) {
+		if (server->type->id == TRIBES2_SERVER) {
 			char *v;
 			for (v = rule->value; *v; v++)
-			if (*v == '\n')
-			{
+			if (*v == '\n') {
 				*v = ' ';
 			}
 		}
@@ -196,8 +177,7 @@ raw_display_server_rules(struct qserver *server)
 		xform_printf(OF, "%s%s=%s", (printed) ? RD : "", rule->name, rule->value);
 		printed++;
 	}
-	if (server->missing_rules)
-	{
+	if (server->missing_rules) {
 		xform_printf(OF, "%s?", (printed) ? RD : "");
 	}
 	fputs("\n", OF);
@@ -210,8 +190,7 @@ raw_display_q_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			player->number, RD,
 			xform_name(player->name, server), RD,
@@ -235,8 +214,7 @@ raw_display_qw_player_info(struct qserver *server)
 	strcat(fmt, "%s%d""%s%s""%s%s");
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			player->number, RD,
 			xform_name(player->name, server), RD,
@@ -260,14 +238,11 @@ raw_display_q2_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		if (server->flags &FLAG_PLAYER_TEAMS)
-		{
+	for (; player != NULL; player = player->next) {
+		if (server->flags &FLAG_PLAYER_TEAMS) {
 			xform_printf(OF, fmt_team, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team);
 		}
-		else
-		{
+		else {
 			xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping);
 		}
 		fputs("\n", OF);
@@ -282,10 +257,8 @@ raw_display_unreal_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		if (player->team_name)
-		{
+	for (; player != NULL; player = player->next) {
+		if (player->team_name) {
 			xform_printf(OF, fmt_team_name,
 				xform_name(player->name,server), RD,
 				player->frags, RD,
@@ -296,8 +269,7 @@ raw_display_unreal_player_info(struct qserver *server)
 				player->face ? player->face: ""
 			);
 		}
-		else
-		{
+		else {
 			xform_printf(OF, fmt,
 				xform_name(player->name, server), RD,
 				player->frags, RD,
@@ -319,8 +291,7 @@ raw_display_halflife_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
@@ -333,8 +304,7 @@ raw_display_fl_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		fprintf(
 			OF, fmt,
 			xform_name(player->name, server), RD,
@@ -354,8 +324,7 @@ raw_display_tribes_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->ping, RD, player->team, RD, player->packet_loss);
 		fputs("\n", OF);
 	}
@@ -369,10 +338,8 @@ raw_display_tribes2_player_info(struct qserver *server)
 	char *type;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		switch (player->type_flag)
-		{
+	for (; player != NULL; player = player->next) {
+		switch (player->type_flag) {
 			case PLAYER_TYPE_BOT:
 				type = "Bot";
 				break;
@@ -402,8 +369,7 @@ raw_display_bfris_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			player->number, RD,
 			player->ship, RD,
@@ -424,8 +390,7 @@ raw_display_descent3_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, player->deaths, RD, player->ping, RD, player->team);
 		fputs("\n", OF);
 	}
@@ -438,8 +403,7 @@ raw_display_ghostrecon_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->deaths, RD, player->team);
 		fputs("\n", OF);
 	}
@@ -453,10 +417,8 @@ raw_display_eye_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		if (player->team_name)
-		{
+	for (; player != NULL; player = player->next) {
+		if (player->team_name) {
 			xform_printf(OF, fmt_team_name,
 				xform_name(player->name,server), RD,
 				player->score, RD,
@@ -466,8 +428,7 @@ raw_display_eye_player_info(struct qserver *server)
 				play_time(player->connect_time,1)
 			);
 		}
-		else
-		{
+		else {
 			xform_printf(OF, fmt,
 				xform_name(player->name, server), RD,
 				player->score, RD,
@@ -489,14 +450,11 @@ raw_display_doom3_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		if (player->tribe_tag)
-		{
+	for (; player != NULL; player = player->next) {
+		if (player->tribe_tag) {
 			xform_printf(OF, fmt_team_name, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->tribe_tag, RD, player->number);
 		}
-		else
-		{
+		else {
 			xform_printf(OF, fmt, xform_name(player->name, server), RD, player->score, RD, player->ping, RD, player->team, RD, player->number);
 		}
 		fputs("\n", OF);
@@ -511,10 +469,8 @@ raw_display_gs2_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		if (player->team_name)
-		{
+	for (; player != NULL; player = player->next) {
+		if (player->team_name) {
 			xform_printf(OF, fmt_team_name, xform_name(player->name, server), RD,
 				player->score, RD,
 				player->ping, RD,
@@ -523,8 +479,7 @@ raw_display_gs2_player_info(struct qserver *server)
 				play_time(player->connect_time,1)
 			);
 		}
-		else
-		{
+		else {
 			xform_printf(OF, fmt,
 				xform_name(player->name,server), RD,
 				player->score, RD,
@@ -544,8 +499,7 @@ raw_display_armyops_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		player->score = calculate_armyops_score(player);
 	}
 
@@ -559,8 +513,7 @@ raw_display_ts2_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->ping, RD,
@@ -578,8 +531,7 @@ raw_display_ts3_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
@@ -596,8 +548,7 @@ raw_display_starmade_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
@@ -614,8 +565,7 @@ raw_display_bfbc2_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->skin ? player->skin: "", RD,
@@ -632,8 +582,7 @@ raw_display_wic_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->score, RD,
@@ -651,8 +600,7 @@ raw_display_ventrilo_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		fprintf(
 			OF, fmt,
 			xform_name(player->name, server),
@@ -671,8 +619,7 @@ raw_display_tm_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt,
 			xform_name(player->name,server), RD,
 			player->ping, RD,
@@ -690,9 +637,8 @@ raw_display_tee_player_info(struct qserver *server)
 	struct player *player;
 
 	player = server->players;
-	for (; player != NULL; player = player->next)
-	{
-		xform_printf(OF, fmt, xform_name(player->name,server) );
+	for (; player != NULL; player = player->next) {
+		xform_printf(OF, fmt, xform_name(player->name,server));
 		fputs("\n", OF);
 	}
 }
@@ -702,8 +648,7 @@ raw_display_ravenshield_player_info(struct qserver *server)
 {
 	static char fmt[24] = "%s""%s%d""%s%s";
 	struct player *player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
@@ -714,8 +659,7 @@ raw_display_savage_player_info(struct qserver *server)
 {
 	static char fmt[24] = "%s""%s%d""%s%s";
 	struct player *player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}
@@ -726,8 +670,7 @@ raw_display_farcry_player_info(struct qserver *server)
 {
 	static char fmt[24] = "%s""%s%d""%s%s";
 	struct player *player = server->players;
-	for (; player != NULL; player = player->next)
-	{
+	for (; player != NULL; player = player->next) {
 		xform_printf(OF, fmt, xform_name(player->name, server), RD, player->frags, RD, play_time(player->connect_time, 1));
 		fputs("\n", OF);
 	}

@@ -97,7 +97,7 @@ standard_display_server(struct qserver *server)
 			default:
 				break;
 		}
-		xform_printf(OF, 
+		xform_printf(OF,
 			"%s%-21s %2d/%-2d %2d/%-2d %*s %6d / %1d  %*s %s\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
@@ -126,7 +126,7 @@ standard_display_server(struct qserver *server)
 	{
 		char name[512];
 		sprintf(name, "\"%s\"", server->server_name);
-		xform_printf(OF, 
+		xform_printf(OF,
 			"%-16s %10s map %s at %22s %d/%d players %d ms\n",
 			(hostname_lookup) ? server->host_name: server->arg,
 			name,
@@ -147,7 +147,7 @@ standard_display_qwmaster(struct qserver *server)
 
 	if (server->error != NULL)
 	{
-		xform_printf(OF, 
+		xform_printf(OF,
 			"%s %-17s ERROR <%s>\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
@@ -156,7 +156,7 @@ standard_display_qwmaster(struct qserver *server)
 	}
 	else
 	{
-		xform_printf(OF, 
+		xform_printf(OF,
 			"%s %-17s %d servers %6d / %1d\n",
 			prefix,
 			(hostname_lookup) ? server->host_name: server->arg,
