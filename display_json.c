@@ -186,7 +186,10 @@ json_display_server_rules(struct qserver *server)
 	xform_printf(OF, ",\n\t\t\"rules\": {\n");
 	for (; rule != NULL; rule = rule->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t\"%s\": \"%s\"", json_escape(rule->name), json_escape(rule->value));
 		printed = 1;
 	}
@@ -204,7 +207,10 @@ json_display_q_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\"number\": %d,\n", player->number);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
@@ -229,7 +235,10 @@ json_display_qw_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
@@ -256,7 +265,10 @@ json_display_q2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -299,7 +311,10 @@ json_display_unreal_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -316,8 +331,6 @@ json_display_unreal_player_info(struct qserver *server)
 			xform_printf(OF, "\t\t\t\t\"team\": %d,\n", player->team);
 		}
 
-		// Some games dont provide
-		// so only display if they do
 		if (player->skin)
 		{
 			xform_printf(OF, "\t\t\t\t\"skin\": \"%s\",\n", player->skin ? json_escape(player->skin): "");
@@ -350,7 +363,10 @@ json_display_halflife_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -373,7 +389,10 @@ json_display_fl_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -398,7 +417,10 @@ json_display_tribes_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -439,7 +461,10 @@ json_display_tribes2_player_info(struct qserver *server)
 					break;
 			}
 
-			if (printed) xform_printf(OF, ",\n");
+			if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 			xform_printf(OF, "\t\t\t{\n");
 			xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 			xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -465,7 +490,10 @@ json_display_bfris_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
@@ -492,7 +520,10 @@ json_display_descent3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -517,7 +548,10 @@ json_display_ravenshield_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -541,7 +575,10 @@ json_display_ghostrecon_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"deaths\": %d,\n", player->deaths);
@@ -564,7 +601,10 @@ json_display_eye_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
@@ -603,7 +643,10 @@ json_display_doom3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"number\": %d,\n", player->number);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
@@ -652,7 +695,10 @@ json_display_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		if (NA_INT != player->ping)
 		{
@@ -720,7 +766,10 @@ json_display_ts2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		if (player->connect_time)
@@ -747,7 +796,10 @@ json_display_ts3_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		if (player->connect_time)
 		{
@@ -773,7 +825,10 @@ json_display_bfbc2_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		if (player->connect_time)
 		{
@@ -799,7 +854,10 @@ json_display_wic_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->score);
@@ -828,7 +886,10 @@ json_display_ventrilo_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"ping\": %d,\n", player->ping);
@@ -852,7 +913,10 @@ json_display_tm_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		if (player->connect_time)
@@ -880,7 +944,10 @@ json_display_savage_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -903,7 +970,10 @@ json_display_farcry_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d,\n", player->frags);
@@ -926,7 +996,10 @@ json_display_tee_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t\t\"score\": %d\n", player->score);
@@ -948,7 +1021,10 @@ json_display_starmade_player_info(struct qserver *server)
 	player = server->players;
 	for (; player != NULL; player = player->next)
 	{
-		if (printed) xform_printf(OF, ",\n");
+		if (printed)
+		{
+			xform_printf(OF, ",\n");
+		}
 		xform_printf(OF, "\t\t\t{\n");
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\",\n", json_escape(xform_name(player->name, server)));
 		if (player->connect_time)
