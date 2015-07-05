@@ -1217,6 +1217,14 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(argv[arg], "-raw", 4) == 0)
 		{
+			if (json_display == 1)
+			{
+				usage("cannot specify both -json and -raw\n", argv, NULL);
+			}
+			if (xml_display == 1)
+			{
+				usage("cannot specify both -xml and -raw\n", argv, NULL);
+			}
 			if (argv[arg][4] == ',')
 			{
 				if (strcmp(&argv[arg][5], "game") == 0)
@@ -1259,6 +1267,10 @@ int main(int argc, char *argv[])
 			{
 				usage("cannot specify both -raw and -xml\n", argv, NULL);
 			}
+			if (json_display == 1)
+			{
+				usage("cannot specify both -json and -xml\n", argv, NULL);
+			}
 		}
 		else if (strcmp(argv[arg], "-json") == 0)
 		{
@@ -1266,6 +1278,10 @@ int main(int argc, char *argv[])
 			if (raw_display == 1)
 			{
 				usage("cannot specify both -raw and -json\n", argv, NULL);
+			}
+			if (xml_display == 1)
+			{
+				usage("cannot specify both -xml and -json\n", argv, NULL);
 			}
 		}
 		else if (strcmp(argv[arg], "-utf8") == 0)
