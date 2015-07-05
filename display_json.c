@@ -65,7 +65,7 @@ json_display_server(struct qserver *server)
 	{
 		if (!up_servers_only)
 		{
-			xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 			xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 			xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 			xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("offline"));
@@ -79,7 +79,7 @@ json_display_server(struct qserver *server)
 	{
 		if (server->flags &FLAG_BROADCAST && server->n_servers)
 		{
-			xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 			xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 			xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 			xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("timeout"));
@@ -89,7 +89,7 @@ json_display_server(struct qserver *server)
 		}
 		else if (!up_servers_only)
 		{
-			xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+			xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 			xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 			xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 			xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("timeout"));
@@ -102,7 +102,7 @@ json_display_server(struct qserver *server)
 
 	if (server->error != NULL)
 	{
-		xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 		xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 		xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 		xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("error"));
@@ -113,7 +113,7 @@ json_display_server(struct qserver *server)
 	}
 	else if (server->type->master)
 	{
-		xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 		xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 		xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 		xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("online"));
@@ -122,7 +122,7 @@ json_display_server(struct qserver *server)
 	}
 	else
 	{
-		xform_printf(OF, "%s\n", (json_printed) ? ",\n\t{" : "\t{");
+		xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
 		xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 		xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 		xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("online"));
