@@ -54,7 +54,7 @@ query_status_t send_bfbc2_request_packet( struct qserver *server )
 query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
 	char *s, *end, *crlf;
-	int size, words, word = 0;
+	int words, word = 0;
 	debug( 2, "processing..." );
 
 	if ( 17 > pktlen )
@@ -74,7 +74,6 @@ query_status_t deal_with_bfbc2_packet( struct qserver *server, char *rawpkt, int
 	s += 4;
 
 	// Packet Size
-	size = *(int*)s;
 	s += 4;
 
 	// Num Words

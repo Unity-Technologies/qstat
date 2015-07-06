@@ -34,7 +34,7 @@ query_status_t send_terraria_request_packet( struct qserver *server )
 
 query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *end, *key, *val, *sep, *linep, *varp;
+	char *s, *key, *val, *sep, *linep, *varp;
 	int complete_response = 0;
 	char last_char;
 	unsigned short port = 0;
@@ -99,8 +99,6 @@ query_status_t deal_with_terraria_packet( struct qserver *server, char *rawpkt, 
 	}
 
 	s += 4;
-
-	end = &rawpkt[pktlen-1];
 
 	// Correct ping
 	// Not quite right but gives a good estimate
