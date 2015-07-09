@@ -5,7 +5,7 @@
  * http://www.qstat.org
  *
  * Inspired by QuakePing by Len Norton
- * 
+ *
  * RAW Output
  *
  * Copyright 1996,1997,1998,1999,2000,2001,2002,2003,2004 by Steve Jankowski

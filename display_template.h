@@ -20,38 +20,38 @@
 #include <time.h>
 
 #if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__) || defined(__MidnightBSD__)
-#include <sys/types.h>
+	#include <sys/types.h>
 #endif
 
 #ifndef _WIN32
-#include <netinet/in.h>
+	#include <netinet/in.h>
 #endif
 
 #include "qstat.h"
 #include "xform.h"
 
 #ifdef _WIN32
-#define strcasecmp	stricmp
-#define strncasecmp	strnicmp
+	#define strcasecmp  stricmp
+	#define strncasecmp strnicmp
 #endif
 
 #ifdef __hpux
-#define STATIC static
+	#define STATIC static
 #else
-#define STATIC
+	#define STATIC
 #endif
 
 /*
-#ifdef __cplusplus
-extern "C" {
-#endif
-#ifndef _AIX
-extern unsigned int ntohl(unsigned int n);
-#endif
-#ifdef __cplusplus
-}
-#endif
-*/
+   #ifdef __cplusplus
+   extern "C" {
+   #endif
+   #ifndef _AIX
+   extern unsigned int ntohl(unsigned int n);
+   #endif
+   #ifdef __cplusplus
+   }
+   #endif
+ */
 
 int have_header_template();
 int have_trailer_template();

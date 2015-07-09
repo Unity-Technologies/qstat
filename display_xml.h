@@ -27,7 +27,7 @@ int xml_encoding;
 void xml_header();
 void xml_footer();
 
-char *xml_escape(char *string);
+char* xml_escape(char *string);
 
 void xml_display_server(struct qserver *server);
 void xml_display_server_rules(struct qserver *server);

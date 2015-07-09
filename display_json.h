@@ -31,7 +31,7 @@ void json_header();
 void json_protocols();
 void json_version();
 
-char *json_escape(char *string);
+char* json_escape(char *string);
 
 void json_display_server(struct qserver *server);
 void json_display_server_rules(struct qserver *server);

@@ -10,14 +10,10 @@
 #ifndef QSTAT_CUBE2_H
 #define QSTAT_CUBE2_H
 
-
 #include "qserver.h"
 
 // Packet processing methods
-query_status_t deal_with_cube2_packet( struct qserver *server, char *pkt, int pktlen );
-query_status_t send_cube2_request_packet( struct qserver *server );
+query_status_t deal_with_cube2_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t send_cube2_request_packet(struct qserver *server);
 
-
-#endif  // QSTAT_CUBE2_H
-
-
+#endif	// QSTAT_CUBE2_H
