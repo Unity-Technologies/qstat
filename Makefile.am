@@ -13,7 +13,11 @@ qstat_SOURCES = \
 	md5.c md5.h \
 	qserver.c qserver.h \
 	qstat.c qstat.h \
-	template.c \
+	display_standard.c display_standard.h \
+	display_template.c display_template.h \
+	display_raw.c display_raw.h \
+	display_xml.c display_xml.h \
+	display_json.c display_json.h \
 	a2s.c a2s.h \
 	packet_manip.c packet_manip.h \
 	ut2004.c ut2004.h \

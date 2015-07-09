@@ -11,15 +11,15 @@
  */
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#define strtok_ret strtok_r
-#define VENTRILO_RAND random()
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
+	#define strtok_ret strtok_r
+	#define VENTRILO_RAND random()
 #else
-#include <winsock.h>
-#define strtok_ret strtok_s
-#define VENTRILO_RAND rand()
+	#include <winsock.h>
+	#define strtok_ret strtok_s
+	#define VENTRILO_RAND rand()
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,25 +29,24 @@
 #include "qstat.h"
 #include "packet_manip.h"
 
-
 int VENTRILO_COMMAND_GENERIC_INFO = 1;
 int VENTRILO_COMMAND_DETAILED_INFO = 2;	// includes generic infos
 int VENTRILO_COMMAND_DIFFERENT = 7;
 
 typedef struct {
-	unsigned short pckkey;  // key for decoding this header
+	unsigned short pckkey;	// key for decoding this header
 	unsigned short zero;	// ever 0
-	unsigned short cmd;	 // command number: 1 generic info, 2 for details
-	unsigned short id;	  // packet ID used for tracking the replies
-	unsigned short totlen;  // total data size (for data splitted in packets)
-	unsigned short len;	 // size of the data in this packet (max 492)
-	unsigned short totpck;  // total amount of packets (max 32)
-	unsigned short pck;	 // current packet number
-	unsigned short datakey; // key for decoding the data
-	unsigned short crc;	 // checksum of the total plain-text data
+	unsigned short cmd;	// command number: 1 generic info, 2 for details
+	unsigned short id;		// packet ID used for tracking the replies
+	unsigned short totlen;	// total data size (for data splitted in packets)
+	unsigned short len;	// size of the data in this packet (max 492)
+	unsigned short totpck;	// total amount of packets (max 32)
+	unsigned short pck;	// current packet number
+	unsigned short datakey;	// key for decoding the data
+	unsigned short crc;	// checksum of the total plain-text data
 } ventrilo_udp_head;
 
-const static unsigned char  ventrilo_udp_encdata_head[] =
+const static unsigned char ventrilo_udp_encdata_head[] =
 	"\x80\xe5\x0e\x38\xba\x63\x4c\x99\x88\x63\x4c\xd6\x54\xb8\x65\x7e"
 	"\xbf\x8a\xf0\x17\x8a\xaa\x4d\x0f\xb7\x23\x27\xf6\xeb\x12\xf8\xea"
 	"\x17\xb7\xcf\x52\x57\xcb\x51\xcf\x1b\x14\xfd\x6f\x84\x38\xb5\x24"
@@ -65,7 +64,7 @@ const static unsigned char  ventrilo_udp_encdata_head[] =
 	"\xb6\xac\x77\xc4\xbf\x59\x5e\x80\x74\xbb\xf2\xde\x57\x62\x4c\x1a"
 	"\xff\x95\x6d\xc7\x04\xa2\x3b\xc4\x1b\x72\xc7\x6c\x82\x60\xd1\x0d";
 
-const static unsigned char  ventrilo_udp_encdata_data[] =
+const static unsigned char ventrilo_udp_encdata_data[] =
 	"\x82\x8b\x7f\x68\x90\xe0\x44\x09\x19\x3b\x8e\x5f\xc2\x82\x38\x23"
 	"\x6d\xdb\x62\x49\x52\x6e\x21\xdf\x51\x6c\x76\x37\x86\x50\x7d\x48"
 	"\x1f\x65\xe7\x52\x6a\x88\xaa\xc1\x32\x2f\xf7\x54\x4c\xaa\x6d\x7e"
@@ -119,7 +118,8 @@ const static unsigned short ventrilo_crc_table[] =
 	0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
 };
 
-void ventrilo_udp_head_dec(unsigned char *data)
+void
+ventrilo_udp_head_dec(unsigned char *data)
 {
 	int i;
 	unsigned short *p;
@@ -131,26 +131,24 @@ void ventrilo_udp_head_dec(unsigned char *data)
 
 	*p = ntohs(*p);
 	a1 = *p;
-	if( ! a1 )
-	{
+	if (!a1) {
 		return;
 	}
 
 	a2 = *p >> 8;
-	for( i = 0; i < 18; i++ )
-	{
+	for (i = 0; i < 18; i++) {
 		data[i] -= ventrilo_udp_encdata_head[a2] + (i % 5);
 		a2 += a1;
 	}
 
-	for( i = 0; i < 9; i++ )
-	{
+	for (i = 0; i < 9; i++) {
 		p++;
 		*p = ntohs(*p);
 	}
 }
 
-void ventrilo_udp_head_enc(unsigned char *data)
+void
+ventrilo_udp_head_enc(unsigned char *data)
 {
 	int i;
 	unsigned short *p;
@@ -163,46 +161,43 @@ void ventrilo_udp_head_enc(unsigned char *data)
 	*p = (((VENTRILO_RAND * 0x343fd) + 0x269ec3) >> 16) & 0x7fff;
 	a1 = *p;
 	a2 = *p >> 8;
-	if( ! a2 )
-	{
+	if (!a2) {
 		a2 = 69;
 		*p |= (a2 << 8);
 	}
 
-	for( i = 0; i < 10; i++ )
-	{
+	for (i = 0; i < 10; i++) {
 		*p = htons(*p);
 		p++;
 	}
 
-	for( i = 0; i < 18; i++ )
-	{
+	for (i = 0; i < 18; i++) {
 		data[i] += ventrilo_udp_encdata_head[a2] + (i % 5);
 		a2 += a1;
 	}
 }
 
-void ventrilo_udp_data_dec(unsigned char *data, int len, unsigned short key)
+void
+ventrilo_udp_data_dec(unsigned char *data, int len, unsigned short key)
 {
 	int i;
 	unsigned char a1;
 	unsigned char a2;
 
 	a1 = key;
-	if( ! a1 )
-	{
+	if (!a1) {
 		return;
 	}
 
 	a2 = key >> 8;
-	for( i = 0; i < len; i++ )
-	{
+	for (i = 0; i < len; i++) {
 		data[i] -= ventrilo_udp_encdata_data[a2] + (i % 72);
 		a2 += a1;
 	}
 }
 
-unsigned short ventrilo_udp_data_enc(unsigned char *data, int len)
+unsigned short
+ventrilo_udp_data_enc(unsigned char *data, int len)
 {
 	int i;
 	unsigned short key;
@@ -212,14 +207,12 @@ unsigned short ventrilo_udp_data_enc(unsigned char *data, int len)
 	key = (((VENTRILO_RAND * 0x343fd) + 0x269ec3) >> 16) & 0x7fff;
 	a1 = key;
 	a2 = key >> 8;
-	if( ! a2 )
-	{
+	if (!a2) {
 		a2 = 1;
 		key |= (a2 << 8);
 	}
 
-	for( i = 0; i < len; i++ )
-	{
+	for (i = 0; i < len; i++) {
 		data[i] += ventrilo_udp_encdata_data[a2] + (i % 72);
 		a2 += a1;
 	}
@@ -227,13 +220,12 @@ unsigned short ventrilo_udp_data_enc(unsigned char *data, int len)
 	return key;
 }
 
-
-
-unsigned short ventrilo_udp_crc(unsigned char *data, int len)
+unsigned short
+ventrilo_udp_crc(unsigned char *data, int len)
 {
-	unsigned short  crc = 0;
+	unsigned short crc = 0;
 
-	while( len-- )
+	while (len--)
 	{
 		crc = ventrilo_crc_table[crc >> 8] ^ *data ^ (crc << 8);
 		data++;
@@ -242,7 +234,8 @@ unsigned short ventrilo_udp_crc(unsigned char *data, int len)
 	return(crc);
 }
 
-int buildVentriloRequest(unsigned char *buf, int cmd, char *pass, int id)
+int
+buildVentriloRequest(unsigned char *buf, int cmd, char *pass, int id)
 {
 	ventrilo_udp_head *stat = (ventrilo_udp_head *) buf;
 	unsigned char *data = buf + 20;
@@ -260,108 +253,93 @@ int buildVentriloRequest(unsigned char *buf, int cmd, char *pass, int id)
 	stat->datakey = ventrilo_udp_data_enc(data, 16);
 	ventrilo_udp_head_enc(buf);
 
-	return 20+16;
+	return 20 + 16;
 }
 
-query_status_t send_ventrilo_request_packet( struct qserver *server )
+query_status_t
+send_ventrilo_request_packet(struct qserver *server)
 {
 	char buf[1500];
-	char *password = get_param_value( server, "password", "" );
+	char *password = get_param_value(server, "password", "");
 	int size = buildVentriloRequest((unsigned char *) buf, VENTRILO_COMMAND_DETAILED_INFO, password, server->challenge);
 	server->n_requests++;
-	gettimeofday( &server->packet_time1, NULL );
+	gettimeofday(&server->packet_time1, NULL);
 
-	debug( 2, "send status request");
+	debug(2, "send status request");
 
-	return send_packet( server, buf, size );
+	return send_packet(server, buf, size);
 }
 
-query_status_t deal_with_ventrilo_packet( struct qserver *server, char *rawpkt, int pktlen )
+query_status_t
+deal_with_ventrilo_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *line, *last_line;
 
-	debug( 3, "deal_with_ventrilo_packet: state = %ld", server->challenge );
+	debug(3, "deal_with_ventrilo_packet: state = %ld", server->challenge);
 
-	if( 20 > pktlen )
-	{
-		debug( 2, "wrong or incomplete packet received. retrying...");
+	if (20 > pktlen) {
+		debug(2, "wrong or incomplete packet received. retrying...");
 		return INPROGRESS;
 	}
 
 	/* add to the data previously saved to get a full packet*/
-	if ( ! server->combined )
-	{
+	if (!server->combined) {
 		ventrilo_udp_head *header = (ventrilo_udp_head *) rawpkt;
-		unsigned char *data = (unsigned char *) header+20;
-		ventrilo_udp_head_dec( (unsigned char*) header );
+		unsigned char *data = (unsigned char *) header + 20;
+		ventrilo_udp_head_dec((unsigned char *) header);
 		ventrilo_udp_data_dec(data, header->len, header->datakey);
 
-		if (header->id != server->challenge)
-		{
-			debug( 2, "ignoring unnecessary packet...");
+		if (header->id != server->challenge) {
+			debug(2, "ignoring unnecessary packet...");
 			return INPROGRESS;
 		}
 
-		debug( 3, "decoded ventrilo fragment: id:%i - len:%i - totlen:%i - totpck:%i - zero:%i - cmd:%i", header->id, header->len, header->totlen, header->totpck, header->zero, header->cmd);
+		debug(3, "decoded ventrilo fragment: id:%i - len:%i - totlen:%i - totpck:%i - zero:%i - cmd:%i", header->id, header->len, header->totlen, header->totpck, header->zero, header->cmd);
 
 		add_packet(server, header->id, packet_count(server), header->totpck, header->len, (char *) data, 0);
-		return combine_packets( server );
+		return combine_packets(server);
 	}
 
-	debug( 4, "combined ventrilo packet: %s", rawpkt);
+	debug(4, "combined ventrilo packet: %s", rawpkt);
 
-	server->ping_total += time_delta( &packet_recv_time, &server->packet_time1 );
+	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 
-	line = strtok_ret( rawpkt, "\n", &last_line );
-	debug( 3, "processing detailed response..." );
+	line = strtok_ret(rawpkt, "\n", &last_line);
+	debug(3, "processing detailed response...");
 	while (line != NULL)
 	{
-		debug( 4, "processing line: %s", line );
-		if ( 0 == strncmp( line, "NAME: ", 6 ) )
-		{
-			server->server_name = strdup( line + 6 );
-		}
-		else if ( 0 == strncmp( line, "MAXCLIENTS: ", 12 ) )
-		{
-			server->max_players = atoi( line + 12 );
-		}
-		else if ( 0 == strncmp( line, "CLIENTCOUNT: ", 13 ) )
-		{
-			server->num_players = atoi( line + 13 );
-		}
-		else if ( 0 == strncmp( line, "CLIENT: ", 8 ) )
-		{
+		debug(4, "processing line: %s", line);
+		if (0 == strncmp(line, "NAME: ", 6)) {
+			server->server_name = strdup(line + 6);
+		} else if (0 == strncmp(line, "MAXCLIENTS: ", 12))   {
+			server->max_players = atoi(line + 12);
+		} else if (0 == strncmp(line, "CLIENTCOUNT: ", 13))   {
+			server->num_players = atoi(line + 13);
+		} else if (0 == strncmp(line, "CLIENT: ", 8))   {
 			// Client e.g.
 			// CLIENT: UID=406,ADMIN=0,CID=17,PHAN=0,PING=73,SEC=2245,NAME=Darrimu,COMM=
-			struct player *player = add_player( server, server->n_player_info );
+			struct player *player = add_player(server, server->n_player_info);
 			char *last_info = NULL;
-			char *player_info = strtok_ret( line + 8, ",", &last_info );
-			while ( NULL != player_info )
+			char *player_info = strtok_ret(line + 8, ",", &last_info);
+			while (NULL != player_info)
 			{
-				debug( 5, "player info: %s", player_info );
-				if ( 0 ==  strncmp( player_info, "NAME=", 5 ) )
-				{
-					player->name = strdup( player_info + 5 );
+				debug(5, "player info: %s", player_info);
+				if (0 ==  strncmp(player_info, "NAME=", 5)) {
+					player->name = strdup(player_info + 5);
+				} else if (strncmp(player_info, "PING=", 5))   {
+					player->ping = atoi(player_info + 5);
+				} else if (0 == strncmp(player_info, "CID=", 4))   {
+					player->team = atoi(player_info + 4);
+				} else if (strncmp(player_info, "SEC=", 4))   {
+					player->connect_time = atoi(player_info + 4);
 				}
-				else if ( strncmp( player_info, "PING=", 5 ) )
-				{
-					player->ping = atoi( player_info + 5 );
-				}
-				else if ( 0 == strncmp( player_info, "CID=", 4 ) )
-				{
-					player->team = atoi( player_info + 4 );
-				}
-				else if ( strncmp( player_info, "SEC=", 4 ) )
-				{
-					player->connect_time = atoi( player_info + 4 );
-				}
-				player_info = strtok_ret( NULL, ",", &last_info );
+				player_info = strtok_ret(NULL, ",", &last_info);
 			}
 		}
 
-		line = strtok_ret( NULL, "\n", &last_line );
+		line = strtok_ret(NULL, "\n", &last_line);
 	}
-	server->map_name = strdup( "N/A" );
+	server->map_name = strdup("N/A");
 
 	return DONE_FORCE;
 }

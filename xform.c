@@ -18,14 +18,14 @@
 #include <ctype.h>
 
 #ifndef _WIN32
-#include <err.h>
-#include <sysexits.h>
+	#include <err.h>
+	#include <sysexits.h>
 #endif
 
 #include "xform.h"
 
 #ifndef EX_OSERR
-#define EX_OSERR 71
+	#define EX_OSERR 71
 #endif
 
 /*
@@ -52,7 +52,7 @@ int xform_html_names = -1;
 extern int html_mode;
 
 /* xform buffer structure */
-typedef struct xform  {
+typedef struct xform {
 	char *buf;
 	size_t size;
 	struct xform *next;
@@ -72,7 +72,6 @@ static int xform_font_tag;
 
 /* Min size of an xform buffer */
 static const int xform_buf_min = 256;
-
 
 /*** Private Methods ***/
 
@@ -122,8 +121,9 @@ xform_buf_resize(size_t size, char **bufp)
 	}
 
 	oldbuf = xform_buf->buf;
-	if ((xform_buf->buf = realloc(xform_buf->buf, size)) == NULL)
+	if ((xform_buf->buf = realloc(xform_buf->buf, size)) == NULL) {
 		err(EX_OSERR, NULL);
+	}
 
 	if (xform_buf->buf != oldbuf && bufp != NULL) {
 		// memory block moved update bufp
@@ -139,10 +139,10 @@ xform_buf_resize(size_t size, char **bufp)
  * by the size of new string if needed
  */
 static int
-xform_snprintf(char **buf, size_t size, const char* format, ... )
+xform_snprintf(char **buf, size_t size, const char *format, ...)
 {
 	int ret;
-    va_list args;
+	va_list args;
 
 	// ensure buf is large enough
 	xform_buf_resize(xform_used + size, buf);
@@ -183,12 +183,14 @@ xform_html_color(char **buf, const char *font_color)
 	size_t size;
 	int inc;
 
-	if (xform_html_names != 1)
+	if (xform_html_names != 1) {
 		return 0;
+	}
 
 	size = 15 + strlen(font_color);
-	if (xform_font_tag)
+	if (xform_font_tag) {
 		size += 7;
+	}
 
 	inc = xform_snprintf(buf, size, "%s<font color=\"%s\">", xform_font_tag ? "</font>" : "", font_color);
 	xform_font_tag = 1;
@@ -207,7 +209,6 @@ xform_buf_reset()
 	xform_used = 0;
 }
 
-
 /*
  * Allocate and init a new xform buffer ensuring min size is used
  */
@@ -215,6 +216,7 @@ static char *
 xform_buf_create(size_t size)
 {
 	struct xform *next;
+
 	char *buf;
 
 	/*
@@ -223,11 +225,11 @@ xform_buf_create(size_t size)
 	 */
 	size = (size >= xform_buf_min) ? size + 1 : xform_buf_min;
 
-	if((next = malloc(sizeof(xform))) == NULL) {
+	if ((next = malloc(sizeof(xform))) == NULL) {
 		err(EX_OSERR, NULL);
 	}
 
-	if((buf = malloc(sizeof(char) * size)) == NULL) {
+	if ((buf = malloc(sizeof(char) * size)) == NULL) {
 		err(EX_OSERR, NULL);
 	}
 
@@ -240,7 +242,7 @@ xform_buf_create(size_t size)
 
 	if (xform_buf == NULL) {
 		xform_bufs = next;
-	} else {
+	} else   {
 		xform_buf->next = next;
 	}
 	xform_buf = next;
@@ -260,14 +262,14 @@ xform_buf_get(size_t size)
 	}
 
 	xform_buf = xform_buf->next;
-	
+
 	if (size > xform_buf->size) {
 		xform_buf_resize(size, NULL);
-	} else {
+	} else   {
 		xform_used = size;
 		xform_font_tag = 0;
 	}
-	
+
 	xform_buf->buf[0] = '\0';
 
 	return xform_buf->buf;
@@ -288,7 +290,7 @@ xform_name_q3(char *string, struct qserver *server)
 	char *q;
 
 	q = xform_strbuf();
-	s = (unsigned char*)string;
+	s = (unsigned char *)string;
 
 	for (; *s; s++) {
 		if (*s == '^' && *(s + 1) != '^') {
@@ -297,38 +299,38 @@ xform_name_q3(char *string, struct qserver *server)
 			}
 
 			if (xform_html_names == 1) {
-				q += xform_html_color(&q, quake3_escape_colors[*(s + 1) &0x7]);
+				q += xform_html_color(&q, quake3_escape_colors[*(s + 1) & 0x7]);
 				s++;
-			} else if (xform_strip_carets) {
+			} else if (xform_strip_carets)   {
 				s++;
-			} else {
+			} else   {
 				*q++ = *s;
 			}
-		} else {
+		} else   {
 			int inc = xform_html_entity((char)*s, q);
 			if (0 != inc) {
 				q += inc;
-			} else if (isprint(*s)) {
+			} else if (isprint(*s))   {
 				*q++ = *s;
-			} else if (*s == '\033') {
+			} else if (*s == '\033')   {
 				/* skip */
-			} else if (*s == 0x80) {
+			} else if (*s == 0x80)   {
 				*q++ = '(';
-			} else if (*s == 0x81) {
+			} else if (*s == 0x81)   {
 				*q++ = '=';
-			} else if (*s == 0x82) {
+			} else if (*s == 0x82)   {
 				*q++ = ')';
-			} else if (*s == 0x10 || *s == 0x90) {
+			} else if (*s == 0x10 || *s == 0x90)   {
 				*q++ = '[';
-			} else if (*s == 0x11 || *s == 0x91) {
+			} else if (*s == 0x11 || *s == 0x91)   {
 				*q++ = ']';
-			} else if (*s >= 0x92 && *s <= 0x9a) {
+			} else if (*s >= 0x92 && *s <= 0x9a)   {
 				*q++ = *s - 98;
-			} else if (*s >= 0xa0 && *s <= 0xe0) {
+			} else if (*s >= 0xa0 && *s <= 0xe0)   {
 				*q++ = *s - 128;
-			} else if (*s >= 0xe1 && *s <= 0xfa) {
+			} else if (*s >= 0xe1 && *s <= 0xfa)   {
 				*q++ = *s - 160;
-			} else if (*s >= 0xfb && *s <= 0xfe) {
+			} else if (*s >= 0xfb && *s <= 0xfe)   {
 				*q++ = *s - 128;
 			}
 		}
@@ -354,7 +356,7 @@ xform_name_t2(char *string, struct qserver *server)
 		if (0 != inc) {
 			q += inc;
 			continue;
-		} else if (isprint(*s)) {
+		} else if (isprint(*s))   {
 			*q++ = *s;
 			continue;
 		}
@@ -364,16 +366,16 @@ xform_name_t2(char *string, struct qserver *server)
 			switch (*s) {
 			case 0x8:
 				font_color = "white";
-				break; /* normal */
+				break;	/* normal */
 			case 0xb:
 				font_color = "yellow";
-				break; /* tribe tag */
+				break;	/* tribe tag */
 			case 0xc:
 				font_color = "blue";
-				break; /* alias */
+				break;	/* alias */
 			case 0xe:
 				font_color = "green";
-				break; /* bot */
+				break;	/* bot */
 			default:
 				font_color = NULL;
 			}
@@ -403,7 +405,6 @@ static const char *unreal_rgb_colors[] =
 	"#B0E0E6", "#800080", "#FF0000", "#BC8F8F", "#4169E1", "#8B4513", "#FA8072", "#F4A460", "#2E8B57", "#FFF5EE", "#A0522D",
 	"#C0C0C0", "#87CEEB", "#6A5ACD", "#708090", "#FFFAFA", "#00FF7F", "#4682B4", "#D2B48C", "#008080", "#D8BFD8", "#FF6347",
 	"#40E0D0", "#EE82EE", "#F5DEB3", "#FFFFFF", "#F5F5F5", "#FFFF00", "#9ACD32",
-
 };
 
 /*
@@ -423,20 +424,20 @@ xform_name_u2(char *string, struct qserver *server)
 			// xmp color
 			s += 2;
 			q += xform_html_color((char **)&s, unreal_rgb_colors[*s - 1]);
-		} else if (memcmp(s, "\x1b", 1) == 0) {
+		} else if (memcmp(s, "\x1b", 1) == 0)   {
 			// ut2k4 color
 			char color[5];
 			s += 1;
 			sprintf(color, "#%02hhx%02hhx%02hhx", s[0], s[1], s[2]);
 			q += xform_html_color(&q, color);
 			s += 3;
-		} else {
+		} else   {
 			int inc = xform_html_entity(*s, q);
 			if (0 != inc) {
 				q += inc;
-			} else if (isprint(*s)) {
+			} else if (isprint(*s))   {
 				*q++ = *s;
-			} else if (0xa0 == *s) {
+			} else if (0xa0 == *s)   {
 				*q++ = ' ';
 			}
 		}
@@ -510,7 +511,8 @@ xform_name_tm(char *string, struct qserver *server)
 			case 'z':
 			case 'Z':
 				// reset all
-				while (open) {
+				while (open)
+				{
 					q += xform_strcpy(&q, "</span>");
 					open--;
 				}
@@ -546,12 +548,13 @@ xform_name_tm(char *string, struct qserver *server)
 				}
 				break;
 			}
-		} else {
+		} else   {
 			*q++ = *s;
 		}
 	}
 
-	while (open) {
+	while (open)
+	{
 		q += xform_strcpy(&q, "</span>");
 		open--;
 	}
@@ -559,7 +562,6 @@ xform_name_tm(char *string, struct qserver *server)
 
 	return xform_strbuf();
 }
-
 
 static char *sof_colors[32] =
 {
@@ -578,7 +580,7 @@ xform_name_sof(char *string, struct qserver *server)
 	char *q;
 
 	q = xform_strbuf();
-	s = (unsigned char*)string;
+	s = (unsigned char *)string;
 
 	// The may not be the intention but is needed for q1 at least
 	for (; *s; s++) {
@@ -590,20 +592,20 @@ xform_name_sof(char *string, struct qserver *server)
 
 		if (*s < ' ') {
 			q += xform_html_color(&q, sof_colors[*(s)]);
-		} else if (isprint(*s)) {
+		} else if (isprint(*s))   {
 			*q++ = *s;
-		// ## more fixes below; double check against real sof servers
-		} else if (*s >= 0xa0) {
-			*q++ = *s &0x7f;
-		} else if (*s >= 0x92 && *s < 0x9c) {
+			// ## more fixes below; double check against real sof servers
+		} else if (*s >= 0xa0)   {
+			*q++ = *s & 0x7f;
+		} else if (*s >= 0x92 && *s < 0x9c)   {
 			*q++ = '0' + (*s - 0x92);
-		} else if (*s >= 0x12 && *s < 0x1c) {
+		} else if (*s >= 0x12 && *s < 0x1c)   {
 			*q++ = '0' + (*s - 0x12);
-		} else if (*s == 0x90 || *s == 0x10) {
+		} else if (*s == 0x90 || *s == 0x10)   {
 			*q++ = '[';
-		} else if (*s == 0x91 || *s == 0x11) {
+		} else if (*s == 0x91 || *s == 0x11)   {
 			*q++ = ']';
-		} else if (*s == 0xa || *s == 0xc || *s == 0xd) {
+		} else if (*s == 0xa || *s == 0xc || *s == 0xd)   {
 			*q++ = ']';
 		}
 	}
@@ -639,6 +641,7 @@ void
 xform_buf_free()
 {
 	struct xform *cur;
+
 	struct xform *next;
 
 	for (cur = xform_bufs; cur != NULL; cur = next) {
@@ -669,7 +672,7 @@ xform_name(char *string, struct qserver *server)
 
 		return buf;
 	}
-	
+
 	if (!xform_names) {
 		return string;
 	}
@@ -708,15 +711,15 @@ xform_name(char *string, struct qserver *server)
 	}
 
 	buf = xform_buf_get(strlen(s));
-	if (server->type->flags &TF_QUAKE3_NAMES) {
+	if (server->type->flags & TF_QUAKE3_NAMES) {
 		s = xform_name_q3(s, server);
-	} else if (!is_server_name && (server->type->flags &TF_TRIBES2_NAMES)) {
+	} else if (!is_server_name && (server->type->flags & TF_TRIBES2_NAMES))   {
 		s = xform_name_t2(s, server);
-	} else if (server->type->flags &TF_U2_NAMES) {
+	} else if (server->type->flags & TF_U2_NAMES)   {
 		s = xform_name_u2(s, server);
-	} else if (server->type->flags &TF_TM_NAMES) {
+	} else if (server->type->flags & TF_TM_NAMES)   {
 		s = xform_name_tm(s, server);
-	} else if (!is_server_name || server->type->flags &TF_SOF_NAMES) {
+	} else if (!is_server_name || server->type->flags & TF_SOF_NAMES)   {
 		// Catch all for NOT is_server_name OR TF_SOF_NAMES
 		s = xform_name_sof(s, server);
 	}
@@ -727,4 +730,3 @@ xform_name(char *string, struct qserver *server)
 
 	return s;
 }
-

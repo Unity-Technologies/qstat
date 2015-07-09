@@ -13,8 +13,7 @@
 #include "qserver.h"
 
 // Packet processing methods
-query_status_t deal_with_bfbc2_packet( struct qserver *server, char *pkt, int pktlen );
-query_status_t send_bfbc2_request_packet( struct qserver *server );
+query_status_t deal_with_bfbc2_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t send_bfbc2_request_packet(struct qserver *server);
 
 #endif
-

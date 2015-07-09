@@ -11,11 +11,11 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
 #else
-#include <winsock.h>
+	#include <winsock.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,14 +27,16 @@
 #include "md5.h"
 #include "packet_manip.h"
 
-char *decode_ksp_val(char *val)
+char *
+decode_ksp_val(char *val)
 {
 	// Very basic html conversion
 	val = str_replace(val, "&quot;", "\"");
 	return str_replace(val, "&amp;", "&");
 }
 
-query_status_t send_ksp_request_packet(struct qserver *server)
+query_status_t
+send_ksp_request_packet(struct qserver *server)
 {
 	char buf[256];
 
@@ -44,7 +46,8 @@ query_status_t send_ksp_request_packet(struct qserver *server)
 	return send_packet(server, buf, strlen(buf));
 }
 
-query_status_t valid_ksp_response(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t
+valid_ksp_response(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s;
 	int len;
@@ -88,7 +91,8 @@ query_status_t valid_ksp_response(struct qserver *server, char *rawpkt, int pktl
 	return DONE_FORCE;
 }
 
-char *ksp_json_attrib(char *line, char *name)
+char *
+ksp_json_attrib(char *line, char *name)
 {
 	char *q, *p, *val;
 
@@ -109,7 +113,7 @@ char *ksp_json_attrib(char *line, char *name)
 		if (q == NULL) {
 			return NULL;
 		}
-	} else {
+	} else   {
 		// Integer, bool etc
 		q = strchr(p, ',');
 		if (q == NULL) {
@@ -117,7 +121,7 @@ char *ksp_json_attrib(char *line, char *name)
 		}
 	}
 	*q = '\0';
-	
+
 	val = strdup(p);
 	*q = '"';
 	debug(4, "%s = %s", name, val);
@@ -125,7 +129,8 @@ char *ksp_json_attrib(char *line, char *name)
 	return val;
 }
 
-query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pktlen)
+query_status_t
+deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *val, *line;
 	query_status_t state = INPROGRESS;
@@ -158,7 +163,7 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			return combine_packets(server);
 		}
 		case DONE_FORCE:
-			break; // single packet response fall through
+			break;	// single packet response fall through
 		default:
 			return state;
 		}
@@ -168,7 +173,7 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 		state = valid_ksp_response(server, rawpkt, pktlen);
 		switch (state) {
 		case DONE_FORCE:
-			break; // actually process
+			break;	// actually process
 		default:
 			return state;
 		}
@@ -187,7 +192,8 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 	line = strtok(s, "\012");
 
 	// NOTE: id=XXX and msg=XXX will be processed by the mod following the one they where the response of
-	while (line != NULL) {
+	while (line != NULL)
+	{
 		debug(4, "LINE: %s\n", line);
 		if (strstr(line, "{") != NULL) {
 			debug(1, "{...");
@@ -211,7 +217,7 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			val = ksp_json_attrib(line, "server_name");
 			if (val != NULL) {
 				server->server_name = val;
-			} else {
+			} else   {
 				server->server_name = strdup("Unknown");
 			}
 
@@ -219,7 +225,7 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			val = ksp_json_attrib(line, "mapName");
 			if (val != NULL) {
 				server->map_name = val;
-			} else {
+			} else   {
 				server->map_name = strdup("Default");
 			}
 
@@ -228,7 +234,7 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			if (val != NULL) {
 				server->max_players = atoi(val);
 				free(val);
-			} else {
+			} else   {
 				server->max_players = get_param_ui_value(server, "max_players", 1);
 			}
 
@@ -237,11 +243,11 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			if (val != NULL) {
 				server->num_players = atoi(val);
 				free(val);
-			} else {
+			} else   {
 				server->num_players = 0;
 			}
 		}
-		
+
 		line = strtok(NULL, "\012");
 	}
 
@@ -249,4 +255,3 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 
 	return DONE_FORCE;
 }
-
