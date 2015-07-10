@@ -69,7 +69,9 @@
 		#define INADDR_NONE ~0
 	#endif
 	#define sockerr()	errno
-#endif /* _WIN32 */
+#else	/* _WIN32 */
+	#include "utils.h"
+#endif	/* !_WIN32 */
 
 #ifdef __OS2__
 	#include <sys/socket.h>

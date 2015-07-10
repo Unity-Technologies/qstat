@@ -6,7 +6,10 @@
  */
 #ifndef QSTAT_UTILS_H
 #define QSTAT_UTILS_H
+
+#ifndef _WIN32
 #include "gnuconfig.h"
+#endif
 
 // BSD has strnstr
 #if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__OpenBSD__)
