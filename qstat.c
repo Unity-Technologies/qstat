@@ -2654,7 +2654,7 @@ void usage(char *msg, char **argv, char *a1)
 
 	sorted_types = (server_type **)malloc(sizeof(server_type*) * n_server_types);
 	type = &types[0];
-	for (i = 0; type->id != Q_UNKNOWN_TYPE; type++, i++)
+	for (i = 0; type->id != Q_UNKNOWN_TYPE && i < n_server_types; type++, i++)
 	{
 		sorted_types[i] = type;
 	}
