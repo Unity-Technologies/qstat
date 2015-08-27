@@ -425,7 +425,11 @@ xform_name_u2(char *string, struct qserver *server)
 			q += xform_html_color((char **)&s, unreal_rgb_colors[*s - 1]);
 		} else if (memcmp(s, "\x1b", 1) == 0) {
 			// ut2k4 color
-			char color[5];
+			// A 3 byte array, for example { 0xF8, 0x40, 0x40 }
+			// is encoded as a 8 char sized string including
+			// the '#' prefix and the null-terminator:
+			// { '#', 'F', '8', '4', '0', '4', '0', 0x00 }
+			char color[8];
 			s += 1;
 			sprintf(color, "#%02hhx%02hhx%02hhx", s[0], s[1], s[2]);
 			q += xform_html_color(&q, color);
