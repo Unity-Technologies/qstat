@@ -11,11 +11,11 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
 #else
-#include <winsock.h>
+	#include <winsock.h>
 #endif
 
 #include <stdlib.h>
@@ -27,7 +27,6 @@
 #include "qstat.h"
 #include "md5.h"
 #include "packet_manip.h"
-
 
 int unpack_msgpack(struct qserver *server, unsigned char *, unsigned char *);
 
@@ -43,8 +42,8 @@ send_dirtybomb_request_packet(struct qserver *server)
 		chunks |= 0x02;
 	}
 	if (server->flags & TF_PLAYER_QUERY) {
-		chunks |= 0x04; // Player
-		chunks |= 0x08; // Team - Currently not supported
+		chunks |= 0x04;	// Player
+		chunks |= 0x08;	// Team - Currently not supported
 	}
 	sprintf(buf, "%c%c%s%c", 0x01, len, password, chunks);
 
@@ -59,7 +58,7 @@ deal_with_dirtybomb_packet(struct qserver *server, char *rawpkt, int pktlen)
 	unsigned char *s, *l, pkt_id, pkt_max;
 
 	debug(2, "processing...");
-	
+
 	if (8 > pktlen) {
 		// not valid response
 		malformed_packet(server, "packet too small");
@@ -81,20 +80,20 @@ deal_with_dirtybomb_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pkt_max = rawpkt[6];
 
 	// Payload Blob - msgpack map
-	s = (unsigned char*)rawpkt + 7;
-	
+	s = (unsigned char *)rawpkt + 7;
+
 	if (!server->combined) {
 		int pkt_cnt = packet_count(server);
 
 		server->retry1 = n_retries;
 		if (0 == server->n_requests) {
-			server->ping_total = time_delta( &packet_recv_time, &server->packet_time1 );
+			server->ping_total = time_delta(&packet_recv_time, &server->packet_time1);
 			server->n_requests++;
 		}
 
 		if (pkt_cnt < pkt_max) {
 			// We're expecting more to come
-			debug( 5, "fragment recieved..." );
+			debug(5, "fragment recieved...");
 
 			if (!add_packet(server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1)) {
 				// fatal error e.g. out of memory
@@ -125,8 +124,6 @@ deal_with_dirtybomb_packet(struct qserver *server, char *rawpkt, int pktlen)
 int
 unpack_msgpack_pos_fixnum(struct qserver *server, uint8_t *val, unsigned char **datap, unsigned char *last, int raw)
 {
-
-
 	if (!raw) {
 		if (*datap > last) {
 			malformed_packet(server, "packet too small");
@@ -137,7 +134,6 @@ unpack_msgpack_pos_fixnum(struct qserver *server, uint8_t *val, unsigned char **
 			malformed_packet(server, "invalid positive fixnum type 0x%02hhx", **datap);
 			return 0;
 		}
-
 	}
 
 	*val = **datap;
@@ -149,8 +145,6 @@ unpack_msgpack_pos_fixnum(struct qserver *server, uint8_t *val, unsigned char **
 int
 unpack_msgpack_uint16(struct qserver *server, uint16_t *val, unsigned char **datap, unsigned char *last, int raw)
 {
-
-
 	if (!raw) {
 		if (*datap > last) {
 			malformed_packet(server, "packet too small");
@@ -178,8 +172,6 @@ unpack_msgpack_uint16(struct qserver *server, uint16_t *val, unsigned char **dat
 int
 unpack_msgpack_uint32(struct qserver *server, uint32_t *val, unsigned char **datap, unsigned char *last, int raw)
 {
-
-
 	if (!raw) {
 		if (*datap > last) {
 			malformed_packet(server, "packet too small");
@@ -200,9 +192,9 @@ unpack_msgpack_uint32(struct qserver *server, uint32_t *val, unsigned char **dat
 	}
 
 	*val = (uint32_t)(*datap)[3] |
-		((uint32_t)(*datap)[2] << 8) |
-		((uint32_t)(*datap)[1] << 16) |
-		((uint32_t)(*datap)[0] << 24);
+		   ((uint32_t)(*datap)[2] << 8) |
+		   ((uint32_t)(*datap)[1] << 16) |
+		   ((uint32_t)(*datap)[0] << 24);
 	*datap += 2;
 
 	return 1;
@@ -266,8 +258,9 @@ unpack_msgpack_raw16(struct qserver *server, char **valp, unsigned char **datap,
 	}
 	(*datap)++;
 
-	if (!unpack_msgpack_uint16(server, &len, datap, last, 1))
+	if (!unpack_msgpack_uint16(server, &len, datap, last, 1)) {
 		return 0;
+	}
 
 	return unpack_msgpack_raw_len(server, valp, datap, last, (uint32_t)len);
 }
@@ -283,8 +276,9 @@ unpack_msgpack_raw32(struct qserver *server, char **valp, unsigned char **datap,
 	}
 	(*datap)++;
 
-	if (!unpack_msgpack_uint32(server, &len, datap, last, 1))
+	if (!unpack_msgpack_uint32(server, &len, datap, last, 1)) {
 		return 0;
+	}
 
 	return unpack_msgpack_raw_len(server, valp, datap, last, len);
 }
@@ -296,14 +290,15 @@ unpack_msgpack_string(struct qserver *server, char **valp, unsigned char **datap
 
 	debug(4, "string: 0x%02hhx\n", type);
 
-	if (0xa0 == (type & 0xa0))
+	if (0xa0 == (type & 0xa0)) {
 		return unpack_msgpack_raw(server, valp, datap, last);
-	else if (type == 0xda)
+	} else if (type == 0xda) {
 		return unpack_msgpack_raw16(server, valp, datap, last);
-	else if (type == 0xdb)
+	} else if (type == 0xdb) {
 		return unpack_msgpack_raw32(server, valp, datap, last);
-	else
+	} else {
 		malformed_packet(server, "invalid string type 0x%02hhx", type);
+	}
 
 	return 0;
 }
@@ -323,61 +318,63 @@ unpack_msgpack(struct qserver *server, unsigned char *s, unsigned char *l)
 		type = (type_len & 0x80);
 		elements = (type_len & 0x0f);
 		debug(3, "map type: 0x%02hhx, elements: %d\n", type, elements);
-
 	} else if (type_len == 0xde) {
 		// map 16
-		if (!unpack_msgpack_uint16(server, &elements, &s, l, 1))
+		if (!unpack_msgpack_uint16(server, &elements, &s, l, 1)) {
 			return 0;
+		}
 	} else {
 		// There is a map 32 but we don't support it
 		malformed_packet(server, "invalid map type 0x%02hhx", type_len);
 		return 0;
 	}
 
-	while(elements) {
+	while (elements)
+	{
 		type = *s;
-		if (!unpack_msgpack_string(server, &var, &s, l))
+		if (!unpack_msgpack_string(server, &var, &s, l)) {
 			return 0;
+		}
 
 		debug(4, "Map[%s]\n", var);
 
 		if (0 == strcmp(var, "SN")) {
 			// Server Name
-			if (!unpack_msgpack_string(server, &str_val, &s, l))
+			if (!unpack_msgpack_string(server, &str_val, &s, l)) {
 				return 0;
+			}
 			server->server_name = str_val;
-
 		} else if (0 == strcmp(var, "MAP")) {
 			// Map
-			if (!unpack_msgpack_string(server, &str_val, &s, l))
+			if (!unpack_msgpack_string(server, &str_val, &s, l)) {
 				return 0;
+			}
 			server->map_name = str_val;
-
 		} else if (0 == strcmp(var, "MP")) {
 			// Max Players
-			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0))
+			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0)) {
 				return 0;
+			}
 			server->max_players = uint8_val;
-
 		} else if (0 == strcmp(var, "NP")) {
 			// Number of Players
-			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0))
+			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0)) {
 				return 0;
+			}
 			server->num_players = uint8_val;
-
 		} else if (0 == strcmp(var, "RL")) {
 			// Gametype
-			if (!unpack_msgpack_string(server, &str_val, &s, l))
+			if (!unpack_msgpack_string(server, &str_val, &s, l)) {
 				return 0;
+			}
 
 			server->game = str_val;
 			add_rule(server, "gametype", str_val, NO_FLAGS);
-
 		} else if (0 == strcmp(var, "SFT")) {
 			// Current Frametime in ms
-			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0))
+			if (!unpack_msgpack_pos_fixnum(server, &uint8_val, &s, l, 0)) {
 				return 0;
-
+			}
 		} else {
 			debug(4, "Unknown setting '%s'\n", var);
 			s++;
