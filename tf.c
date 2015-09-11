@@ -18,7 +18,7 @@
 #define SERVERINFO_VERSION 1
 #define SERVERINFO_RESPONSE 80
 
-static char serverinfo_pkt[] = {0xFF, 0xFF, 0xFF, 0xFF, SERVERINFO_REQUEST, SERVERINFO_VERSION};
+static char serverinfo_pkt[] = { 0xFF, 0xFF, 0xFF, 0xFF, SERVERINFO_REQUEST, SERVERINFO_VERSION };
 
 static void
 pkt_inc(char **pkt, int *rem, int inc)
@@ -139,7 +139,7 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 		(unsigned char)pkt[1] << 8 |
 		(unsigned char)pkt[2] << 16 |
 		(unsigned char)pkt[3] << 24
-	);
+		);
 	sprintf(buf, "%d", num);
 	add_rule(server, "playlist_num", buf, 0);
 	pkt_inc(&pkt, &rem, sizeof(int32_t));
@@ -186,7 +186,6 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 		// Client Team ID (uint8)
 		p->team = (uint8_t)*pkt;
 		pkt_inc(&pkt, &rem, sizeof(uint8_t));
-
 	}
 
 	// EOP (int64)

@@ -11,6 +11,6 @@
 
 void xform_buf_free();
 int xform_printf(FILE *, const char *, ...);
-char * xform_name(char *, struct qserver *);
+char* xform_name(char *, struct qserver *);
 
 #endif
