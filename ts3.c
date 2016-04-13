@@ -206,7 +206,7 @@ int valid_ts3_response( struct qserver *server, char *rawpkt, int pktlen )
 
 query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *end, *player_name = "unknown";
+	char *s, *player_name = "unknown";
 	int valid_response = 0, mode = 0, all_servers = 0;
 	char last_char;
 	unsigned short port = 0, down = 0, auth_seen = 0;
@@ -220,7 +220,6 @@ query_status_t deal_with_ts3_packet( struct qserver *server, char *rawpkt, int p
 
 	last_char = rawpkt[pktlen-1];
 	rawpkt[pktlen-1] = '\0';
-	end = &rawpkt[pktlen-1];
 	s = rawpkt;
 	all_servers = all_ts3_servers( server );
 
