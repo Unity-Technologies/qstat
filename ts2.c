@@ -48,7 +48,7 @@ query_status_t send_ts2_request_packet( struct qserver *server )
 
 query_status_t deal_with_ts2_packet( struct qserver *server, char *rawpkt, int pktlen )
 {
-	char *s, *end;
+	char *s;
 	int ping, connect_time, mode = 0;
 	char name[256];
 	debug( 2, "processing..." );
@@ -64,7 +64,6 @@ query_status_t deal_with_ts2_packet( struct qserver *server, char *rawpkt, int p
 	}
 
 	rawpkt[pktlen]= '\0';
-	end = &rawpkt[pktlen];
 
 	s = rawpkt;
 	s = strtok( rawpkt, "\015\012" );

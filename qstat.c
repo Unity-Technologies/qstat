@@ -3095,7 +3095,7 @@ struct rcv_pkt
 
 void do_work(void)
 {
-	int pktlen, rc, fd;
+	int pktlen, rc;
 	char *pkt = NULL;
 	int bind_retry = 0;
 	struct timeval timeout;
@@ -3164,7 +3164,6 @@ void do_work(void)
 			break;
 		}
 
-		fd = 0;
 		for (; rc && buffill < bufsize; rc--)
 		{
 			int addrlen = sizeof(buffer[buffill].addr);
@@ -9775,7 +9774,7 @@ static char Dat2Reply1_4[] =
 
 query_status_t deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 {
-	char str[256], *start, *end, StartFlag, *lpszIgnoreServerPlayer;
+	char str[256], StartFlag, *lpszIgnoreServerPlayer;
 	char *lpszMission;
 	unsigned int iIgnoreServerPlayer, iDedicatedServer, iUseStartTimer;
 	unsigned short GrPayloadLen;
@@ -9790,8 +9789,6 @@ query_status_t deal_with_ghostrecon_packet(struct qserver *server, char *pkt, in
 
 	debug( 2, "deal_with_ghostrecon_packet %p, %d", server, pktlen );
 
-	start = pkt;
-	end = &pkt[pktlen];
 	pkt[pktlen] = '\0';
 
 	/*
