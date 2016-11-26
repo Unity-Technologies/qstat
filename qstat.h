@@ -38,7 +38,7 @@
 static int gettimeofday(struct timeval *now, void *blah)
 {
     struct timeb timeb;
-    ftime( &timeb);
+    ftime(&timeb);
     now->tv_sec= timeb.time;
     now->tv_usec= (unsigned int)timeb.millitm * 1000;
     return 0;
@@ -80,9 +80,18 @@ typedef enum {
 
 #include "qserver.h"
 
-typedef void (*DisplayFunc)( struct qserver *);
-typedef query_status_t (*QueryFunc)( struct qserver *);
-typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
+#define ENCODING_LATIN_1 1
+#define ENCODING_UTF_8  8
+#define UTF8BYTESWAPNOTACHAR	0xFFFE
+#define UTF8NOTACHAR	0xFFFF
+#define UTF8MAXFROMUCS4	0x10FFFF
+
+// Output formats
+#include "display_standard.h"
+#include "display_template.h"
+#include "display_raw.h"
+#include "display_xml.h"
+#include "display_json.h"
 
 // Packet modules
 #include "ut2004.h"
@@ -288,143 +297,121 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 
 #define TRIBES_TEAM	-1
 
+typedef void (*DisplayFunc)(struct qserver *);
+typedef query_status_t (*QueryFunc)(struct qserver *);
+typedef query_status_t (*PacketFunc)(struct qserver *, char *rawpkt, int pktlen);
+
 struct q_packet;
 
-/*
- * Output and formatting functions
+struct qserver *servers;
+struct qserver **last_server;
+struct qserver *last_server_bind;
+struct qserver *first_server_bind;
+
+/* 
+ * Functions 
  */
 
-void display_server( struct qserver *server);
-void display_qwmaster( struct qserver *server);
-void display_server_rules( struct qserver *server);
-void display_player_info( struct qserver *server);
-void display_q_player_info( struct qserver *server);
-void display_qw_player_info( struct qserver *server);
-void display_q2_player_info( struct qserver *server);
-void display_unreal_player_info( struct qserver *server);
-void display_shogo_player_info( struct qserver *server);
-void display_halflife_player_info( struct qserver *server);
-void display_tribes_player_info( struct qserver *server);
-void display_tribes2_player_info( struct qserver *server);
-void display_bfris_player_info( struct qserver *server);
-void display_descent3_player_info( struct qserver *server);
-void display_ravenshield_player_info( struct qserver *server);
-void display_savage_player_info( struct qserver *server);
-void display_farcry_player_info( struct qserver *server);
-void display_ghostrecon_player_info( struct qserver *server);
-void display_eye_player_info( struct qserver *server);
-void display_armyops_player_info( struct qserver *server);
-void display_gs2_player_info( struct qserver *server);
-void display_doom3_player_info( struct qserver *server);
-void display_ts2_player_info( struct qserver *server);
-void display_ts3_player_info( struct qserver *server);
-void display_bfbc2_player_info( struct qserver *server);
-void display_tm_player_info( struct qserver *server);
-void display_wic_player_info( struct qserver *server);
-void display_fl_player_info( struct qserver *server);
-void display_tee_player_info( struct qserver *server);
-void display_ventrilo_player_info( struct qserver *server);
-void display_starmade_player_info( struct qserver *server);
+void quicksort(void **array, int i, int j, int(*compare)(void *, void*));
+int qpartition(void **array, int i, int j, int(*compare)(void *, void*));
 
-void raw_display_server( struct qserver *server);
-void raw_display_server_rules( struct qserver *server);
-void raw_display_player_info( struct qserver *server);
-void raw_display_q_player_info( struct qserver *server);
-void raw_display_qw_player_info( struct qserver *server);
-void raw_display_q2_player_info( struct qserver *server);
-void raw_display_unreal_player_info( struct qserver *server);
-void raw_display_halflife_player_info( struct qserver *server);
-void raw_display_tribes_player_info( struct qserver *server);
-void raw_display_tribes2_player_info( struct qserver *server);
-void raw_display_bfris_player_info( struct qserver *server);
-void raw_display_ravenshield_player_info( struct qserver *server);
-void raw_display_savage_player_info( struct qserver *server);
-void raw_display_farcry_player_info( struct qserver *server);
-void raw_display_descent3_player_info( struct qserver *server);
-void raw_display_ghostrecon_player_info( struct qserver *server);
-void raw_display_eye_player_info( struct qserver *server);
-void raw_display_armyops_player_info( struct qserver *server);
-void raw_display_gs2_player_info( struct qserver *server);
-void raw_display_doom3_player_info( struct qserver *server);
-void raw_display_ts2_player_info( struct qserver *server);
-void raw_display_ts3_player_info( struct qserver *server);
-void raw_display_bfbc2_player_info( struct qserver *server);
-void raw_display_tm_player_info( struct qserver *server);
-void raw_display_wic_player_info( struct qserver *server);
-void raw_display_fl_player_info( struct qserver *server);
-void raw_display_tee_player_info( struct qserver *server);
-void raw_display_ventrilo_player_info( struct qserver *server);
-void raw_display_starmade_player_info( struct qserver *server);
+void sort_servers(struct qserver **array, int size);
+void sort_players(struct qserver *server);
+int server_compare(struct qserver *one, struct qserver *two);
+int player_compare(struct player *one, struct player *two);
+int type_option_compare(server_type *one, server_type *two);
+int type_string_compare(server_type *one, server_type *two);
 
-void xml_display_server( struct qserver *server);
-void xml_header();
-void xml_footer();
-void xml_display_server_rules( struct qserver *server);
-void xml_display_player_info( struct qserver *server);
-void xml_display_q_player_info( struct qserver *server);
-void xml_display_qw_player_info( struct qserver *server);
-void xml_display_q2_player_info( struct qserver *server);
-void xml_display_unreal_player_info( struct qserver *server);
-void xml_display_halflife_player_info( struct qserver *server);
-void xml_display_tribes_player_info( struct qserver *server);
-void xml_display_tribes2_player_info( struct qserver *server);
-void xml_display_ravenshield_player_info( struct qserver *server);
-void xml_display_savage_player_info( struct qserver *server);
-void xml_display_farcry_player_info( struct qserver *server);
-void xml_display_bfris_player_info( struct qserver *server);
-void xml_display_descent3_player_info( struct qserver *server);
-void xml_display_ghostrecon_player_info( struct qserver *server);
-void xml_display_eye_player_info( struct qserver *server);
-void xml_display_armyops_player_info( struct qserver *server);
-void xml_display_player_info( struct qserver *server);
-void xml_display_doom3_player_info( struct qserver *server);
-void xml_display_ts2_player_info( struct qserver *server);
-void xml_display_ts3_player_info( struct qserver *server);
-void xml_display_bfbc2_player_info( struct qserver *server);
-void xml_display_tm_player_info( struct qserver *server);
-void xml_display_wic_player_info( struct qserver *server);
-void xml_display_fl_player_info( struct qserver *server);
-void xml_display_tee_player_info( struct qserver *server);
-void xml_display_ventrilo_player_info( struct qserver *server);
-void xml_display_starmade_player_info( struct qserver *server);
-char *xml_escape( char*);
+int process_func_ret( struct qserver *server, int ret );
+int connection_inprogress();
+void clear_socketerror();
 
-query_status_t send_qserver_request_packet( struct qserver *server);
-query_status_t send_qwserver_request_packet( struct qserver *server);
-query_status_t send_ut2003_request_packet( struct qserver *server);
-query_status_t send_tribes_request_packet( struct qserver *server);
-query_status_t send_qwmaster_request_packet( struct qserver *server);
-query_status_t send_bfris_request_packet( struct qserver *server);
-query_status_t send_player_request_packet( struct qserver *server);
-query_status_t send_rule_request_packet( struct qserver *server);
-query_status_t send_savage_request_packet( struct qserver *server);
-query_status_t send_farcry_request_packet( struct qserver *server);
-query_status_t send_gamespy_master_request( struct qserver *server);
-query_status_t send_tribes2_request_packet( struct qserver *server);
-query_status_t send_tribes2master_request_packet( struct qserver *server);
-query_status_t send_hl2_request_packet( struct qserver *server);
+void remove_server_from_hash(struct qserver *server);
+void free_server(struct qserver *server);
+void free_player(struct player *player);
+void free_rule(struct rule *rule);
 
-query_status_t deal_with_q_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_qw_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_q1qw_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_q2_packet( struct qserver *server, char *pkt, int pktlen );
-query_status_t deal_with_qwmaster_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_halflife_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_ut2003_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_tribes_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_tribesmaster_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_bfris_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_gamespy_master_response( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_ravenshield_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_savage_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_farcry_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_tribes2_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_tribes2master_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_descent3_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_descent3master_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_ghostrecon_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_eye_packet( struct qserver *server, char *pkt, int pktlen);
-query_status_t deal_with_hl2_packet( struct qserver *server, char *pkt, int pktlen);
+void display_server(struct qserver *server);
+void display_progress();
+int calculate_armyops_score(struct player *player);
+
+/*
+ * Values set by command-line arguments
+ */
+
+int hostname_lookup;
+int new_style; /* unset if -old was specified */
+int up_servers_only;
+int no_full_servers;
+int no_empty_servers;
+int no_header_display;
+int player_address;
+int max_simultaneous;
+int sendinterval;
+
+int progress;
+int num_servers_total;
+int num_players_total;
+int max_players_total;
+int num_servers_returned;
+int num_servers_timed_out;
+int num_servers_down;
+
+int player_sort;
+int server_sort;
+
+extern int xform_names;
+extern int xform_strip_unprintable;
+extern int xform_hex_player_names;
+extern int xform_hex_server_names;
+extern int xform_strip_carets;
+extern int xform_html_names;
+extern int html_mode;
+
+FILE *OF; /* output file */
+
+int display_prefix;
+
+/* 
+ * Functions for handling response packets
+ */
+
+query_status_t send_qserver_request_packet(struct qserver *server);
+query_status_t send_qwserver_request_packet(struct qserver *server);
+query_status_t send_ut2003_request_packet(struct qserver *server);
+query_status_t send_tribes_request_packet(struct qserver *server);
+query_status_t send_qwmaster_request_packet(struct qserver *server);
+query_status_t send_bfris_request_packet(struct qserver *server);
+query_status_t send_player_request_packet(struct qserver *server);
+query_status_t send_rule_request_packet(struct qserver *server);
+query_status_t send_savage_request_packet(struct qserver *server);
+query_status_t send_farcry_request_packet(struct qserver *server);
+query_status_t send_gamespy_master_request(struct qserver *server);
+query_status_t send_tribes2_request_packet(struct qserver *server);
+query_status_t send_tribes2master_request_packet(struct qserver *server);
+query_status_t send_hl2_request_packet(struct qserver *server);
+
+query_status_t deal_with_q_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_qw_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_q1qw_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_q2_packet(struct qserver *server, char *pkt, int pktlen );
+query_status_t deal_with_qwmaster_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_halflife_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ut2003_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribesmaster_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_bfris_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_gamespy_master_response(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ravenshield_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_savage_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_farcry_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_tribes2master_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_descent3_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_descent3master_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_eye_packet(struct qserver *server, char *pkt, int pktlen);
+query_status_t deal_with_hl2_packet(struct qserver *server, char *pkt, int pktlen);
 
 struct _server_type  {
     int id;
@@ -454,6 +441,8 @@ struct _server_type  {
     DisplayFunc display_raw_rule_func;
     DisplayFunc display_xml_player_func;
     DisplayFunc display_xml_rule_func;
+    DisplayFunc display_json_player_func;
+    DisplayFunc display_json_rule_func;
     QueryFunc status_query_func;
     QueryFunc rule_query_func;
     QueryFunc player_query_func;
@@ -464,7 +453,7 @@ extern server_type builtin_types[];
 extern server_type *types;
 extern int n_server_types;
 extern server_type* default_server_type;
-server_type* find_server_type_string( char* type_string);
+server_type* find_server_type_string(char* type_string);
 
 
 #ifdef QUERY_PACKETS
@@ -804,10 +793,10 @@ unsigned char haze_player_query[] = {
 
 // Steam
 // Format:
-// 1. Request type ( 1 byte )
-// 2. Region ( 1 byte )
-// 3. ip ( string + null )
-// 4. Filter ( optional + null )
+// 1. Request type (1 byte )
+// 2. Region (1 byte )
+// 3. ip (string + null )
+// 4. Filter (optional + null )
 //
 // Regions:
 // 0 = US East Coast
@@ -910,17 +899,19 @@ server_type builtin_types[] = {
     (char*) &q_player,		/* player_packet */
     Q_HEADER_LEN+1,		/* player_len */
     (char*) &q_rule,		/* rule_packet */
-    sizeof( q_rule),		/* rule_len */
+    sizeof(q_rule),		/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -944,17 +935,19 @@ server_type builtin_types[] = {
     (char*) &q_player,		/* player_packet */
     Q_HEADER_LEN+1,		/* player_len */
     (char*) &q_rule,		/* rule_packet */
-    sizeof( q_rule),		/* rule_len */
+    sizeof(q_rule),		/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -974,7 +967,7 @@ server_type builtin_types[] = {
     "*gamedir",			/* game_rule */
     "QUAKEWORLD",		/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -983,12 +976,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qw_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_qw_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_qw_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_qw_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_qw_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1008,7 +1003,7 @@ server_type builtin_types[] = {
     "*gamedir",			/* game_rule */
     "HEXENWORLD",		/* template_var */
     (char*) &hw_serverstatus,	/* status_packet */
-    sizeof( hw_serverstatus),	/* status_len */
+    sizeof(hw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1017,12 +1012,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qw_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_qw_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_qw_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_qw_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_qw_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1042,7 +1039,7 @@ server_type builtin_types[] = {
     "gamedir",			/* game_rule */
     "QUAKE2",			/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1051,12 +1048,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1076,21 +1075,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "QUAKE3",			/* template_var */
     (char*) &q3_serverinfo,	/* status_packet */
-    sizeof( q3_serverinfo),	/* status_len */
+    sizeof(q3_serverinfo),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &q3_serverstatus,	/* rule_packet */
-    sizeof( q3_serverstatus),	/* rule_len */
+    sizeof(q3_serverstatus),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1110,7 +1111,7 @@ server_type builtin_types[] = {
     "fs_game",						/* game_rule */
     "DOOM3",						/* template_var */
     (char*) &doom3_serverinfo,		/* status_packet */
-    sizeof( doom3_serverinfo),		/* status_len */
+    sizeof(doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -1119,12 +1120,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_doom3_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -1144,21 +1147,23 @@ server_type builtin_types[] = {
     "",								/* game_rule */
     "HL2",							/* template_var */
     (char*) &hl2_serverinfo,		/* status_packet */
-    sizeof( hl2_serverinfo),		/* status_len */
+    sizeof(hl2_serverinfo),		/* status_len */
     (char*) &hl2_playerinfo,		/* player_packet */
-    sizeof( hl2_playerinfo),		/* player_len */
+    sizeof(hl2_playerinfo),		/* player_len */
     (char*) &hl2_ruleinfo,			/* rule_packet */
-    sizeof( hl2_ruleinfo),			/* rule_len */
+    sizeof(hl2_ruleinfo),			/* rule_len */
     NULL,							/* master_packet */
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_halflife_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_halflife_player_info,		/* display_player_func */
+    standard_display_server_rules,			/* display_rule_func */
     raw_display_halflife_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_halflife_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_hl2_request_packet,		/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1178,21 +1183,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "RTCW",			/* template_var */
     (char*) &q3_serverinfo,	/* status_packet */
-    sizeof( q3_serverinfo),	/* status_len */
+    sizeof(q3_serverinfo),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &q3_serverstatus,	/* rule_packet */
-    sizeof( q3_serverstatus),	/* rule_len */
+    sizeof(q3_serverstatus),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1212,21 +1219,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "ELITEFORCE",		/* template_var */
     (char*) &q3_serverinfo,	/* status_packet */
-    sizeof( q3_serverinfo),	/* status_len */
+    sizeof(q3_serverinfo),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &q3_serverstatus,	/* rule_packet */
-    sizeof( q3_serverstatus),	/* rule_len */
+    sizeof(q3_serverstatus),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1246,21 +1255,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "JEDIKNIGHT3",		/* template_var */
     (char*) &q3_serverinfo,	/* status_packet */
-    sizeof( q3_serverinfo),	/* status_len */
+    sizeof(q3_serverinfo),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &q3_serverstatus,	/* rule_packet */
-    sizeof( q3_serverstatus),	/* rule_len */
+    sizeof(q3_serverstatus),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1280,21 +1291,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "UNREALTOURNAMENT2003",	/* template_var */
     (char*) &ut2003_basicstatus,/* status_packet */
-    sizeof( ut2003_basicstatus),/* status_len */
+    sizeof(ut2003_basicstatus),/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &ut2003_allinfo,	/* rule_packet */
-    sizeof( ut2003_allinfo),	/* rule_len */
+    sizeof(ut2003_allinfo),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     0,				/* master_query */
-    display_unreal_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_unreal_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_unreal_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ut2003_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1314,7 +1327,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "UNREAL",			/* template_var */
     (char*) &unreal_serverstatus,	/* status_packet */
-    sizeof( unreal_serverstatus),	/* status_len */
+    sizeof(unreal_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1323,12 +1336,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_unreal_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_unreal_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_unreal_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1348,21 +1363,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "HALFLIFE",			/* template_var */
     (char*) &hl_details,		/* status_packet */
-    sizeof( hl_details),		/* status_len */
+    sizeof(hl_details),		/* status_len */
     (char*) &hl_players,	/* player_packet */
-    sizeof( hl_players),	/* player_len */
+    sizeof(hl_players),	/* player_len */
     (char*) &hl_rules,		/* rule_packet */
-    sizeof( hl_rules),		/* rule_len */
+    sizeof(hl_rules),		/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_halflife_player_info,/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_halflife_player_info,/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_halflife_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_halflife_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_halflife_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1382,7 +1399,7 @@ server_type builtin_types[] = {
     "gamedir",			/* game_rule */
     "SIN",			/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1391,12 +1408,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1416,7 +1435,7 @@ server_type builtin_types[] = {
     "",				/* game_rule */
     "SHOGO",			/* template_var */
     (char*) &unreal_serverstatus,	/* status_packet */
-    sizeof( unreal_serverstatus),	/* status_len */
+    sizeof(unreal_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1425,12 +1444,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1450,21 +1471,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "TRIBES",			/* template_var */
     (char*) &tribes_info,	/* status_packet */
-    sizeof( tribes_info),	/* status_len */
+    sizeof(tribes_info),	/* status_len */
     (char*) &tribes_players,	/* player_packet */
-    sizeof( tribes_players),	/* player_len */
+    sizeof(tribes_players),	/* player_len */
     (char*) &tribes_players,	/* rule_packet */
-    sizeof( tribes_players),	/* rule_len */
+    sizeof(tribes_players),	/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_tribes_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_tribes_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_tribes_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_tribes_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_tribes_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_tribes_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1493,12 +1516,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_bfris_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_bfris_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_bfris_player_info,/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_bfris_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_bfris_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_bfris_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1518,7 +1543,7 @@ server_type builtin_types[] = {
     "gamedir",			/* game_rule */
     "KINGPIN",			/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1527,12 +1552,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1552,7 +1579,7 @@ server_type builtin_types[] = {
     "gamedir",			/* game_rule */
     "HERETIC2",			/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1561,12 +1588,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1586,7 +1615,7 @@ server_type builtin_types[] = {
     "gamedir",			/* game_rule */
     "SOLDIEROFFORTUNE",		/* template_var */
     (char*) &qw_serverstatus,	/* status_packet */
-    sizeof( qw_serverstatus),	/* status_len */
+    sizeof(qw_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1595,12 +1624,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_q2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_q2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1620,7 +1651,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "GAMESPYPROTOCOL",		/* template_var */
     (char*) &unreal_serverstatus,	/* status_packet */
-    sizeof( unreal_serverstatus),	/* status_len */
+    sizeof(unreal_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1629,12 +1660,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_unreal_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_unreal_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_unreal_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1654,21 +1687,23 @@ server_type builtin_types[] = {
     "game",			/* game_rule */
     "TRIBES2",			/* template_var */
     (char*) &tribes2_ping,	/* status_packet */
-    sizeof( tribes2_ping),	/* status_len */
+    sizeof(tribes2_ping),	/* status_len */
     (char*) &tribes2_info,	/* player_packet */
-    sizeof( tribes2_info),	/* player_len */
+    sizeof(tribes2_info),	/* player_len */
     (char*) NULL,		/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_tribes2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_tribes2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_tribes2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_tribes2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_tribes2_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_tribes2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1688,7 +1723,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "DESCENT3",			/* template_var */
     (char*) &unreal_serverstatus,	/* status_packet */
-    sizeof( unreal_serverstatus),	/* status_len */
+    sizeof(unreal_serverstatus),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1697,12 +1732,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_descent3_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_descent3_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_descent3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1722,21 +1759,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "DESCENT3",			/* template_var */
     (char*) &descent3_tcpipinfoquery,	/* status_packet */
-    sizeof( descent3_tcpipinfoquery),	/* status_len */
+    sizeof(descent3_tcpipinfoquery),	/* status_len */
     (char*) &descent3_playerquery,	/* player_packet */
-    sizeof( descent3_playerquery),	/* player_len */
+    sizeof(descent3_playerquery),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_descent3_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_descent3_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_descent3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1756,21 +1795,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "DESCENT3",			/* template_var */
     (char*) &descent3_pxoinfoquery,	/* status_packet */
-    sizeof( descent3_pxoinfoquery),	/* status_len */
+    sizeof(descent3_pxoinfoquery),	/* status_len */
     (char*) &descent3_playerquery,	/* player_packet */
-    sizeof( descent3_playerquery),	/* player_len */
+    sizeof(descent3_playerquery),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_descent3_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_descent3_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_descent3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_descent3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_descent3_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gps_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1790,7 +1831,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "GHOSTRECON",			/* template_var */
     (char*) &ghostrecon_playerquery,	/* status_packet */
-    sizeof( ghostrecon_playerquery),	/* status_len */
+    sizeof(ghostrecon_playerquery),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1799,12 +1840,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_ghostrecon_player_info,	/* display_player_func */
-    display_server_rules,		/* display_rule_func */
+    standard_display_ghostrecon_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_ghostrecon_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ghostrecon_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ghostrecon_player_info,	/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1824,7 +1867,7 @@ server_type builtin_types[] = {
     "gametype",				/* game_rule */
     "EYEPROTOCOL",		/* template_var */
     (char*) &eye_status_query,	/* status_packet */
-    sizeof( eye_status_query),	/* status_len */
+    sizeof(eye_status_query),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1833,12 +1876,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_eye_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_eye_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_eye_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_eye_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_eye_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1858,7 +1903,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "GPS2PROTOCOL",		/* template_var */
     (char*) &gs2_status_query,	/* status_packet */
-    sizeof( gs2_status_query),	/* status_len */
+    sizeof(gs2_status_query),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1867,12 +1912,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_gs2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_gs2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1892,7 +1939,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "AMERICASARMY",		/* template_var */
     (char*) &gs2_status_query,	/* status_packet */
-    sizeof( gs2_status_query),	/* status_len */
+    sizeof(gs2_status_query),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1901,12 +1948,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_armyops_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_armyops_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_armyops_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_armyops_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_armyops_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_gs2_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -1926,7 +1975,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "RAVENSHIELD",			/* template_var */
     (char*)ravenshield_serverquery,			/* status_packet */
-    sizeof( ravenshield_serverquery ) - 1,	/* status_len */
+    sizeof(ravenshield_serverquery ) - 1,	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -1935,12 +1984,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_ravenshield_player_info,	/* display_player_func */
-    display_server_rules,		/* display_rule_func */
+    standard_display_ravenshield_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_ravenshield_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ravenshield_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ravenshield_player_info,	/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_qserver_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1960,21 +2011,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "SAVAGE",			/* template_var */
     (char*)savage_serverquery,			/* status_packet */
-    sizeof( savage_serverquery ) - 1,	/* status_len */
+    sizeof(savage_serverquery ) - 1,	/* status_len */
     (char*)savage_playerquery,			/* player_packet */
-    sizeof( savage_playerquery ) - 1,				/* player_len */
+    sizeof(savage_playerquery ) - 1,				/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_savage_player_info,	/* display_player_func */
-    display_server_rules,		/* display_rule_func */
+    standard_display_savage_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_savage_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_savage_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_savage_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_savage_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -1994,7 +2047,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "FARCRY",			/* template_var */
     (char*)farcry_serverquery,			/* status_packet */
-    sizeof( savage_serverquery ) - 1,	/* status_len */
+    sizeof(savage_serverquery ) - 1,	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -2003,12 +2056,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_farcry_player_info,	/* display_player_func */
-    display_server_rules,		/* display_rule_func */
+    standard_display_farcry_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_farcry_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_farcry_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_farcry_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_farcry_request_packet,	/* status_query_func */
     NULL,				/* rule_query_func */
     NULL,				/* player_query_func */
@@ -2037,15 +2092,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &qw_masterquery,	/* master_packet */
-    sizeof( qw_masterquery),	/* master_len */
+    sizeof(qw_masterquery),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2071,15 +2128,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &hw_masterquery,	/* master_packet */
-    sizeof( hw_masterquery),	/* master_len */
+    sizeof(hw_masterquery),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2105,15 +2164,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     q2_masterquery,		/* master_packet */
-    sizeof( q2_masterquery),	/* master_len */
+    sizeof(q2_masterquery),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2142,12 +2203,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     q3_master_default_protocol,	/* master_protocol */
     q3_master_default_query,	/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2176,12 +2239,14 @@ server_type builtin_types[] = {
     0,          /* master_len */
     NULL,	/* master_protocol */
     NULL,	/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_doom3master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2210,12 +2275,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     rtcw_master_default_protocol,	/* master_protocol */
     q3_master_default_query,		/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2244,12 +2311,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     stef_master_default_protocol,	/* master_protocol */
     q3_master_default_query,		/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2278,12 +2347,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     jk3_master_default_protocol,	/* master_protocol */
     NULL,		/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2309,15 +2380,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &new_hl_masterquery_prefix,	/* master_packet */
-    sizeof( new_hl_masterquery_prefix),	/* master_len */
+    sizeof(new_hl_masterquery_prefix),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2343,15 +2416,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &tribes_masterquery,/* master_packet */
-    sizeof( tribes_masterquery),/* master_len */
+    sizeof(tribes_masterquery),/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2371,25 +2446,27 @@ server_type builtin_types[] = {
     "",				/* game_rule */
     "GAMESPYMASTER",		/* template_var */
     (char*) &gamespy_master_request_prefix,	/* status_packet */
-    sizeof( gamespy_master_request_prefix)-1,	/* status_len */
+    sizeof(gamespy_master_request_prefix)-1,	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &gamespy_master_validate,/* master_packet */
-    sizeof( gamespy_master_validate)-1,/* master_len */
+    sizeof(gamespy_master_validate)-1,/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,			/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
-    send_gamespy_master_request,/* status_query_func */
-    NULL,			/* rule_query_func */
-    NULL,			/* player_query_func */
-    deal_with_gamespy_master_response,/* packet_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
+    send_gamespy_master_request,		/* status_query_func */
+    NULL,								/* rule_query_func */
+    NULL,								/* player_query_func */
+    deal_with_gamespy_master_response,	/* packet_func */
 },
 {
     /* TRIBES 2 MASTER */
@@ -2411,15 +2488,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*) &tribes2_masterquery,/* master_packet */
-    sizeof( tribes2_masterquery),/* master_len */
+    sizeof(tribes2_masterquery),/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,	/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_tribes2master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2445,15 +2524,17 @@ server_type builtin_types[] = {
     NULL,			/* rule_packet */
     0,				/* rule_len */
     (char*)descent3_masterquery,	/* master_packet */
-    sizeof( descent3_masterquery),	/* master_len */
+    sizeof(descent3_masterquery),	/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2482,12 +2563,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,	/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_qwmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2517,12 +2600,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,	/* master_protocol */
     NULL,	/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,	/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_ut2004master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2530,37 +2615,39 @@ server_type builtin_types[] = {
 },
 {
     /* HALFLIFE 2 */
-    A2S_SERVER,						/* id */
-    "A2S",							/* type_prefix */
-    "a2s",							/* type_string */
-    "-a2s",						/* type_option */
-    "Half-Life 2 new",					/* game_name */
-    0,								/* master */
-    HL2_DEFAULT_PORT,				/* default_port */
-    0,								/* port_offset */
-    TF_QUAKE3_NAMES,				/* flags */
+    A2S_SERVER,								/* id */
+    "A2S",									/* type_prefix */
+    "a2s",									/* type_string */
+    "-a2s",									/* type_option */
+    "Half-Life 2 new",						/* game_name */
+    0,										/* master */
+    HL2_DEFAULT_PORT,						/* default_port */
+    0,										/* port_offset */
+    TF_QUAKE3_NAMES,						/* flags */
     "gamedir",								/* game_rule */
-    "A2S",							/* template_var */
-    NULL,		/* status_packet */
-    0,		/* status_len */
-    NULL,		/* player_packet */
-    0,		/* player_len */
-    NULL,			/* rule_packet */
-    0,			/* rule_len */
-    NULL,							/* master_packet */
-    0,								/* master_len */
-    NULL,							/* master_protocol */
-    NULL,							/* master_query */
-    display_halflife_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
-    raw_display_halflife_player_info,	/* display_raw_player_func */
-    raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_halflife_player_info,	/* display_xml_player_func */
-    xml_display_server_rules,		/* display_xml_rule_func */
-    send_a2s_request_packet,		/* status_query_func */
-    send_a2s_rule_request_packet,	/* rule_query_func */
-    NULL,				/* player_query_func */
-    deal_with_a2s_packet,		/* packet_func */
+    "A2S",									/* template_var */
+    NULL,									/* status_packet */
+    0,										/* status_len */
+    NULL,									/* player_packet */
+    0,										/* player_len */
+    NULL,									/* rule_packet */
+    0,										/* rule_len */
+    NULL,									/* master_packet */
+    0,										/* master_len */
+    NULL,									/* master_protocol */
+    NULL,									/* master_query */
+    standard_display_halflife_player_info,	/* display_player_func */
+    standard_display_server_rules,			/* display_rule_func */
+    raw_display_halflife_player_info,		/* display_raw_player_func */
+    raw_display_server_rules,				/* display_raw_rule_func */
+    xml_display_halflife_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,				/* display_xml_rule_func */
+    json_display_halflife_player_info,		/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
+    send_a2s_request_packet,				/* status_query_func */
+    send_a2s_rule_request_packet,			/* rule_query_func */
+    NULL,									/* player_query_func */
+    deal_with_a2s_packet,					/* packet_func */
 },
 {
     /* PARIAH */
@@ -2576,7 +2663,7 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "UNREALTOURNAMENT2003",	/* template_var */
     (char*) &pariah_basicstatus,/* status_packet */
-    sizeof( pariah_basicstatus),/* status_len */
+    sizeof(pariah_basicstatus),/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     NULL,			/* rule_packet */
@@ -2585,12 +2672,14 @@ server_type builtin_types[] = {
     0,				/* master_len */
     NULL,			/* master_protocol */
     0,				/* master_query */
-    display_unreal_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_unreal_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_unreal_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_unreal_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_unreal_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ut2003_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2610,21 +2699,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "GPS3PROTOCOL",		/* template_var */
     (char*) &gs3_status_query,	/* status_packet */
-    sizeof( gs3_status_query),	/* status_len */
+    sizeof(gs3_status_query),	/* status_len */
     (char*) &gs3_player_query,	/* player_packet */
-    sizeof( gs3_player_query),	/* player_len */
+    sizeof(gs3_player_query),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_gs2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_gs2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2653,12 +2744,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_ts2_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_ts2_player_info,		/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_ts2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ts2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ts2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ts2_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2678,7 +2771,7 @@ server_type builtin_types[] = {
     "fs_game",						/* game_rule */
     "QUAKE4",						/* template_var */
     (char*) &doom3_serverinfo,		/* status_packet */
-    sizeof( doom3_serverinfo),		/* status_len */
+    sizeof(doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -2687,12 +2780,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_doom3_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2721,12 +2816,14 @@ server_type builtin_types[] = {
     0,          /* master_len */
     NULL,	/* master_protocol */
     NULL,	/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_quake4master_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2746,21 +2843,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "GPS4PROTOCOL",		/* template_var */
     (char*) &gs3_challenge,	/* status_packet */
-    sizeof( gs3_challenge),	/* status_len */
+    sizeof(gs3_challenge),	/* status_len */
     (char*) &gs3_challenge,	/* player_packet */
-    sizeof( gs3_challenge),	/* player_len */
+    sizeof(gs3_challenge),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_gs2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_gs2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_gs3_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2780,7 +2879,7 @@ server_type builtin_types[] = {
     "fs_game",						/* game_rule */
     "PREY",						/* template_var */
     (char*) &doom3_serverinfo,		/* status_packet */
-    sizeof( doom3_serverinfo),		/* status_len */
+    sizeof(doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -2789,12 +2888,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_doom3_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2823,12 +2924,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_tm_player_info,			/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_tm_player_info,		/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_tm_player_info,		/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_tm_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_tm_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_tm_request_packet,			/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2848,7 +2951,7 @@ server_type builtin_types[] = {
     "fs_game",						/* game_rule */
     "QUAKE4",						/* template_var */
     (char*) &doom3_serverinfo,		/* status_packet */
-    sizeof( doom3_serverinfo),		/* status_len */
+    sizeof(doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -2857,12 +2960,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_doom3_player_info,	/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2882,21 +2987,23 @@ server_type builtin_types[] = {
     "gametype",			/* game_rule */
     "HAZE",		/* template_var */
     (char*) &haze_status_query,	/* status_packet */
-    sizeof( haze_status_query),	/* status_len */
+    sizeof(haze_status_query),	/* status_len */
     (char*) &haze_player_query,	/* player_packet */
-    sizeof( haze_player_query),	/* player_len */
+    sizeof(haze_player_query),	/* player_len */
     NULL,			/* rule_packet */
     0,				/* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_gs2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_gs2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_gs2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,	/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_haze_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2925,12 +3032,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_wic_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_wic_player_info,		/* display_player_func */
+    standard_display_server_rules,		/* display_rule_func */
     raw_display_wic_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_wic_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_wic_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_wic_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -2950,21 +3059,23 @@ server_type builtin_types[] = {
     "",				/* game_rule */
     "OPENTTD",			/* template_var */
     (char*) &ottd_serverinfo,	/* status_packet */
-    sizeof( ottd_serverinfo),	/* status_len */
+    sizeof(ottd_serverinfo),	/* status_len */
     NULL,			/* player_packet */
     0,				/* player_len */
     (char*) &ottd_serverdetails,/* rule_packet */
-    sizeof( ottd_serverdetails),   /* rule_len */
+    sizeof(ottd_serverdetails),   /* rule_len */
     NULL,			/* master_packet */
     0,				/* master_len */
     NULL,			/* master_protocol */
     NULL,			/* master_query */
-    display_q2_player_info,	/* display_player_func */
-    display_server_rules,	/* display_rule_func */
+    standard_display_q2_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_q2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,	/* display_raw_rule_func */
     xml_display_player_info,/* display_xml_player_func */
     xml_display_server_rules,	/* display_xml_rule_func */
+    json_display_player_info,	/* display_json_player_func */
+    json_display_server_rules,	/* display_json_rule_func */
     send_ottd_request_packet,	/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -2993,12 +3104,14 @@ server_type builtin_types[] = {
     sizeof(ottd_master_query),/* master_len */
     NULL,	/* master_protocol */
     NULL,	/* master_query */
-    display_qwmaster,		/* display_player_func */
+    standard_display_qwmaster,		/* display_player_func */
     NULL,	/* display_rule_func */
     NULL,	/* display_raw_player_func */
     NULL,	/* display_raw_rule_func */
     NULL,	/* display_xml_player_func */
     NULL,	/* display_xml_rule_func */
+    NULL,   /* display_json_player_func */
+    NULL,   /* display_json_rule_func */
     send_ottdmaster_request_packet,/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -3027,12 +3140,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_fl_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
-    raw_display_fl_player_info,	/* display_raw_player_func */
+    standard_display_fl_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
+    raw_display_fl_player_info,		/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_fl_player_info,	/* display_xml_player_func */
+    xml_display_fl_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_fl_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_fl_request_packet,			/* status_query_func */
     send_fl_rule_request_packet,	/* rule_query_func */
 	NULL,							/* player_query_func */
@@ -3052,7 +3167,7 @@ server_type builtin_types[] = {
     "fs_game",						/* game_rule */
     "QUAKE4",						/* template_var */
     (char*) &doom3_serverinfo,		/* status_packet */
-    sizeof( doom3_serverinfo),		/* status_len */
+    sizeof(doom3_serverinfo),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -3061,12 +3176,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_doom3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_doom3_player_info,		/* display_player_func */
+    standard_display_server_rules,			/* display_rule_func */
     raw_display_doom3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_doom3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_doom3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_qwserver_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3078,15 +3195,15 @@ server_type builtin_types[] = {
     "TEE",							/* type_prefix */
     "tee",							/* type_string */
     "-tee",							/* type_option */
-    "Teeworlds",		/* game_name */
+    "Teeworlds",					/* game_name */
     0,								/* master */
     35515,							/* default_port */
     0,								/* port_offset */
-    0,				/* flags */
-    "gametype",							/* game_rule */
+    0,								/* flags */
+    "gametype",						/* game_rule */
     "TEE",							/* template_var */
-    tee_serverstatus,						/* status_packet */
-    sizeof(tee_serverstatus),					/* status_len */
+    tee_serverstatus,				/* status_packet */
+    sizeof(tee_serverstatus),		/* status_len */
     NULL,							/* player_packet */
     0,								/* player_len */
     NULL,							/* rule_packet */
@@ -3095,13 +3212,15 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_tee_player_info,			/* display_player_func */
-    display_server_rules,			/* display_rule_func */
-    raw_display_tee_player_info,		/* display_raw_player_func */
+    standard_display_tee_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
+    raw_display_tee_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_tee_player_info,		/* display_xml_player_func */
+    xml_display_tee_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
-    send_tee_request_packet,			/* status_query_func */
+    json_display_tee_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
+    send_tee_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
     deal_with_tee_packet,			/* packet_func */
@@ -3129,12 +3248,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_ts3_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_ts3_player_info,	/* display_player_func */
+    standard_display_server_rules,	/* display_rule_func */
     raw_display_ts3_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_ts3_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_ts3_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ts3_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3163,12 +3284,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_bfbc2_player_info,		/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_bfbc2_player_info,		/* display_player_func */
+    standard_display_server_rules,			/* display_rule_func */
     raw_display_bfbc2_player_info,	/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_bfbc2_player_info,	/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_bfbc2_player_info,	/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_bfbc2_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3197,12 +3320,14 @@ server_type builtin_types[] = {
     0,									/* master_len */
     NULL,								/* master_protocol */
     NULL,								/* master_query */
-    display_ventrilo_player_info,		/* display_player_func */
-    display_server_rules,				/* display_rule_func */
+    standard_display_ventrilo_player_info,		/* display_player_func */
+    standard_display_server_rules,				/* display_rule_func */
     raw_display_ventrilo_player_info,	/* display_raw_player_func */
     raw_display_server_rules,			/* display_raw_rule_func */
     xml_display_ventrilo_player_info,	/* display_xml_player_func */
     xml_display_server_rules,			/* display_xml_rule_func */
+    json_display_ventrilo_player_info,	/* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_ventrilo_request_packet,		/* status_query_func */
     NULL,								/* rule_query_func */
     NULL,								/* player_query_func */
@@ -3232,11 +3357,13 @@ server_type builtin_types[] = {
     NULL,								/* master_protocol */
     NULL,								/* master_query */
     NULL,								/* display_player_func */
-    display_server_rules,				/* display_rule_func */
+    standard_display_server_rules,		/* display_rule_func */
     NULL,								/* display_raw_player_func */
     raw_display_server_rules,			/* display_raw_rule_func */
     NULL,								/* display_xml_player_func */
     xml_display_server_rules,			/* display_xml_rule_func */
+    NULL,                               /* display_json_player_func */
+    json_display_server_rules,			/* display_json_rule_func */
     send_cube2_request_packet,			/* status_query_func */
     NULL,								/* rule_query_func */
     NULL,								/* player_query_func */
@@ -3266,11 +3393,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,			/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_mumble_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3300,11 +3429,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,	/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_mumble_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3334,11 +3465,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,			/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_crysis_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3368,11 +3501,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,	/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_dirtybomb_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3401,12 +3536,14 @@ server_type builtin_types[] = {
     0,								/* master_len */
     NULL,							/* master_protocol */
     NULL,							/* master_query */
-    display_starmade_player_info,	/* display_player_func */
-    display_server_rules,			/* display_rule_func */
-    raw_display_starmade_player_info,	/* display_raw_player_func */
-    raw_display_server_rules,		/* display_raw_rule_func */
-    xml_display_starmade_player_info,	/* display_xml_player_func */
-    xml_display_server_rules,		/* display_xml_rule_func */
+    standard_display_starmade_player_info,	/* display_player_func */
+    standard_display_server_rules,			/* display_rule_func */
+    raw_display_starmade_player_info,		/* display_raw_player_func */
+    raw_display_server_rules,				/* display_raw_rule_func */
+    xml_display_starmade_player_info,		/* display_xml_player_func */
+    xml_display_server_rules,				/* display_xml_rule_func */
+    json_display_starmade_player_info,		/* display_json_player_func */
+    json_display_server_rules,				/* display_json_rule_func */
     send_starmade_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3436,11 +3573,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,	/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_farmsim_request_packet,	/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3470,11 +3609,13 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,	/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    json_display_player_info,		/* display_json_player_func */
+    json_display_server_rules,		/* display_json_rule_func */
     send_ksp_request_packet,		/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3504,7 +3645,7 @@ server_type builtin_types[] = {
     NULL,							/* master_protocol */
     NULL,							/* master_query */
     NULL,							/* display_player_func */
-    display_server_rules,			/* display_rule_func */
+    standard_display_server_rules,	/* display_rule_func */
     NULL,							/* display_raw_player_func */
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
@@ -3542,6 +3683,8 @@ server_type builtin_types[] = {
     NULL,			/* display_raw_rule_func */
     NULL,			/* display_xml_player_func */
     NULL,			/* display_xml_rule_func */
+    NULL,           /* display_json_player_func */
+    NULL,           /* display_json_rule_func */
     NULL,			/* status_query_func */
     NULL,			/* rule_query_func */
     NULL,			/* player_query_func */
@@ -3709,40 +3852,39 @@ HL master: send 'i', master responds with a small 'j' packet
 
 #define QW_REQUEST_LENGTH 20
 
-int is_default_rule( struct rule *rule);
-char *xform_name( char*, struct qserver *server);
-char *quake_color( int color);
-char *play_time( int seconds, int show_seconds);
-char *ping_time( int ms);
-char *get_qw_game( struct qserver *server);
+int is_default_rule(struct rule *rule);
+char *quake_color(int color);
+char *play_time(int seconds, int show_seconds);
+char *ping_time(int ms);
+char *get_qw_game(struct qserver *server);
 
 
 /*
  * Query status and packet handling functions
  */
 
-int cleanup_qserver( struct qserver *server, int force);
-void change_server_port( struct qserver *server, unsigned short port, int force );
+int cleanup_qserver(struct qserver *server, int force);
+void change_server_port(struct qserver *server, unsigned short port, int force );
 
-int server_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
-int player_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
-int rule_info_packet( struct qserver *server, struct q_packet *pkt, int datalen );
+int server_info_packet(struct qserver *server, struct q_packet *pkt, int datalen );
+int player_info_packet(struct qserver *server, struct q_packet *pkt, int datalen );
+int rule_info_packet(struct qserver *server, struct q_packet *pkt, int datalen );
 
-int time_delta( struct timeval *later, struct timeval *past);
-char * strherror( int h_err);
+int time_delta(struct timeval *later, struct timeval *past);
+char * strherror(int h_err);
 int connection_refused();
 int connection_would_block();
 int connection_reset();
 
-void add_file( char *filename);
-int add_qserver( char *arg, server_type* type, char *outfilename, char *query_arg);
-struct qserver* add_qserver_byaddr( unsigned int ipaddr, unsigned short port, server_type* type, int *new_server);
-void init_qserver( struct qserver *server, server_type* type);
-int bind_qserver( struct qserver *server);
+void add_file(char *filename);
+int add_qserver(char *arg, server_type* type, char *outfilename, char *query_arg);
+struct qserver* add_qserver_byaddr(unsigned int ipaddr, unsigned short port, server_type* type, int *new_server);
+void init_qserver(struct qserver *server, server_type* type);
+int bind_qserver(struct qserver *server);
 int bind_sockets();
 void send_packets();
-struct qserver * find_server_by_address( unsigned int ipaddr, unsigned short port);
-void add_server_to_hash( struct qserver *server);
+struct qserver * find_server_by_address(unsigned int ipaddr, unsigned short port);
+void add_server_to_hash(struct qserver *server);
 
 #define NO_FLAGS 0
 #define NO_VALUE_COPY 1
@@ -3751,52 +3893,28 @@ void add_server_to_hash( struct qserver *server);
 #define COMBINE_VALUES 8
 #define OVERWITE_DUPLICATES 16
 
-struct player* get_player_by_number( struct qserver *server, int player_number );
-struct rule* add_rule( struct qserver *server, char *key, char *value,	int flags) ;
-struct player* add_player( struct qserver *server, int player_number );
-struct info* player_add_info( struct player *player, char *key, char *value, int flags );
-void players_set_teamname( struct qserver *server, int teamid, char *teamname );
-
-
-/*
- * Output template stuff
- */
-
-int read_qserver_template( char *filename);
-int read_rule_template( char *filename);
-int read_header_template( char *filename);
-int read_trailer_template( char *filename);
-int read_player_template( char *filename);
-int have_server_template();
-int have_header_template();
-int have_trailer_template();
-
-void template_display_server( struct qserver *server);
-void template_display_header();
-void template_display_trailer();
-void template_display_players( struct qserver *server);
-void template_display_player( struct qserver *server, struct player *player);
-void template_display_rules( struct qserver *server);
-void template_display_rule( struct qserver *server, struct rule *rule);
-
-
+struct player* get_player_by_number(struct qserver *server, int player_number );
+struct rule* add_rule(struct qserver *server, char *key, char *value,	int flags) ;
+struct player* add_player(struct qserver *server, int player_number );
+struct info* player_add_info(struct player *player, char *key, char *value, int flags );
+void players_set_teamname(struct qserver *server, int teamid, char *teamname );
 
 /*
  * Host cache stuff
  */
 
-int hcache_open( char *filename, int update);
-void hcache_write( char *filename);
+int hcache_open(char *filename, int update);
+void hcache_write(char *filename);
 void hcache_invalidate();
 void hcache_validate();
-unsigned long hcache_lookup_hostname( char *hostname);
-char * hcache_lookup_ipaddr( unsigned long ipaddr);
-void hcache_write_file( char *filename);
+unsigned long hcache_lookup_hostname(char *hostname);
+char * hcache_lookup_ipaddr(unsigned long ipaddr);
+void hcache_write_file(char *filename);
 void hcache_update_file();
 
-unsigned int swap_long_from_little( void *l);
-unsigned short swap_short_from_little( void *l);
-float swap_float_from_little( void *f);
+unsigned int swap_long_from_little(void *l);
+unsigned short swap_short_from_little(void *l);
+float swap_float_from_little(void *f);
 
 /** \brief write four bytes in little endian order */
 void put_long_little(unsigned val, char* buf);

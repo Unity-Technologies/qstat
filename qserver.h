@@ -7,6 +7,9 @@
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
+
+#include "qstat.h"
+
 #ifndef QSTAT_QSERVER_H
 #define QSTAT_QSERVER_H
 

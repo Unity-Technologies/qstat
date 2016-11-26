@@ -4,67 +4,16 @@
  * steve@qstat.org
  * http://www.qstat.org
  *
- * Thanks to Per Hammer for the OS/2 patches (per@mindbend.demon.co.uk)
- * Thanks to John Ross Hunt for the OpenVMS Alpha patches (bigboote@ais.net)
- * Thanks to Scott MacFiggen for the quicksort code (smf@webmethods.com)
- *
  * Inspired by QuakePing by Len Norton
+ *
+ * Template output
  *
  * Copyright 1996,1997,1998,1999,2000,2001,2002 by Steve Jankowski
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <time.h>
-
-#if defined(__hpux) || defined(_AIX) || defined(__FreeBSD__) || defined(__MidnightBSD__)
-#include <sys/types.h>
-#endif
-
-#ifndef _WIN32
-#include <netinet/in.h>
-#endif
-
-
-#include "qstat.h"
-#include "xform.h"
-
-#ifdef _WIN32
-#define strcasecmp	stricmp
-#define strncasecmp	strnicmp
-#endif
-
-#ifdef __hpux
-#define STATIC static
-#else
-#define STATIC
-#endif
-
-/*
-#ifdef __cplusplus
-extern "C" {
-#endif
-#ifndef _AIX
-extern unsigned int ntohl(unsigned int n);
-#endif
-#ifdef __cplusplus
-}
-#endif
-*/
-
-extern int hostname_lookup;
-extern int num_servers_total;
-extern int num_servers_timed_out;
-extern int num_servers_down;
-extern int num_players_total;
-extern int max_players_total;
-extern int xform_html_names;
-extern int xform_hex_player_names;
-extern FILE *OF;		/* output file */
+#include "display_template.h"
 
 static char *server_template;
 static char *rule_template;
