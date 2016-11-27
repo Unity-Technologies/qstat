@@ -195,12 +195,6 @@ unsigned short source_port = 0;
 int show_game_port = 0;
 int no_port_offset = 0;
 
-#define ENCODING_LATIN_1 1
-#define ENCODING_UTF_8  8
-#define UTF8BYTESWAPNOTACHAR	0xFFFE
-#define UTF8NOTACHAR	0xFFFF
-#define UTF8MAXFROMUCS4	0x10FFFF
-
 int output_bom = 0;
 int xml_display = 0;
 int xml_encoding = ENCODING_LATIN_1;
@@ -212,14 +206,11 @@ char sort_keys[32];
 int player_sort = 0;
 int server_sort = 0;
 
-void quicksort(void **array, int i, int j, int(*compare)(void *, void*));
 int qpartition(void **array, int i, int j, int(*compare)(void *, void*));
 void sort_servers(struct qserver **array, int size);
 void sort_players(struct qserver *server);
 int server_compare(struct qserver *one, struct qserver *two);
 int player_compare(struct player *one, struct player *two);
-int type_option_compare(server_type *one, server_type *two);
-int type_string_compare(server_type *one, server_type *two);
 int process_func_ret( struct qserver *server, int ret );
 int connection_inprogress();
 void clear_socketerror();
@@ -301,6 +292,10 @@ void display_server(struct qserver *server)
 	else if (xml_display)
 	{
 		xml_display_server(server);
+	}
+	else if (json_display)
+	{
+		json_display_server(server);
 	}
 	else if (have_server_template())
 	{
@@ -2572,7 +2567,6 @@ void xml_display_tee_player_info(struct qserver *server)
 	xform_printf(OF, "\t\t</players>\n");
 }
 
-
 void display_progress()
 {
 	static struct timeval rate_start =
@@ -2608,6 +2602,7 @@ void display_progress()
 		fprintf(stderr, "\r%d/%d (%d timed out, %d down)%s", num_servers_returned + num_servers_timed_out, num_servers_total, num_servers_timed_out, num_servers_down, rate);
 	}
 }
+
 
 /* ----- END MODIFICATION ----- Don't need to change anything below here. */
 
@@ -2660,21 +2655,19 @@ void usage(char *msg, char **argv, char *a1)
 	}
 
 	quicksort((void **)sorted_types, 0, n_server_types - 1, (int(*)(void *, void*))type_option_compare);
-
-
 	for (i = 0; i < n_server_types; i++)
 	{
 		type = sorted_types[i];
 		printf("%s\t\tquery %s server\n", type->type_option, type->game_name);
 	}
 
-	quicksort((void **)sorted_types, 0, n_server_types - 1, (int(*)(void *, void*))type_string_compare);
 	printf("-default\tset default server type:");
-	for (i = 0; i < n_server_types; type++, i++)
+	for (i = 0; i < n_server_types; i++)
 	{
 		type = sorted_types[i];
 		printf(" %s", type->type_string);
 	}
+
 	puts("");
 	printf("-nocfg\t\tIgnore qstat configuration loaded from any default location. Must be the first option on the command-line.\n");
 	printf("-cfg\t\tread the extended types from given file not the default one\n");
@@ -2711,6 +2704,7 @@ void usage(char *msg, char **argv, char *a1)
 	printf("-raw <delim>\toutput in raw format using <delim> as delimiter\n");
 	printf("-mdelim <delim>\tFor rules with multi values use <delim> as delimiter\n");
 	printf("-xml\t\toutput status data as an XML document\n");
+	printf("-json\t\toutput status data as an JSON document\n");
 	printf("-Th,-Ts,-Tpt\toutput templates: header, server and player\n");
 	printf("-Tr,-Tt\t\toutput templates: rule, and trailer\n");
 	printf("-srcport <range>\tSend packets from these network ports\n");
@@ -3357,6 +3351,14 @@ int main(int argc, char *argv[])
 		{
 			usage(NULL, argv, NULL);
 		}
+		else if (strcmp(argv[arg], "-json-protocols") == 0)
+		{
+			json_protocols();
+		}
+		else if (strcmp(argv[arg], "-json-version") == 0)
+		{
+			json_version();
+		}
 		else if (strcmp(argv[arg], "-f") == 0)
 		{
 			arg++;
@@ -3446,6 +3448,14 @@ int main(int argc, char *argv[])
 		}
 		else if (strncmp(argv[arg], "-raw", 4) == 0)
 		{
+			if (json_display == 1)
+			{
+				usage("cannot specify both -json and -raw\n", argv, NULL);
+			}
+			if (xml_display == 1)
+			{
+				usage("cannot specify both -xml and -raw\n", argv, NULL);
+			}
 			if (argv[arg][4] == ',')
 			{
 				if (strcmp(&argv[arg][5], "game") == 0)
@@ -3487,6 +3497,22 @@ int main(int argc, char *argv[])
 			if (raw_display == 1)
 			{
 				usage("cannot specify both -raw and -xml\n", argv, NULL);
+			}
+			if (json_display == 1)
+			{
+				usage("cannot specify both -json and -xml\n", argv, NULL);
+			}
+		}
+		else if (strcmp(argv[arg], "-json") == 0)
+		{
+			json_display = 1;
+			if (raw_display == 1)
+			{
+				usage("cannot specify both -raw and -json\n", argv, NULL);
+			}
+			if (xml_display == 1)
+			{
+				usage("cannot specify both -xml and -json\n", argv, NULL);
 			}
 		}
 		else if (strcmp(argv[arg], "-utf8") == 0)
@@ -3960,6 +3986,10 @@ int main(int argc, char *argv[])
 	{
 		xml_header();
 	}
+	else if (json_display)
+	{
+		json_header();
+	}
 	else if (new_style && !raw_display && !have_server_template())
 	{
 		display_header();
@@ -4044,6 +4074,10 @@ void finish_output()
 	if (xml_display)
 	{
 		xml_footer();
+	}
+	else if (json_display)
+	{
+		json_footer();
 	}
 	else if (have_trailer_template())
 	{
@@ -12167,8 +12201,6 @@ void put_long_little(unsigned val, char *buf)
 	buf[3] = (val >> 24) &0xFF;
 }
 
-#define MAXSTRLEN 2048
-
 char *xml_escape(char *string)
 {
 	static unsigned char _buf[4][MAXSTRLEN + 8];
@@ -12383,7 +12415,6 @@ char *xml_escape(char *string)
 	*b = '\0';
 	return (char*)result;
 }
-
 
 int is_default_rule(struct rule *rule)
 {
