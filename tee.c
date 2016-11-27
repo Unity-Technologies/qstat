@@ -88,7 +88,7 @@ query_status_t send_teeserver_request_packet(struct qserver *server)
 
 query_status_t deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 {
-	int i, skip;
+	int i;
 	char last_char;
 	char *current = NULL, *end = NULL, *version = NULL, *tok = NULL;
 	struct player* player;
@@ -109,7 +109,7 @@ query_status_t deal_with_teeserver_packet(struct qserver *server, char *rawpkt, 
 	last_char = rawpkt[len_teeserver_info_headerprefix];
 
 	/* compare the response without the last character, and verify if the last character is 'o', '2' or '3' */
-	if (memcmp(rawpkt + skip, teeserver_info_headerprefix, len_teeserver_info_headerprefix) != 0 || (last_char != 'o' && last_char != '2' && last_char != '3')) {
+	if (memcmp(rawpkt, teeserver_info_headerprefix, len_teeserver_info_headerprefix) != 0 || (last_char != 'o' && last_char != '2' && last_char != '3')) {
 		return (PKT_ERROR);
 	}
 
