@@ -58,6 +58,13 @@ static int gettimeofday(struct timeval *now, void *blah)
 
 #include <string.h>
 
+#define MAXSTRLEN 2048
+#define ENCODING_LATIN_1 1
+#define ENCODING_UTF_8 8
+#define UTF8BYTESWAPNOTACHAR 0xFFFE
+#define UTF8NOTACHAR 0xFFFF
+#define UTF8MAXFROMUCS4 0x10FFFF
+
 typedef struct _server_type server_type;
 
 #ifdef __GNUC__
@@ -83,6 +90,9 @@ typedef enum {
 typedef void (*DisplayFunc)( struct qserver *);
 typedef query_status_t (*QueryFunc)( struct qserver *);
 typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen);
+
+// Display modules
+#include "display_json.h"
 
 // Packet modules
 #include "ut2004.h"
@@ -110,6 +120,7 @@ typedef query_status_t (*PacketFunc)( struct qserver *, char *rawpkt, int pktlen
 #include "farmsim.h"
 #include "ksp.h"
 #include "tf.h"
+#include "armyops.h"
 
 /*
  * Various magic numbers.
@@ -388,39 +399,6 @@ void xml_display_tee_player_info( struct qserver *server);
 void xml_display_ventrilo_player_info( struct qserver *server);
 void xml_display_starmade_player_info( struct qserver *server);
 char *xml_escape( char*);
-
-void json_display_server( struct qserver *server);
-void json_header();
-void json_footer();
-void json_display_server_rules( struct qserver *server);
-void json_display_player_info( struct qserver *server);
-void json_display_q_player_info( struct qserver *server);
-void json_display_qw_player_info( struct qserver *server);
-void json_display_q2_player_info( struct qserver *server);
-void json_display_unreal_player_info( struct qserver *server);
-void json_display_halflife_player_info( struct qserver *server);
-void json_display_tribes_player_info( struct qserver *server);
-void json_display_tribes2_player_info( struct qserver *server);
-void json_display_ravenshield_player_info( struct qserver *server);
-void json_display_savage_player_info( struct qserver *server);
-void json_display_farcry_player_info( struct qserver *server);
-void json_display_bfris_player_info( struct qserver *server);
-void json_display_descent3_player_info( struct qserver *server);
-void json_display_ghostrecon_player_info( struct qserver *server);
-void json_display_eye_player_info( struct qserver *server);
-void json_display_armyops_player_info( struct qserver *server);
-void json_display_player_info( struct qserver *server);
-void json_display_doom3_player_info( struct qserver *server);
-void json_display_ts2_player_info( struct qserver *server);
-void json_display_ts3_player_info( struct qserver *server);
-void json_display_bfbc2_player_info( struct qserver *server);
-void json_display_tm_player_info( struct qserver *server);
-void json_display_wic_player_info( struct qserver *server);
-void json_display_fl_player_info( struct qserver *server);
-void json_display_tee_player_info( struct qserver *server);
-void json_display_ventrilo_player_info( struct qserver *server);
-void json_display_starmade_player_info( struct qserver *server);
-char *json_escape( char*);
 
 query_status_t send_qserver_request_packet( struct qserver *server);
 query_status_t send_qwserver_request_packet( struct qserver *server);
@@ -3692,6 +3670,8 @@ server_type builtin_types[] = {
     raw_display_server_rules,		/* display_raw_rule_func */
     xml_display_player_info,		/* display_xml_player_func */
     xml_display_server_rules,		/* display_xml_rule_func */
+    NULL,							/* display_json_player_func */
+    NULL,							/* display_json_rule_func */
     send_tf_request_packet,			/* status_query_func */
     NULL,							/* rule_query_func */
     NULL,							/* player_query_func */
@@ -3928,6 +3908,9 @@ int bind_sockets();
 void send_packets();
 struct qserver * find_server_by_address( unsigned int ipaddr, unsigned short port);
 void add_server_to_hash( struct qserver *server);
+void quicksort(void **array, int i, int j, int(*compare)(void *, void*));
+int type_option_compare(server_type *one, server_type *two);
+int type_string_compare(server_type *one, server_type *two);
 
 #define NO_FLAGS 0
 #define NO_VALUE_COPY 1
@@ -3990,6 +3973,8 @@ void put_long_little(unsigned val, char* buf);
  * Exported Globals
  */
 extern int show_game_port;
+extern int up_servers_only;
+extern int hostname_lookup;
 
 #define NA_INT -32767
 #define NO_PLAYER_INFO 0xffff

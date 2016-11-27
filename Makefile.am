@@ -14,6 +14,7 @@ qstat_SOURCES = \
 	qserver.c qserver.h \
 	qstat.c qstat.h \
 	template.c \
+	display_json.c display_json.h \
 	a2s.c a2s.h \
 	packet_manip.c packet_manip.h \
 	ut2004.c ut2004.h \
@@ -39,7 +40,8 @@ qstat_SOURCES = \
 	starmade.c starmade.h \
 	farmsim.c farmsim.h \
 	ksp.c ksp.h \
-	tf.c tf.h
+	tf.c tf.h \
+	armyops.c armyops.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
