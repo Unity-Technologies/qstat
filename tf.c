@@ -122,7 +122,7 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pkt_inc(&pkt, &rem, sizeof(uint16_t));
 
 	// Platform (string)
-	ret = pkt_rule(server, "version", &pkt, &rem);
+	ret = pkt_rule(server, "platform", &pkt, &rem);
 	if (ret < 0) {
 		return (ret);
 	}
