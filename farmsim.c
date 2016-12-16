@@ -11,11 +11,11 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
 #else
-#include <winsock.h>
+ #include <winsock.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,14 +27,17 @@
 #include "md5.h"
 #include "packet_manip.h"
 
-char *decode_farmsim_val(char *val)
+char *
+decode_farmsim_val(char *val)
 {
 	// Very basic html conversion
 	val = str_replace(val, "&quot;", "\"");
-	return str_replace(val, "&amp;", "&");
+	return (str_replace(val, "&amp;", "&"));
 }
 
-query_status_t send_farmsim_request_packet(struct qserver *server)
+
+query_status_t
+send_farmsim_request_packet(struct qserver *server)
 {
 	char buf[256], *code;
 
@@ -42,25 +45,28 @@ query_status_t send_farmsim_request_packet(struct qserver *server)
 	code = get_param_value(server, "code", "");
 	sprintf(buf, "GET /feed/dedicated-server-stats.xml?code=%s HTTP/1.1\015\012User-Agent: qstat\015\012\015\012", code);
 
-	return send_packet(server, buf, strlen(buf));
+	return (send_packet(server, buf, strlen(buf)));
 }
 
-query_status_t valid_farmsim_response(struct qserver *server, char *rawpkt, int pktlen)
+
+query_status_t
+valid_farmsim_response(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s;
 	int len;
 	int cnt = packet_count(server);
-	if (0 == cnt && 0 != strncmp("HTTP/1.1 200 OK", rawpkt, 15)) {
+
+	if ((0 == cnt) && (0 != strncmp("HTTP/1.1 200 OK", rawpkt, 15))) {
 		// not valid response
 		debug(2, "Invalid");
-		return REQ_ERROR;
+		return (REQ_ERROR);
 	}
 
 	s = strnstr(rawpkt, "Content-Length: ", pktlen);
 	if (s == NULL) {
 		// not valid response
 		debug(2, "Invalid (no content-length)");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 	s += 16;
 
@@ -70,57 +76,62 @@ query_status_t valid_farmsim_response(struct qserver *server, char *rawpkt, int 
 	}
 	if (sscanf(s, "%d", &len) != 1) {
 		debug(2, "Invalid (no length)");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	s = strnstr(rawpkt, "\015\012\015\012", pktlen);
 	if (s == NULL) {
 		debug(2, "Invalid (no end of header");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	s += 4;
 	if (pktlen != (s - rawpkt + len)) {
 		debug(2, "Outstanding data");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	debug(2, "Valid data");
-	return DONE_FORCE;
+	return (DONE_FORCE);
 }
 
-char *farmsim_xml_attrib(char *line, char *name)
+
+char *
+farmsim_xml_attrib(char *line, char *name)
 {
 	char *q, *p, *val;
 
 	p = strstr(line, name);
 	if (p == NULL) {
-		return NULL;
+		return (NULL);
 	}
 
 	p += strlen(name);
 	if (strlen(p) < 4) {
-		return NULL;
+		return (NULL);
 	}
 	p += 2;
 
 	q = strchr(p, '"');
 	if (q == NULL) {
-		return NULL;
+		return (NULL);
 	}
 	*q = '\0';
-	
+
 	val = strdup(p);
 	*q = '"';
 	debug(4, "%s = %s", name, val);
 
-	return val;
+	return (val);
 }
 
-query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, int pktlen)
+
+query_status_t
+deal_with_farmsim_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *val, *line;
 	query_status_t state = INPROGRESS;
+
 	debug(2, "processing...");
 
 	if (!server->combined) {
@@ -132,7 +143,8 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 		}
 
 		switch (state) {
-		case INPROGRESS: {
+		case INPROGRESS:
+		{
 			// response fragment recieved
 			int pkt_id;
 			int pkt_max;
@@ -143,16 +155,18 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 			pkt_max = pkt_id + 1;
 			if (!add_packet(server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1)) {
 				// fatal error e.g. out of memory
-				return MEM_ERROR;
+				return (MEM_ERROR);
 			}
 
 			// combine_packets will call us recursively
-			return combine_packets(server);
+			return (combine_packets(server));
 		}
+
 		case DONE_FORCE:
-			break; // single packet response fall through
+			break;  // single packet response fall through
+
 		default:
-			return state;
+			return (state);
 		}
 	}
 
@@ -160,9 +174,10 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 		state = valid_farmsim_response(server, rawpkt, pktlen);
 		switch (state) {
 		case DONE_FORCE:
-			break; // actually process
+			break;  // actually process
+
 		default:
-			return state;
+			return (state);
 		}
 	}
 
@@ -229,12 +244,11 @@ query_status_t deal_with_farmsim_packet(struct qserver *server, char *rawpkt, in
 				server->num_players = 0;
 			}
 		}
-		
+
 		line = strtok(NULL, "\012");
 	}
 
 	gettimeofday(&server->packet_time1, NULL);
 
-	return DONE_FORCE;
+	return (DONE_FORCE);
 }
-
