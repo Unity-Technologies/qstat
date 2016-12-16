@@ -11,11 +11,11 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
 #else
-#include <winsock.h>
+ #include <winsock.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,7 +36,6 @@ typedef enum {
 	SM_SHORT,
 	SM_BYTE_ARRAY
 } starmade_param_type;
-
 
 query_status_t
 send_starmade_request_packet(struct qserver *server)
@@ -59,8 +58,9 @@ send_starmade_request_packet(struct qserver *server)
 
 	debug(3, "send_starmade_request_packet: state = %ld", server->challenge);
 
-	return send_packet(server, buf, 13);
+	return (send_packet(server, buf, 13));
 }
+
 
 static query_status_t
 starmade_read_parameter(char **datap, int *datalen, void *val, int vlen, starmade_param_type type)
@@ -70,90 +70,99 @@ starmade_read_parameter(char **datap, int *datalen, void *val, int vlen, starmad
 	if (**datap != type) {
 		/* unexpected type */
 		debug(2, "Invalid type detected, expected 0x%02x got 0x%02x", type, **datap);
-		return REQ_ERROR;
+		return (REQ_ERROR);
 	}
 
 	(*datap)++;
 	(*datalen)--;
 
-	switch(type) {
+	switch (type) {
 	case SM_INT:
 		size = 4;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(uint32_t*)val = ((uint32_t)(*datap)[3]) |
-			((uint32_t)(*datap)[2] << 8) |
-			((uint32_t)(*datap)[1] << 16) |
-			((uint32_t)(*datap)[0] << 24);
+		*(uint32_t *)val = ((uint32_t)(*datap)[3]) |
+		    ((uint32_t)(*datap)[2] << 8) |
+		    ((uint32_t)(*datap)[1] << 16) |
+		    ((uint32_t)(*datap)[0] << 24);
 		break;
+
 	case SM_LONG:
 		size = 8;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(uint64_t*)val = ((uint64_t)(*datap)[7]) |
-			((uint64_t)(*datap)[6] << 8) |
-			((uint64_t)(*datap)[5] << 16) |
-			((uint64_t)(*datap)[4] << 24) |
-			((uint64_t)(*datap)[3] << 32) |
-			((uint64_t)(*datap)[2] << 40) |
-			((uint64_t)(*datap)[1] << 48) |
-			((uint64_t)(*datap)[0] << 56);
+		*(uint64_t *)val = ((uint64_t)(*datap)[7]) |
+		    ((uint64_t)(*datap)[6] << 8) |
+		    ((uint64_t)(*datap)[5] << 16) |
+		    ((uint64_t)(*datap)[4] << 24) |
+		    ((uint64_t)(*datap)[3] << 32) |
+		    ((uint64_t)(*datap)[2] << 40) |
+		    ((uint64_t)(*datap)[1] << 48) |
+		    ((uint64_t)(*datap)[0] << 56);
 		break;
+
 	case SM_FLOAT:
 		size = 4;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(uint32_t*)val = (uint32_t)(*datap)[3] |
-			((uint32_t)(*datap)[2] << 8) |
-			((uint32_t)(*datap)[1] << 16) |
-			((uint32_t)(*datap)[0] << 24);
+		*(uint32_t *)val = (uint32_t)(*datap)[3] |
+		    ((uint32_t)(*datap)[2] << 8) |
+		    ((uint32_t)(*datap)[1] << 16) |
+		    ((uint32_t)(*datap)[0] << 24);
 		break;
+
 	case SM_STRING:
 		size = ((short)(*datap)[1]) | ((short)(*datap)[0] << 8);
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
 		(*datap) += 2;
 		memcpy(val, *datap, size);
-		((char*)val)[size] = 0x00;
+		((char *)val)[size] = 0x00;
 		break;
+
 	case SM_BOOLEAN:
 		size = 1;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(unsigned char*)val = **datap;
+		*(unsigned char *)val = **datap;
 		break;
+
 	case SM_BYTE:
 		size = 1;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(unsigned char*)val = **datap;
+		*(unsigned char *)val = **datap;
 		break;
+
 	case SM_SHORT:
 		size = 2;
-		if (size > vlen || size > *datalen) {
-			return MEM_ERROR;
+		if ((size > vlen) || (size > *datalen)) {
+			return (MEM_ERROR);
 		}
-		*(short*)val = (short)(*datap)[1] | ((short)(*datap)[0] << 8);
+		*(short *)val = (short)(*datap)[1] | ((short)(*datap)[0] << 8);
 		break;
+
 	case SM_BYTE_ARRAY:
 		debug(2, "Unsupport type 0x%02x requested / received", type);
-		return REQ_ERROR;
+		return (REQ_ERROR);
+
 	default:
 		debug(2, "Unknown type 0x%02x requested / received", type);
-		return REQ_ERROR;
+		return (REQ_ERROR);
 	}
 
 	(*datap) += size;
 	(*datalen) -= size;
 
-	return INPROGRESS;
+	return (INPROGRESS);
 }
+
 
 query_status_t
 deal_with_starmade_packet(struct qserver *server, char *rawpkt, int pktlen)
@@ -165,7 +174,7 @@ deal_with_starmade_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	if (pktlen < 54) {
 		// Invalid password
-		return REQ_ERROR;
+		return (REQ_ERROR);
 	}
 
 	s = rawpkt;
@@ -195,44 +204,50 @@ deal_with_starmade_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	// byte - info version
 	ret = starmade_read_parameter(&s, &pktlen, buf, sizeof(buf), SM_BYTE);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	// float - version
 	ret = starmade_read_parameter(&s, &pktlen, buf, sizeof(buf), SM_FLOAT);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	// string - server name
 	ret = starmade_read_parameter(&s, &pktlen, buf, sizeof(buf), SM_STRING);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 	server->server_name = strdup(buf);
 
 	// string - description
 	ret = starmade_read_parameter(&s, &pktlen, buf, sizeof(buf), SM_STRING);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	// long - start time
 	ret = starmade_read_parameter(&s, &pktlen, buf, sizeof(buf), SM_LONG);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	// int - player count
 	ret = starmade_read_parameter(&s, &pktlen, &server->num_players, sizeof(server->num_players), SM_INT);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	// int - max players
 	ret = starmade_read_parameter(&s, &pktlen, &server->max_players, sizeof(server->max_players), SM_INT);
-	if (ret != INPROGRESS)
-		return ret;
+	if (ret != INPROGRESS) {
+		return (ret);
+	}
 
 	gettimeofday(&server->packet_time1, NULL);
 
 	server->map_name = strdup("default");
 
-	return DONE_FORCE;
+	return (DONE_FORCE);
 }
-

@@ -11,11 +11,11 @@
 
 #include <sys/types.h>
 #ifndef _WIN32
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
 #else
-#include <winsock.h>
+ #include <winsock.h>
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,39 +27,45 @@
 #include "md5.h"
 #include "packet_manip.h"
 
-char *decode_ksp_val(char *val)
+char *
+decode_ksp_val(char *val)
 {
 	// Very basic html conversion
 	val = str_replace(val, "&quot;", "\"");
-	return str_replace(val, "&amp;", "&");
+	return (str_replace(val, "&amp;", "&"));
 }
 
-query_status_t send_ksp_request_packet(struct qserver *server)
+
+query_status_t
+send_ksp_request_packet(struct qserver *server)
 {
 	char buf[256];
 
 	server->saved_data.pkt_max = -1;
 	sprintf(buf, "GET / HTTP/1.1\015\012User-Agent: qstat\015\012Host: %s:%d\015\012\015\012", server->host_name, server->port);
 
-	return send_packet(server, buf, strlen(buf));
+	return (send_packet(server, buf, strlen(buf)));
 }
 
-query_status_t valid_ksp_response(struct qserver *server, char *rawpkt, int pktlen)
+
+query_status_t
+valid_ksp_response(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s;
 	int len;
 	int cnt = packet_count(server);
-	if (0 == cnt && 0 != strncmp("HTTP/1.1 200 OK", rawpkt, 15)) {
+
+	if ((0 == cnt) && (0 != strncmp("HTTP/1.1 200 OK", rawpkt, 15))) {
 		// not valid response
 		debug(2, "Invalid");
-		return REQ_ERROR;
+		return (REQ_ERROR);
 	}
 
 	s = strnstr(rawpkt, "Content-Length: ", pktlen);
 	if (s == NULL) {
 		// not valid response
 		debug(2, "Invalid (no content-length)");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 	s += 16;
 
@@ -69,37 +75,39 @@ query_status_t valid_ksp_response(struct qserver *server, char *rawpkt, int pktl
 	}
 	if (sscanf(s, "%d", &len) != 1) {
 		debug(2, "Invalid (no length)");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	s = strnstr(rawpkt, "\015\012\015\012", pktlen);
 	if (s == NULL) {
 		debug(2, "Invalid (no end of header");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	s += 4;
 	if (pktlen != (s - rawpkt + len)) {
 		debug(2, "Outstanding data");
-		return INPROGRESS;
+		return (INPROGRESS);
 	}
 
 	debug(2, "Valid data");
-	return DONE_FORCE;
+	return (DONE_FORCE);
 }
 
-char *ksp_json_attrib(char *line, char *name)
+
+char *
+ksp_json_attrib(char *line, char *name)
 {
 	char *q, *p, *val;
 
 	p = strstr(line, name);
 	if (p == NULL) {
-		return NULL;
+		return (NULL);
 	}
 
 	p += strlen(name);
 	if (strlen(p) < 3) {
-		return NULL;
+		return (NULL);
 	}
 	p += 2;
 	if (*p == '"') {
@@ -107,28 +115,31 @@ char *ksp_json_attrib(char *line, char *name)
 		p++;
 		q = strchr(p, '"');
 		if (q == NULL) {
-			return NULL;
+			return (NULL);
 		}
 	} else {
 		// Integer, bool etc
 		q = strchr(p, ',');
 		if (q == NULL) {
-			return NULL;
+			return (NULL);
 		}
 	}
 	*q = '\0';
-	
+
 	val = strdup(p);
 	*q = '"';
 	debug(4, "%s = %s", name, val);
 
-	return val;
+	return (val);
 }
 
-query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pktlen)
+
+query_status_t
+deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *s, *val, *line;
 	query_status_t state = INPROGRESS;
+
 	debug(2, "processing...");
 
 	if (!server->combined) {
@@ -140,7 +151,8 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 		}
 
 		switch (state) {
-		case INPROGRESS: {
+		case INPROGRESS:
+		{
 			// response fragment recieved
 			int pkt_id;
 			int pkt_max;
@@ -151,16 +163,18 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 			pkt_max = pkt_id + 1;
 			if (!add_packet(server, 0, pkt_id, pkt_max, pktlen, rawpkt, 1)) {
 				// fatal error e.g. out of memory
-				return MEM_ERROR;
+				return (MEM_ERROR);
 			}
 
 			// combine_packets will call us recursively
-			return combine_packets(server);
+			return (combine_packets(server));
 		}
+
 		case DONE_FORCE:
-			break; // single packet response fall through
+			break;  // single packet response fall through
+
 		default:
-			return state;
+			return (state);
 		}
 	}
 
@@ -168,9 +182,10 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 		state = valid_ksp_response(server, rawpkt, pktlen);
 		switch (state) {
 		case DONE_FORCE:
-			break; // actually process
+			break;  // actually process
+
 		default:
-			return state;
+			return (state);
 		}
 	}
 
@@ -241,12 +256,11 @@ query_status_t deal_with_ksp_packet(struct qserver *server, char *rawpkt, int pk
 				server->num_players = 0;
 			}
 		}
-		
+
 		line = strtok(NULL, "\012");
 	}
 
 	gettimeofday(&server->packet_time1, NULL);
 
-	return DONE_FORCE;
+	return (DONE_FORCE);
 }
-

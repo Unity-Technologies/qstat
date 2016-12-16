@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #if !HAVE_STRNSTR
+
 /*
  * strnstr -
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
@@ -44,95 +45,105 @@
  * SUCH DAMAGE.
  */
 
-#include <string.h>
+ #include <string.h>
 
-char *
-qstat_strnstr(const char *s, const char *find, size_t slen)
-{
-	char c, sc;
-	size_t len;
+	char *
+	qstat_strnstr(const char *s, const char *find, size_t slen)
+	{
+		char c, sc;
+		size_t len;
 
-	if ((c = *find++) != '\0') {
-		len = strlen(find);
-		do {
+		if ((c = *find++) != '\0') {
+			len = strlen(find);
 			do {
-				if (slen-- < 1 || (sc = *s++) == '\0')
+				do {
+					if ((slen-- < 1) || ((sc = *s++) == '\0')) {
+						return (NULL);
+					}
+				} while (sc != c);
+				if (len > slen) {
 					return (NULL);
-			} while (sc != c);
-			if (len > slen)
-				return (NULL);
-		} while (strncmp(s, find, len) != 0);
-		s--;
+				}
+			} while (strncmp(s, find, len) != 0);
+			s--;
+		}
+		return ((char *)s);
 	}
-	return ((char *)s);
-}
 
-#endif /* !HAVE_STRNSTR */
+
+#endif  /* !HAVE_STRNSTR */
 
 #if !HAVE_STRNDUP
 
-#include <stdlib.h>
-#include <string.h>
+ #include <stdlib.h>
+ #include <string.h>
 
-char *
-strndup(const char *string, size_t len)
-{
-	char *result;
-	result = (char*)malloc(len + 1);
-	memcpy(result, string, len);
-	result[len] = '\0';
+	char *
+	strndup(const char *string, size_t len)
+	{
+		char *result;
 
-	return result;
-}
+		result = (char *)malloc(len + 1);
+		memcpy(result, string, len);
+		result[len] = '\0';
 
-#endif /* !HAVE_STRNDUP */
+		return (result);
+	}
+
+
+#endif  /* !HAVE_STRNDUP */
 
 #if !HAVE_ERR_H
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdarg.h>
+ #include <errno.h>
+ #include <stdio.h>
+ #include <stdarg.h>
 
-void
-err(int eval, const char *fmt, ...) 
-{ 
-	va_list list; 
+	void
+	err(int eval, const char *fmt, ...)
+	{
+		va_list list;
 
-	va_start(list, fmt); 
-	warn(fmt, list); 
-	va_end(list); 
+		va_start(list, fmt);
+		warn(fmt, list);
+		va_end(list);
 
-	exit(eval); 
-}
+		exit(eval);
+	}
 
-void
-warn(const char *fmt, ...) 
-{ 
-	va_list list; 
 
-	va_start(list, fmt); 
-	if (fmt)
-		fprintf(stderr, fmt, list); 
-	fprintf(stderr, "%s\n", strerror(errno)); 
-	va_end(list); 
-} 
-#endif /* HAVE_ERR_H */
+	void
+	warn(const char *fmt, ...)
+	{
+		va_list list;
+
+		va_start(list, fmt);
+		if (fmt) {
+			fprintf(stderr, fmt, list);
+		}
+		fprintf(stderr, "%s\n", strerror(errno));
+		va_end(list);
+	}
+
+
+#endif  /* HAVE_ERR_H */
 
 #include <string.h>
 
 // NOTE: replace must be smaller or equal in size to find
-char *str_replace(char *source, char *find, char *replace)
+char *
+str_replace(char *source, char *find, char *replace)
 {
-    char *s = strstr(source, find);
-    int rlen = strlen(replace);
-    int flen = strlen(find);
+	char *s = strstr(source, find);
+	int rlen = strlen(replace);
+	int flen = strlen(find);
 
-    while(NULL != s) {
+	while (NULL != s) {
 		strncpy(s, replace, rlen);
 		strcpy(s + rlen, s + flen);
 		s += rlen;
 		s = strstr(s, find);
-   	}
+	}
 
-	return source;
+	return (source);
 }

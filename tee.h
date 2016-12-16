@@ -17,4 +17,3 @@ query_status_t send_teeserver_request_packet(struct qserver *server);
 query_status_t deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int pktlen);
 
 #endif
-
