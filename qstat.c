@@ -2249,6 +2249,10 @@ xml_display_player_info(struct qserver *server)
 			xform_printf(OF, "\t\t\t\t<time>%s</time>\n", xml_escape(play_time(player->connect_time, 1)));
 		}
 
+		if (player->address) {
+			xform_printf(OF, "\t\t\t\t<address>%s</address>\n", xml_escape(player->address));
+		}
+
 		xml_display_player_info_info(player);
 
 		xform_printf(OF, "\t\t\t</player>\n");

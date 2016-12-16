@@ -681,6 +681,9 @@ json_display_player_info(struct qserver *server)
 		if (player->connect_time != 0) {
 			xform_printf(OF, "\t\t\t\t\"time\": \"%s\",\n", json_escape(play_time(player->connect_time, 1)));
 		}
+		if (player->address != NULL) {
+			xform_printf(OF, "\t\t\t\t\"address\": \"%s\",\n", json_escape(player->address));
+		}
 		json_display_player_info_info(player);
 		xform_printf(OF, "\t\t\t\t\"name\": \"%s\"\n", json_escape(xform_name(player->name, server)));
 		xform_printf(OF, "\t\t\t}");
