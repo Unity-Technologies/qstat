@@ -57,6 +57,30 @@ char teeserver_info_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF',
  * Answer sample: '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xffinf30\x000.6.1\x00[Bigstream.ru] CTF5 only\x00ctf5\x00CTF\x000\x000\x0016\x000\x0016\x00'
  * Answer format: (*char)header,(*char)token,(*char)version),(*char)name,(*char)map,(*char)gametype,(int)flags,(int)num_players,(int)max_players,(int)num_clients,(int)max_clients,*players[]
  */
+
+int len_teemaster_packet = 14;
+char teemaster_packet[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', 't' };
+
+/* master response */
+int len_teemaster_list_header = 14;
+int len_teemaster_list_headerprefix = 13;
+char teemaster_list_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's' };
+
+/*
+ * To request, we will try 2 request packet, only one character change, so no need to declare 2 strings
+ *
+ * char teemaster_packet[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', 't' };
+ * char teemaster_packe2[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', '2' };
+ *
+ * To analyze response, we will compare the same string without the last character, the the last character, so no need to declare 3 strings
+ *
+ * char teemaster_list_header[14] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's', 't' };
+ * char teemaster_lis2_header[14] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's', '2' };
+ */
+
+int len_ipv4_header = 12;
+char ipv4_header[12] = { '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF' };
+
 query_status_t
 send_teeserver_request_packet(struct qserver *server)
 {
@@ -203,4 +227,99 @@ deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 	server->protocol_version |= (atoi(tok) & 0x00FF);
 
 	return (DONE_FORCE);
+}
+
+
+query_status_t
+send_teemaster_request_packet(struct qserver *server)
+{
+	query_status_t ret_packet, ret_packe2;
+
+	teemaster_packet[13] = 't';
+	ret_packet = send_packet(server, teemaster_packet, len_teemaster_packet);
+
+	if (ret_packet != INPROGRESS) {
+		return (ret_packet);
+	}
+
+	teemaster_packet[13] = '2';
+	ret_packe2 = send_packet(server, teemaster_packet, len_teemaster_packet);
+
+	return (ret_packe2);
+}
+
+
+query_status_t
+deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int rawpktlen)
+{
+	int i;
+	char *current;
+	int previous_len, num_servers;
+	int len_address_packet;
+	char last_char;
+
+	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
+
+	if (len_teemaster_list_headerprefix > rawpktlen) {
+		return (PKT_ERROR);
+	}
+
+	/* get the last character */
+	last_char = rawpkt[len_teemaster_list_headerprefix];
+
+	/* compare the response without the last character */
+	if ((memcmp(rawpkt, teemaster_list_headerprefix, len_teemaster_list_headerprefix)) != 0) {
+		return (PKT_ERROR);
+	}
+
+	/* legacy server list format, only ipv4 addresses */
+	if (last_char == 't') {
+		len_address_packet = 6;
+	/* normal server list format, ipv4 and ipv6 addresses */
+	} else if (last_char == '2') {
+		len_address_packet = 18;
+	/* bad or unknown server list format */
+	} else {
+		return (PKT_ERROR);
+	}
+
+	previous_len = server->master_pkt_len;
+	num_servers = (rawpktlen - len_teemaster_list_header) / len_address_packet;
+	server->n_servers += num_servers;
+	server->master_pkt_len += num_servers * 6;
+	server->master_pkt = (char *)realloc(server->master_pkt, server->master_pkt_len);
+	current = server->master_pkt + previous_len;
+
+	rawpkt += len_teemaster_list_header;
+	rawpktlen -= len_teemaster_list_header;
+	for (i = 0; i < num_servers; i++) {
+		if (len_address_packet > rawpktlen) {
+			return (PKT_ERROR);
+		}
+
+		/* ipv4-only server list */
+		if (len_address_packet == 6) {
+			memcpy(current, rawpkt, 6);
+			memcpy(current + 5, rawpkt + 4, 1);
+			memcpy(current + 4, rawpkt + 5, 1);
+		/* ipv4 and ipv6 server list */
+		} else {
+			/* ipv4 server address */
+			if (memcmp(rawpkt, ipv4_header, len_ipv4_header) == 0) {
+				memcpy(current, rawpkt + len_ipv4_header, 6);
+			}
+			/* else it's an ipv6 server address, which is currently unsuported, hence ignored */
+		}
+
+		current += 6;
+		rawpkt += len_address_packet;
+		rawpktlen -= len_address_packet;
+	}
+
+	if (len_address_packet == 6) {
+		return (INPROGRESS);
+	}
+
+	server->server_name = MASTER;
+	return (DONE_AUTO);
 }

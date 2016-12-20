@@ -270,8 +270,9 @@ typedef query_status_t (*PacketFunc)(struct qserver *, char *rawpkt, int pktlen)
 #define FARMSIM_PROTOCOL_SERVER			76
 #define KSP_PROTOCOL_SERVER			77
 #define TF_PROTOCOL_SERVER			78
+#define TEE_MASTER				79
 
-#define LAST_BUILTIN_SERVER			78
+#define LAST_BUILTIN_SERVER			80
 
 #define TF_SINGLE_QUERY				(1 << 1)
 #define TF_OUTFILE				(1 << 2)
@@ -3711,6 +3712,42 @@ server_type *find_server_type_string(char *type_string);
 			NULL,                           /* rule_query_func */
 			NULL,                           /* player_query_func */
 			deal_with_tf_packet,            /* packet_func */
+		},
+		{
+			/* Teeworlds master */
+			TEE_MASTER,                     /* id */
+			"TEEM",                         /* type_prefix */
+			"teem",                         /* type_string */
+			"-teem",                        /* type_option */
+			"Teeworlds Master",             /* game_name */
+			TEE_SERVER,                     /* master */
+			8300,                           /* default_port */
+			0,                              /* port_offset */
+			0,                              /* flags */
+			"gametype",                     /* game_rule */
+			"TEEWORLDSMASTER",              /* template_var */
+			NULL,                           /* status_packet */
+			0,                              /* status_len */
+			NULL,                           /* player_packet */
+			0,                              /* player_len */
+			NULL,                           /* rule_packet */
+			0,                              /* rule_len */
+			NULL,                           /* master_packet */
+			0,                              /* master_len */
+			NULL,                           /* master_protocol */
+			NULL,                           /* master_query */
+			NULL,                           /* display_player_func */
+			NULL,                           /* display_rule_func */
+			NULL,                           /* display_raw_player_func */
+			NULL,                           /* display_raw_rule_func */
+			NULL,                           /* display_xml_player_func */
+			NULL,                           /* display_xml_rule_func */
+			NULL,                           /* display_json_player_func */
+			NULL,                           /* display_json_rule_func */
+			send_teemaster_request_packet,  /* status_query_func */
+			NULL,                           /* rule_query_func */
+			NULL,                           /* player_query_func */
+			deal_with_teemaster_packet,     /* packet_func */
 		},
 		{
 			Q_UNKNOWN_TYPE, /* id */
