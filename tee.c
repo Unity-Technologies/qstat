@@ -3,9 +3,9 @@
  * by Steve Jankowski
  *
  * Teeworlds protocol
- * Thanks to Emiliano Leporati for the first Teeworlds patch (2008)
- * Thanks to Thomas Debesse for the rewrite <dev@illwieckz.net> (2014)
- * Thanks to Steven Hartland for some parts and help <steven.hartland@multiplay.co.uk>
+ * Thanks to Emiliano Leporati for the first Teeworlds server patch (2008)
+ * Thanks to Thomas Debesse for the server rewrite and master addition <dev@illwieckz.net> (2014-2016)
+ * Thanks to Steven Hartland for some parts and generous help <steven.hartland@multiplay.co.uk> (2014)
  *
  * Licensed under the Artistic License, see LICENSE.txt for license terms
  */
@@ -21,15 +21,15 @@
 /* See "scripts/tw_api.py" from Teeworlds project */
 
 /* query server */
-int len_teeserver_request_packet = 15;
-char teeserver_request_packet[15] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', '\x00', '\x00' };
+static char teeserver_request_packet[15] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', '\x00', '\x00' };
+static int len_teeserver_request_packet = sizeof(teeserver_request_packet) / sizeof(char);
 
 /* server response */
-int len_teeserver_info_headerprefix = 13;
-char teeserver_info_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'i', 'n', 'f' };
+static char teeserver_info_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'i', 'n', 'f' };
+static int len_teeserver_info_headerprefix = sizeof(teeserver_info_headerprefix) / sizeof(char);
 
 /*
- * To request, we will try 3 request packet, only one character and the size change, so no need to declare 3 strings
+ * To request, we will try 3 request packets, only one character and the size differ, so no need to declare 3 strings
  *
  * char teeserver_request_packet[14] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', 'f' };
  * char teeserver_request_packe2[15] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'g', 'i', 'e', '2', '\x00' };
@@ -43,7 +43,7 @@ char teeserver_info_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF',
  */
 
 /*
- * For information, Tee packet samples per header, explained
+ * For information, Teeworlds packet samples per header, explained
  *
  * Header "info": \xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'i', 'n', 'f', 'o'
  * Answer sample: '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xffinfo0.5.1\x00.:{TeeKnight|Catch16}:. Catch16 hosted by TeeKnight.de\x00lightcatch\x00Catch16\x000\x00-1\x000\x0016\x00'
@@ -58,32 +58,37 @@ char teeserver_info_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF',
  * Answer format: (*char)header,(*char)token,(*char)version),(*char)name,(*char)map,(*char)gametype,(int)flags,(int)num_players,(int)max_players,(int)num_clients,(int)max_clients,*players[]
  */
 
-int len_teemaster_packet = 14;
-char teemaster_packet[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', 't' };
+/* query master */
+static char teemaster_packet[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', 't' };
+static int len_teemaster_packet = sizeof(teemaster_packet) / sizeof(char);
 
-/* master response */
-int len_teemaster_list_header = 14;
-int len_teemaster_list_headerprefix = 13;
-char teemaster_list_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's' };
+/* master response header, the last char defines the protocol version, everything before that last char is the same */
+static char teemaster_list_headerprefix[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's' };
+static int len_teemaster_list_headerprefix = sizeof(teemaster_list_headerprefix) / sizeof(char);
+static int len_teemaster_list_header = 1 + sizeof(teemaster_list_headerprefix) / sizeof(char);
 
 /*
- * To request, we will try 2 request packet, only one character change, so no need to declare 2 strings
+ * To request, we will try 2 request packets, only one character differs, so no need to declare 2 strings
  *
  * char teemaster_packet[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', 't' };
  * char teemaster_packe2[14] = { '\x20', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF', '\xFF', '\xFF', 'r', 'e', 'q', '2' };
  *
- * To analyze response, we will compare the same string without the last character, the the last character, so no need to declare 3 strings
+ * To analyze response, we will compare the same string without the last character, so no need to declare 3 strings
  *
  * char teemaster_list_header[14] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's', 't' };
  * char teemaster_lis2_header[14] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', 'l', 'i', 's', '2' };
  */
 
-int len_ipv4_header = 12;
-char ipv4_header[12] = { '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF' };
+
+/* ipv4 header for ipv4 addresses stored in ipv6 slots in normal server list */
+static char tee_ipv4_header[12] = { '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\xFF', '\xFF' };
+static int len_tee_ipv4_header = sizeof(tee_ipv4_header) / sizeof(char);
 
 query_status_t
 send_teeserver_request_packet(struct qserver *server)
 {
+	debug(2, "send_teeserver_request_packet %p", server);
+
 	query_status_t ret;
 
 	/*
@@ -91,21 +96,21 @@ send_teeserver_request_packet(struct qserver *server)
 	 * In fact the master server said which server use which protocol, but how qstat can transmit this information?
 	 */
 
-	/* Send v1 packet */
+	/* send getinfo1 packet (legacy server first query) */
 	teeserver_request_packet[13] = 'f';
 	ret = send_packet(server, teeserver_request_packet, 13);
 	if (ret != INPROGRESS) {
 		return (ret);
 	}
 
-	/* Send v2 packet */
+	/* send getinfo2 packet (legacy server second query for additional data) */
 	teeserver_request_packet[13] = '2';
 	ret = send_packet(server, teeserver_request_packet, len_teeserver_request_packet);
 	if (ret != INPROGRESS) {
 		return (ret);
 	}
 
-	/* Send v2 packet */
+	/* send getinfo3 packet (normal server lone query) */
 	teeserver_request_packet[13] = '3';
 	return (send_packet(server, teeserver_request_packet, len_teeserver_request_packet));
 }
@@ -119,23 +124,33 @@ deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 	char *current = NULL, *end = NULL, *version = NULL, *tok = NULL;
 	struct player *player;
 
+	debug(2, "deal_with_teeserver_packet %p, %d", server, rawpktlen);
+
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 
-	/* packet too short */
-	if (len_teeserver_info_headerprefix > rawpktlen) {
+	if (rawpktlen < len_teeserver_info_headerprefix) {
+		malformed_packet(server, "packet too short");
 		return (PKT_ERROR);
 	}
 
 	/* not null-terminated packet */
 	if ((strnlen(rawpkt, rawpktlen) == rawpktlen) && (rawpkt[rawpktlen] != 0)) {
+		malformed_packet(server, "not null-terminated packet");
 		return (PKT_ERROR);
 	}
 
 	/* get the last character */
 	last_char = rawpkt[len_teeserver_info_headerprefix];
 
-	/* compare the response without the last character, and verify if the last character is 'o', '2' or '3' */
-	if ((memcmp(rawpkt, teeserver_info_headerprefix, len_teeserver_info_headerprefix) != 0) || ((last_char != 'o') && (last_char != '2') && (last_char != '3'))) {
+	/* compare the response without the last character */
+	if (memcmp(rawpkt, teeserver_info_headerprefix, len_teeserver_info_headerprefix) != 0) {
+		malformed_packet(server, "unknown packet header");
+		return (PKT_ERROR);
+	}
+
+	/* and verify if the last character is 'o', '2' or '3' */
+	if ((last_char != 'o') && (last_char != '2') && (last_char != '3')) {
+		malformed_packet(server, "unknown packet format");
 		return (PKT_ERROR);
 	}
 
@@ -186,7 +201,7 @@ deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 
 	/* if inf3 */
 	if (last_char == '3') {
-		/* Is there a difference between a teeworld spectator and what qstat calls a "client"?  */
+		/* is there a difference between a Teeworlds spectator and what qstat calls a "client"? */
 
 		/* num clients, skip */
 		current += strnlen(current, end - current) + 1;
@@ -210,18 +225,21 @@ deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 
 	tok = strtok(version, ".");
 	if (tok == NULL) {
+		malformed_packet(server, "malformed server version string");
 		return (PKT_ERROR);
 	}
 	server->protocol_version |= (atoi(tok) & 0x000F) << 12;
 
 	tok = strtok(NULL, ".");
 	if (tok == NULL) {
+		malformed_packet(server, "malformed server version string");
 		return (PKT_ERROR);
 	}
 	server->protocol_version |= (atoi(tok) & 0x000F) << 8;
 
 	tok = strtok(NULL, ".");
 	if (tok == NULL) {
+		malformed_packet(server, "malformed server version string");
 		return (PKT_ERROR);
 	}
 	server->protocol_version |= (atoi(tok) & 0x00FF);
@@ -233,8 +251,11 @@ deal_with_teeserver_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 query_status_t
 send_teemaster_request_packet(struct qserver *server)
 {
+	debug(2, "send_teemaster_request_packet %p", server);
+
 	query_status_t ret_packet, ret_packe2;
 
+	/* query for legacy list (ipv4 only list) of legacy servers (using legacy getinfo and getinfo2 queries) */
 	teemaster_packet[13] = 't';
 	ret_packet = send_packet(server, teemaster_packet, len_teemaster_packet);
 
@@ -242,84 +263,142 @@ send_teemaster_request_packet(struct qserver *server)
 		return (ret_packet);
 	}
 
+	/* query for normal list (mixed ipv4 and ipv6 list) of normal servers (using normal getinfo3 query) */
 	teemaster_packet[13] = '2';
 	ret_packe2 = send_packet(server, teemaster_packet, len_teemaster_packet);
 
 	return (ret_packe2);
 }
 
-
 query_status_t
-deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int rawpktlen)
+process_legacy_teemaster_packet_data(struct qserver *server, char *rawpkt, int rawpktlen)
 {
-	int i;
-	char *current;
-	int previous_len, num_servers;
-	int len_address_packet;
-	char last_char;
+	int num_servers, previous_len, len_address_packet, i;
+	char *current, *dumb_pointer;
 
-	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
+	/* six bytes address */
+	debug(1, "teeworlds master response uses legacy packet format (ipv4 server list)");
 
-	if (len_teemaster_list_headerprefix > rawpktlen) {
-		return (PKT_ERROR);
-	}
+	server->server_name = MASTER;
+	/* length of an address packet in rawpktlen with legacy packet format */
+	len_address_packet = 6;
 
-	/* get the last character */
-	last_char = rawpkt[len_teemaster_list_headerprefix];
-
-	/* compare the response without the last character */
-	if ((memcmp(rawpkt, teemaster_list_headerprefix, len_teemaster_list_headerprefix)) != 0) {
-		return (PKT_ERROR);
-	}
-
-	/* legacy server list format, only ipv4 addresses */
-	if (last_char == 't') {
-		len_address_packet = 6;
-	/* normal server list format, ipv4 and ipv6 addresses */
-	} else if (last_char == '2') {
-		len_address_packet = 18;
-	/* bad or unknown server list format */
-	} else {
-		return (PKT_ERROR);
-	}
+	num_servers = rawpktlen / len_address_packet;
+	server->n_servers += num_servers;
 
 	previous_len = server->master_pkt_len;
-	num_servers = (rawpktlen - len_teemaster_list_header) / len_address_packet;
-	server->n_servers += num_servers;
-	server->master_pkt_len += num_servers * 6;
-	server->master_pkt = (char *)realloc(server->master_pkt, server->master_pkt_len);
+	server->master_pkt_len = server->n_servers * 6;
+	dumb_pointer = (char *)realloc(server->master_pkt, server->master_pkt_len);
+	if (dumb_pointer == NULL) {
+		free(server->master_pkt);
+		debug(0, "Failed to realloc memory for internal master packet");
+		return (MEM_ERROR);
+	}
+	server->master_pkt = dumb_pointer;
 	current = server->master_pkt + previous_len;
 
-	rawpkt += len_teemaster_list_header;
-	rawpktlen -= len_teemaster_list_header;
 	for (i = 0; i < num_servers; i++) {
-		if (len_address_packet > rawpktlen) {
+		if (rawpktlen < len_address_packet) {
+			malformed_packet(server, "packet too short");
 			return (PKT_ERROR);
 		}
 
-		/* ipv4-only server list */
-		if (len_address_packet == 6) {
-			memcpy(current, rawpkt, 6);
-			memcpy(current + 5, rawpkt + 4, 1);
-			memcpy(current + 4, rawpkt + 5, 1);
-		/* ipv4 and ipv6 server list */
-		} else {
-			/* ipv4 server address */
-			if (memcmp(rawpkt, ipv4_header, len_ipv4_header) == 0) {
-				memcpy(current, rawpkt + len_ipv4_header, 6);
-			}
-			/* else it's an ipv6 server address, which is currently unsuported, hence ignored */
-		}
-
+		memcpy(current, rawpkt, 4);
+		memcpy(current + 5, rawpkt + 4, 1);
+		memcpy(current + 4, rawpkt + 5, 1);
+		/* 6 is the internal length of an address in qstat's server->master_pkt */
 		current += 6;
+
 		rawpkt += len_address_packet;
 		rawpktlen -= len_address_packet;
 	}
 
-	if (len_address_packet == 6) {
-		return (INPROGRESS);
-	}
+	return (INPROGRESS);
+}
+
+query_status_t
+process_new_teemaster_packet_data(struct qserver *server, char *rawpkt, int rawpktlen)
+{
+	int num_servers, previous_len, len_address_packet, i;
+	char *current, *dumb_pointer;
+
+	/* eighteen bytes address */
+	debug(1, "teeworlds master response uses normal packet format (mixed ipv4/ipv6 server list)");
 
 	server->server_name = MASTER;
-	return (DONE_AUTO);
+	len_address_packet = 18;
+
+	num_servers = rawpktlen / len_address_packet;
+
+	for (i = 0; i < num_servers; i++) {
+		if (rawpktlen < len_address_packet) {
+			malformed_packet(server, "packet too short");
+			return (PKT_ERROR);
+		}
+
+		if (memcmp(rawpkt, tee_ipv4_header, len_tee_ipv4_header) == 0) {
+			debug(3, "teeworlds ipv4 server found in normal teeworlds master packet");
+
+			previous_len = server->master_pkt_len;
+			server->n_servers += 1;
+			server->master_pkt_len += 6;
+			dumb_pointer = (char *)realloc(server->master_pkt, server->master_pkt_len);
+			if (dumb_pointer == NULL) {
+				free(server->master_pkt);
+				debug(0, "Failed to realloc memory for internal master packet");
+				return (MEM_ERROR);
+			}
+			server->master_pkt = dumb_pointer;
+			current = server->master_pkt + previous_len;
+
+			memcpy(current, rawpkt + len_tee_ipv4_header, 6);
+
+		} else {
+			/* currently unsuported */
+			debug(3, "teeworlds ipv6 server found in normal teeworlds master packet, discarding");
+		}
+
+		rawpkt += len_address_packet;
+		rawpktlen -= len_address_packet;
+	}
+
+	return (INPROGRESS);
+}
+
+query_status_t
+deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int rawpktlen)
+{
+	char last_char;
+
+	debug(2, "deal_with_teemaster_packet %p, %d", server, rawpktlen);
+
+	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
+
+	if (rawpktlen < len_teemaster_list_headerprefix) {
+		malformed_packet(server, "packet too short");
+		return (PKT_ERROR);
+	}
+
+	/* compare the response without the last character */
+	if (memcmp(rawpkt, teemaster_list_headerprefix, len_teemaster_list_headerprefix) != 0) {
+		malformed_packet(server, "unknown packet header");
+		return (PKT_ERROR);
+	}
+
+	/* get the last header character */
+	last_char = rawpkt[len_teemaster_list_headerprefix];
+
+	/* jump to the data */
+	rawpkt += len_teemaster_list_header;
+	rawpktlen -= len_teemaster_list_header;
+
+	if (last_char == 't') {
+		return process_legacy_teemaster_packet_data(server, rawpkt, rawpktlen);
+	} else if (last_char == '2') {
+		return process_new_teemaster_packet_data(server, rawpkt, rawpktlen);
+	}
+
+	/* unknown server list format */
+	malformed_packet(server, "unknown packet format");
+	return (PKT_ERROR);
 }
