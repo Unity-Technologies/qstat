@@ -55,3 +55,6 @@ EXTRA_DIST = CHANGES.txt COMPILE.txt LICENSE.txt \
 cl:
 	cvs2cl.pl --utc --no-wrap --separate-header --no-times -f ChangeLog.cvs
 	rm -f ChangeLog.cvs.bak qstat.core
+
+uncrustify:
+	uncrustify --no-backup -c 'uncrustify.cfg' -l c $(qstat_SOURCES)
