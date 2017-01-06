@@ -10776,61 +10776,125 @@ deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 query_status_t
 deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktlen)
 {
+	char *data;
+	int len;
+	int is_binary_packet = 0;
+
+	char *ipptr, *portptr;
+	char ipstr[16];
+	char portstr[6];
+	unsigned int ipaddr;
+	unsigned short port;
+
+	server->master_pkt_len = 0;
+	server->master_pkt = NULL;
+
 	debug(2, "deal_with_gamespy_master_response %p, %d", server, pktlen);
 
-	if ((0 == pktlen) || ((pktlen > 6) && (0 == strncmp(rawpkt + pktlen - 6, "final\\", 6)))) {
-		int len = server->saved_data.datalen;
-		char *data = server->saved_data.data;
-		char *ip, *portstr;
-		unsigned int ipaddr;
-		unsigned short port;
-		int master_pkt_max;
+	if (server->saved_data.data == NULL) {
+		debug(2, "gamespy master response first packet");
+		server->saved_data.data = (char *)malloc(pktlen);
+		if (server->saved_data.data == NULL) {
+			debug(0, "Failed to malloc memory for saved data");
+			return (MEM_ERROR);
+		}
+	} else {
+		debug(2, "gamespy master response intermediate packet");
+		server->saved_data.data = (char *)realloc(server->saved_data.data, server->saved_data.datalen + pktlen);
+		if (server->saved_data.data == NULL) {
+			debug(0, "Failed to realloc memory for saved data");
+			return (MEM_ERROR);
+		}
+	}
+
+	memcpy(server->saved_data.data + server->saved_data.datalen, rawpkt, pktlen);
+	server->saved_data.datalen += pktlen;
+
+	if ((pktlen == 0) || ((pktlen > 7) && (strncmp(rawpkt + pktlen - 7, "\\final\\", 7) == 0))) {
+		debug(2, "gamespy master response final packet");
+
+		// the header is in the form \basic\\secure\XXXXXX
+		if (strncmp(server->saved_data.data, "\\basic\\\\secure\\", 15) != 0) {
+			malformed_packet(server, "gamespy master response unknown header");
+			return (PKT_ERROR);
+		}
 
 		server->server_name = GAMESPY_MASTER_NAME;
 
-		master_pkt_max = (len / 20) * 6;
-		server->master_pkt = (char *)malloc(master_pkt_max);
-		server->master_pkt_len = 0;
+		data = server->saved_data.data + 21;
+		len = server->saved_data.datalen - 28;
 
-		while (len) {
-			for ( ; len && *data == '\\'; data++, len--) {
+		if (strncmp(data, "\\ip\\", 4) != 0) {
+			is_binary_packet = 1;
+		}
+
+		if (is_binary_packet) {
+			debug(1, "gamespy master response uses binary packet format");
+			server->master_pkt_len = len;
+			server->master_pkt = (char *)malloc(len);
+			if (server->master_pkt == NULL) {
+				debug(0, "Failed to malloc memory for internal master packet");
+				return (MEM_ERROR);
 			}
-			if (len < 3) {
-				break;
-			}
-			if ((data[0] == 'i') && (data[1] == 'p') && (data[2] == '\\')) {
-				data += 3;
-				len -= 3;
-				ip = data;
-				portstr = NULL;
-				for ( ; len && *data != '\\'; data++, len--) {
-					if (*data == ':') {
-						portstr = data + 1;
-						*data = '\0';
+			memcpy(server->master_pkt, data, server->master_pkt_len);
+			return (DONE_FORCE);
+		}
+
+		debug(1, "gamespy master response uses text packet format");
+
+		while (len != 0) {
+			// ip entry
+			if (strncmp(data, "\\ip\\", 4) == 0) {
+				debug(1, "gamespy master response address entry");
+				data += 4;
+				len -= 4;
+
+				server->master_pkt_len += 6;
+				if (server->master_pkt == NULL) {
+					server->master_pkt = (char *)malloc(server->master_pkt_len);
+					if (server->master_pkt == NULL) {
+						debug(0, "Failed to malloc memory for internal master packet");
+						return (MEM_ERROR);
+					}
+				} else {
+					server->master_pkt = (char *)realloc(server->master_pkt, server->master_pkt_len);
+					if (server->master_pkt == NULL) {
+						debug(0, "Failed to realloc memory for internal master packet");
+						return (MEM_ERROR);
 					}
 				}
-				if (len == 0) {
-					break;
+
+				ipptr = data;
+				portptr = NULL;
+
+				// walk to next entry
+				for ( ; len && *data != '\\'; data++, len--) {
+					// port found (ip end)
+					if (*data == ':') {
+						portptr = data + 1;
+					}
 				}
-				*data++ = '\0';
-				len--;
-				ipaddr = inet_addr(ip);
-				if (portstr) {
+				if (portptr != NULL) {
+					strncpy(ipstr, ipptr, portptr - 1 - ipptr);
+					ipstr[portptr - 1 - ipptr] = '\0';
+
+					strncpy(portstr, portptr, data - portptr);
+					portstr[data - portptr] = '\0';
+
+					ipaddr = inet_addr(ipstr);
 					port = htons((unsigned short)atoi(portstr));
 				} else {
-					port = htons(28000);
+					strncpy(ipstr, ipptr, data - 1 - ipptr);
+					ipstr[portptr - ipptr] = '\0';
+
+					ipaddr = inet_addr(ipstr);
+					port = htons(28000); // default port
 				}
-				/* ## default port */
-				if (server->master_pkt_len >= master_pkt_max) {
-					master_pkt_max += 20 * 6;
-					server->master_pkt = (char *)realloc(server->master_pkt, master_pkt_max);
-				}
-				memcpy(server->master_pkt + server->master_pkt_len, &ipaddr, 4);
-				memcpy(server->master_pkt + server->master_pkt_len + 4, &port, 2);
-				server->master_pkt_len += 6;
+				memcpy(server->master_pkt + server->master_pkt_len - 6, &ipaddr, 4);
+				memcpy(server->master_pkt + server->master_pkt_len - 2, &port, 2);
 			} else {
-				for ( ; len && *data != '\\'; data++, len--) {
-				}
+				malformed_packet(server, "gamespy master response unknown entry");
+				return (PKT_ERROR);
 			}
 		}
 
@@ -10840,15 +10904,6 @@ deal_with_gamespy_master_response(struct qserver *server, char *rawpkt, int pktl
 
 		return (DONE_FORCE);
 	}
-
-	if (!server->saved_data.data) {
-		server->saved_data.data = (char *)malloc(pktlen);
-	} else {
-		server->saved_data.data = (char *)realloc(server->saved_data.data, server->saved_data.datalen + pktlen);
-	}
-
-	memcpy(server->saved_data.data + server->saved_data.datalen, rawpkt, pktlen);
-	server->saved_data.datalen += pktlen;
 
 	return (INPROGRESS);
 }
