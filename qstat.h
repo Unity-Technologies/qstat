@@ -521,11 +521,13 @@ server_type *find_server_type_string(char *type_string);
 		Q_FLAG1, Q_FLAG2, Q_SERVERINFO_LEN, Q_CCREQ_SERVER_INFO, "QUAKE\000\003"
 	};
 
-	struct q_packet q_rule = {
+	struct q_packet q_rule =
+	{
 		Q_FLAG1, Q_FLAG2, 0, Q_CCREQ_RULE_INFO, ""
 	};
 
-	struct q_packet q_player = {
+	struct q_packet q_player =
+	{
 		Q_FLAG1, Q_FLAG2, 6, Q_CCREQ_PLAYER_INFO, ""
 	};
 
