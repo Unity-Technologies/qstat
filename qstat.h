@@ -3688,7 +3688,7 @@ server_type *find_server_type_string(char *type_string);
 			0,                              /* default_port */
 			0,                              /* port_offset */
 			0,                              /* flags */
-			"gamerules",                    /* game_rule */
+			"game_mode",                    /* game_rule */
 			"TFPROTOCOL",                   /* template_var */
 			NULL,                           /* status_packet */
 			0,                              /* status_len */
@@ -3706,8 +3706,8 @@ server_type *find_server_type_string(char *type_string);
 			raw_display_server_rules,       /* display_raw_rule_func */
 			xml_display_player_info,        /* display_xml_player_func */
 			xml_display_server_rules,       /* display_xml_rule_func */
-			NULL,                           /* display_json_player_func */
-			NULL,                           /* display_json_rule_func */
+			json_display_player_info,       /* display_json_player_func */
+			json_display_server_rules,      /* display_json_rule_func */
 			send_tf_request_packet,         /* status_query_func */
 			NULL,                           /* rule_query_func */
 			NULL,                           /* player_query_func */
