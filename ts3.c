@@ -110,7 +110,7 @@ send_ts3_single_server_packet(struct qserver *server)
 		password = get_param_value(server, "password", "");
 		if (0 != strlen(password)) {
 			username = get_param_value(server, "username", "serveradmin");
-			sprintf(buf, "login %s %s\015\012", password, username);
+			sprintf(buf, "login %s %s\015\012", username, password);
 			break;
 		}
 		// NOTE: no break so we fall through
