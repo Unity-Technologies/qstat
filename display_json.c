@@ -422,8 +422,28 @@ json_display_tribes2_player_info(struct qserver *server)
 	int printed = 0;
 	char *type;
 
+	// Build Teams into a seperate object
+	xform_printf(OF, ",\n\t\t\"teams\": [\n");
+
+	player = server->players;	
+	for ( ; player != NULL; player = player->next) {
+		if (player->number == TRIBES_TEAM) {
+			if (printed) {
+				xform_printf(OF, ",\n");
+			}
+			printed = 1;
+			xform_printf(OF, "\t\t\t{\n");
+			xform_printf(OF, "\t\t\t\t\"team\": \"%s\",\n", json_escape(xform_name(player->name, server)));
+			xform_printf(OF, "\t\t\t\t\"score\": %d\n", player->frags);
+			xform_printf(OF, "\t\t\t}");
+
+		}
+	}
+
+	xform_printf(OF, "\n\t\t]");
 	xform_printf(OF, ",\n\t\t\"players\": [\n");
 
+	printed = 0;
 	player = server->players;
 	for ( ; player != NULL; player = player->next) {
 		if (player->team_name != NULL) {
@@ -440,7 +460,6 @@ json_display_tribes2_player_info(struct qserver *server)
 				type = "";
 				break;
 			}
-
 			if (printed) {
 				xform_printf(OF, ",\n");
 			}
