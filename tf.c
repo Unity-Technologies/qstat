@@ -13,7 +13,11 @@
 #include "utils.h"
 
 #include <stdio.h>
-#include <netinet/in.h>
+#ifndef _WIN32
+ #include <netinet/in.h>
+#else
+ #include <winsock.h>
+#endif
 #include <inttypes.h>
 #include <string.h>
 
@@ -89,19 +93,19 @@ pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, i
 
 		switch (size) {
 		case 1:
-			sprintf(buf, "%hhu", (uint8_t)data);
+			sprintf(buf, "%hhu", *(uint8_t*)data);
 			break;
 
 		case 2:
-			sprintf(buf, "%hu", (uint16_t)data);
+			sprintf(buf, "%hu", *(uint16_t*)data);
 			break;
 
 		case 4:
-			sprintf(buf, "%" PRIu32, (uint32_t)data);
+			sprintf(buf, "%" PRIu32, *(uint32_t*)data);
 			break;
 
 		case 8:
-			sprintf(buf, "%" PRIu64, (uint64_t)data);
+			sprintf(buf, "%" PRIu64, *(uint64_t*)data);
 			break;
 		}
 		add_rule(server, rule, buf, 0);
