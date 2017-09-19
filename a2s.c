@@ -84,8 +84,8 @@ send_a2s_rule_request_packet(struct qserver *server)
 
 			// Challenge Request was broken so instead we use a player request with an invalid
 			// challenge which prompts the server to send a valid challenge
-			// This was fixed as of the update 2009-08-26 but then subsiquently broken again.
-			//if( SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1) )
+			// This was fixed as of the update 2009-08-26 but then subsequently broken again.
+			//if (SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1)) {
 			char buf[sizeof(A2S_PLAYER) - 1 + 4] = A2S_PLAYER;
 			memcpy(buf + sizeof(A2S_PLAYER) - 1, &status->challenge, 4);
 			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
@@ -697,6 +697,14 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		}
 
 		status->have_player = 1;
+		// Workaround broken implementations which don't send a challenge to a player request
+		// that hasn't seen a challenge yet. Without this we would end up in an infinite loop.
+		if (status->have_challenge == 0) {
+			if (show_errors) {
+				fprintf(stderr, "server has broken challenge so is a DDoS source!\n");
+			}
+			status->have_challenge = 1;
+		}
 
 		server->retry1 = n_retries;
 
