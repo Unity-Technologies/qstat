@@ -54,7 +54,9 @@
  #ifndef EADDRINUSE
 		#define EADDRINUSE	WSAEADDRINUSE
  #endif
+ #if _MSC_VER < 1900
 	#define snprintf		_snprintf
+ #endif
 #else
  #include <sys/time.h>
 	#define SOCKET_ERROR		-1

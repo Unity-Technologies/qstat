@@ -87,4 +87,4 @@ os2emx: $(SRC)
 	$(CC) $(CFLAGS) -o qstat.exe $(SRC) $(LDFLAGS) $(LDLIBS) $(EMX_LIBS)
 
 clean:
-	rm -f qstat core qstat.exe $(O) $(OBJ)
+	rm -f qstat core qstat.exe *.pdb $(O) $(OBJ)
