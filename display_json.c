@@ -109,8 +109,8 @@ json_display_server(struct qserver *server)
 		xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 		xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 		xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("error"));
-		xform_printf(OF, "\t\t\"hostname\": \"%s\"\n", json_escape((hostname_lookup) ? server->host_name : server->arg));
-		xform_printf(OF, "\t\t\"error\": \"%s\",\n", json_escape(server->error));
+		xform_printf(OF, "\t\t\"hostname\": \"%s\",\n", json_escape((hostname_lookup) ? server->host_name : server->arg));
+		xform_printf(OF, "\t\t\"error\": \"%s\"\n", json_escape(server->error));
 		xform_printf(OF, "\t}");
 		json_printed = 1;
 	} else if (server->type->master) {
@@ -118,7 +118,8 @@ json_display_server(struct qserver *server)
 		xform_printf(OF, "\t\t\"protocol\": \"%s\",\n", json_escape(prefix));
 		xform_printf(OF, "\t\t\"address\": \"%s\",\n", json_escape(server->arg));
 		xform_printf(OF, "\t\t\"status\": \"%s\",\n", json_escape("online"));
-		xform_printf(OF, "\t\t\"servers\": %d,\n", server->n_servers);
+		xform_printf(OF, "\t\t\"servers\": %d\n", server->n_servers);
+		xform_printf(OF, "\t}");
 		json_printed = 1;
 	} else {
 		xform_printf(OF, (json_printed) ? ",\n\t{\n" : "\t{\n");
@@ -133,7 +134,6 @@ json_display_server(struct qserver *server)
 		xform_printf(OF, "\t\t\"maxplayers\": %d,\n", server->max_players);
 		xform_printf(OF, "\t\t\"numspectators\": %d,\n", server->num_spectators);
 		xform_printf(OF, "\t\t\"maxspectators\": %d", server->max_spectators);
-		json_printed = 1;
 
 		if (!(server->type->flags & TF_RAW_STYLE_TRIBES)) {
 			xform_printf(OF, ",\n\t\t\"ping\": %d,\n", server->n_requests ? server->ping_total / server->n_requests : 999);
@@ -144,18 +144,18 @@ json_display_server(struct qserver *server)
 			xform_printf(OF, ",\n\t\t\"address\": %s,\n", json_escape(server->address));
 			xform_printf(OF, "\t\t\"protocolversion\": %d", server->protocol_version);
 		}
-	}
 
-	if (!server->type->master && (server->error == NULL)) {
 		if (get_server_rules && (NULL != server->type->display_json_rule_func)) {
 			server->type->display_json_rule_func(server);
 		}
+
 		if (get_player_info && (NULL != server->type->display_json_player_func)) {
 			server->type->display_json_player_func(server);
 		}
-	}
 
-	xform_printf(OF, "\n\t}");
+		xform_printf(OF, "\n\t}");
+		json_printed = 1;
+	}
 }
 
 
