@@ -83,10 +83,13 @@ send_a2s_rule_request_packet(struct qserver *server)
 			debug(3, "sending challenge");
 
 			// Challenge Request was broken so instead we use a player request with an invalid
-			// challenge which prompts the server to send a valid challenge
+			// challenge of -1 (0xFFFFFFFF) which prompts the server to send a valid challenge
 			// This was fixed as of the update 2009-08-26 but then subsequently broken again.
 			//if (SOCKET_ERROR == qserver_send_initial(server, A2S_GETCHALLENGE, sizeof(A2S_GETCHALLENGE)-1)) {
 			char buf[sizeof(A2S_PLAYER) - 1 + 4] = A2S_PLAYER;
+			// We use a challenge of -1 to ensure compatibility with 3rd party implementations
+			// as that's whats documented: https://developer.valvesoftware.com/wiki/Server_queries#Request_Format_5
+			status->challenge = -1;
 			memcpy(buf + sizeof(A2S_PLAYER) - 1, &status->challenge, 4);
 			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
 				return (SOCKET_ERROR);
