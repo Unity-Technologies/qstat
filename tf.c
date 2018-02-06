@@ -149,7 +149,7 @@ send_tf_request_packet(struct qserver *server)
 	char *key, buf[1200];
 	size_t len;
 
-	bzero(buf, sizeof(buf));
+	memset(buf, 0, sizeof(buf));
 	memcpy(buf, serverinfo_pkt, sizeof(serverinfo_pkt));
 	len = sizeof(serverinfo_pkt);
 	if (server->type->status_packet != NULL) {
