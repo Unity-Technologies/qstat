@@ -146,20 +146,29 @@ pkt_longlong(struct qserver *server, char **pkt, int *rem, uint64_t *data, char 
 query_status_t
 send_tf_request_packet(struct qserver *server)
 {
-	char *key, buf[64];
+	char *key, buf[1200];
+	size_t len;
 
-	key = get_param_value(server, "key", NULL);
-	if (key == NULL) {
-		return (qserver_send_initial(server, serverinfo_pkt, sizeof(serverinfo_pkt)));
-	}
-
+	bzero(buf, sizeof(buf));
 	memcpy(buf, serverinfo_pkt, sizeof(serverinfo_pkt));
-	buf[5] = SERVERINFO_VERSION_KEYED;
-	(void)strncpy(&buf[6], key, sizeof(buf) - 7);
-	// strncpy doesn't garantee to NULL terminate and strlcpy isn't portable.
-	buf[sizeof(buf) - 1] = '\0';
-
-	return (qserver_send_initial(server, buf, sizeof(serverinfo_pkt) + strlen(key) + 1));
+	len = sizeof(serverinfo_pkt);
+	if (server->type->status_packet != NULL) {
+		// Custom packet type
+		buf[4] = server->type->status_packet[0];
+		// None standard packet types require the packet to be padded.
+		len = sizeof(buf);
+	}
+	key = get_param_value(server, "key", NULL);
+	if (key != NULL) {
+		buf[5] = SERVERINFO_VERSION_KEYED;
+		(void)strncpy(&buf[6], key, sizeof(buf) - 7);
+		// strncpy doesn't guarantee to NULL terminate and strlcpy isn't portable.
+		buf[sizeof(buf) - 1] = '\0';
+		if (len != sizeof(buf)) {
+			len += strlen(key) + 1;
+		}
+	}
+	return (qserver_send_initial(server, buf, len));
 }
 
 
@@ -196,7 +205,12 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	// Command (int8)
 	debug(2, "TF type = %hhu", *pkt);
-	if (*pkt != SERVERINFO_RESPONSE) {
+	if (server->type->status_packet != NULL) {
+		if (*pkt != server->type->status_packet[0] + 1) {
+			malformed_packet(server, "unknown type");
+			return (PKT_ERROR);
+		}
+	} else if (*pkt != SERVERINFO_RESPONSE) {
 		malformed_packet(server, "unknown type");
 		return (PKT_ERROR);
 	}
