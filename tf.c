@@ -46,7 +46,7 @@ pkt_string(struct qserver *server, char **pkt, int *rem, char **str, char *rule)
 	size_t len;
 
 	if (*rem < 0) {
-		malformed_packet(server, "short packet");
+		malformed_packet(server, "short packet string");
 		return (PKT_ERROR);
 	}
 
@@ -81,7 +81,7 @@ static query_status_t
 pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, int size)
 {
 	if (*rem - size < 0) {
-		malformed_packet(server, "short packet");
+		malformed_packet(server, "short packet data");
 		return (PKT_ERROR);
 	}
 
@@ -177,7 +177,7 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 {
 	char *pkt, buf[64];
 	query_status_t ret;
-	int rem, i;
+	int rem;
 	uint8_t ver, tmpu8;
 	uint16_t port, tmpu16;
 	uint32_t tmpu32;
@@ -192,7 +192,7 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 	}
 
 	if (pktlen < 26) {
-		malformed_packet(server, "packet too short");
+		malformed_packet(server, "packet too short pkt");
 		return (PKT_ERROR);
 	}
 
@@ -398,22 +398,21 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 		}
 	}
 
-	// Clients
-	for (i = 0; i < server->num_players; i++) {
+	// Client ID or EOP (uint64)
+	ret = pkt_longlong(server, &pkt, &rem, &tmpu64, NULL);
+	if (ret < 0) {
+		return (ret);
+	}
+
+	while (tmpu64 > 0) {
 		struct player *p;
 
 		p = add_player(server, server->n_player_info);
 		if (p == NULL) {
-			// Should never happen
 			return (SYS_ERROR);
 		}
-		p->flags = PLAYER_FLAG_DO_NOT_FREE_TEAM;
 
-		// Client ID (uint64)
-		ret = pkt_longlong(server, &pkt, &rem, &tmpu64, NULL);
-		if (ret < 0) {
-			return (ret);
-		}
+		p->flags = PLAYER_FLAG_DO_NOT_FREE_TEAM;
 		sprintf(buf, "%" PRIu64, tmpu64);
 		player_add_info(p, "id", buf, 0);
 
@@ -498,17 +497,12 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 			}
 			p->deaths = tmpu16;
 		}
-	}
 
-	// EOP (long long)
-	ret = pkt_longlong(server, &pkt, &rem, &tmpu64, NULL);
-	if (ret < 0) {
-		return (ret);
-	}
-
-	if (tmpu64 != 0) {
-		malformed_packet(server, "none zero EOP");
-		return (PKT_ERROR);
+		// Client ID or EOP (uint64)
+		ret = pkt_longlong(server, &pkt, &rem, &tmpu64, NULL);
+		if (ret < 0) {
+			return (ret);
+		}
 	}
 
 	// Protocol doesn't support server name
