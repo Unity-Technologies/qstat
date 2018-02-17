@@ -12,7 +12,7 @@
 #endif
 
 // BSD has strnstr
-#if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
  #ifndef HAVE_STRNSTR
 		#define HAVE_STRNSTR    1
  #endif         /* HAVE_STRNSTR */
