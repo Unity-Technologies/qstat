@@ -15,7 +15,11 @@
  #include <netinet/in.h>
  #include <arpa/inet.h>
 	#define strtok_ret		strtok_r
+	#ifdef __OpenBSD__
+	#define VENTRILO_RAND		arc4random()
+	#else
 	#define VENTRILO_RAND		random()
+	#endif
 #else
  #include <winsock.h>
 	#define strtok_ret		strtok_s
