@@ -200,8 +200,8 @@ qsc_load_default_config_files()
 		}
 		strncpy(path, var, len);
 		path[len] = '\0';
-		strlcat( path, "/", sizeof(path));
-		strlcat( path, HOME_CONFIG_FILE, sizeof(path));
+		strncat( path, "/", sizeof(path) - 1 - strlen(path));
+		strncat( path, HOME_CONFIG_FILE, sizeof(path) - 1 - strlen(path));
 /*	sprintf( path, "%s/%s", var, HOME_CONFIG_FILE); */
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
@@ -457,8 +457,7 @@ pf_top_level(char *text, void *_context)
 	force_upper_case(context->gametype->type_prefix);
 	context->gametype->type_option = (char *)malloc(strlen(game_type) + 2);
 	context->gametype->type_option[0] = '-';
-	strlcpy( &context->gametype->type_option[1], game_type,
-			sizeof(context->gametype->type_option[1]));
+	strcpy(&context->gametype->type_option[1], game_type);
 
 	parse_context = context;
 
@@ -580,8 +579,8 @@ get_config_key(char *first_token, const ConfigKey *keys)
 			REPORT_ERROR((stderr, "Key name too long"));
 			return (-1);
 		}
-		strlcat( key_name, " ", sizeof(key_name));
-		strlcat( key_name, token, sizeof(key_name));
+		strncat( key_name, " ", sizeof(key_name) - 1 - strlen(key_name));
+		strncat( key_name, token, sizeof(key_name) - 1 - strlen(key_name));
 	} while (1);
 
 	if (key == 0) {

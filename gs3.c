@@ -229,8 +229,8 @@ deal_with_gs3_status(struct qserver *server, char *rawpkt, int pktlen)
 						if (server->server_name) {
 							char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 							if (name) {
-								strlcat( name, ": ", sizeof(name) );
-								strlcat( name, val, sizeof(name) );
+								strncat( name, ": ", sizeof(name) - 1 - strlen(name) );
+								strncat( name, val, sizeof(name) - 1 - strlen(name) );
 								server->server_name = name;
 							}
 						}
@@ -381,8 +381,8 @@ process_gs3_packet(struct qserver *server)
 									if (server->server_name) {
 										char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 										if (name) {
-											strlcat( name, ": ", sizeof(name) );
-											strlcat( name, val, sizeof(name) );
+											strncat( name, ": ", sizeof(name) - 1 - strlen(name) );
+											strncat( name, val, sizeof(name) - 1 - strlen(name) );
 											server->server_name = name;
 										}
 									}

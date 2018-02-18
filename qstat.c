@@ -484,7 +484,7 @@ display_q_player_info(struct qserver *server)
 	} else {
 		strncat(fmt, "%s", sizeof(fmt) - 1 - strlen(fmt));
 	}
-	strcat(fmt, "%s\n");
+	strncat(fmt, "%s\n", sizeof(fmt) - 1 - strlen(fmt));
 
 	player = server->players;
 	for ( ; player != NULL; player = player->next) {
@@ -5557,7 +5557,8 @@ send_rule_request_packet(struct qserver *server)
 	}
 
 	if (server->type->id == Q_SERVER) {
-		strlcpy((char*)q_rule.data, server->next_rule, sizeof(q_rule.data));
+		strncpy((char*)q_rule.data, server->next_rule, sizeof(q_rule.data) -1);
+		q_rule.data[sizeof(q_rule.data) - 1] = '\0';
 		len = Q_HEADER_LEN + strlen((char *)q_rule.data) + 1;
 		q_rule.length = htons((short)len);
 	} else {
