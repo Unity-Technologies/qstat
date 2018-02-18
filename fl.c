@@ -340,20 +340,20 @@ deal_with_fl_packet(struct qserver *server, char *rawpkt, int pktlen)
 		add_rule(server, "passworded", (*pkt++) ? "1" : "0", 0);
 
 		// FrameTime
-		sprintf(buf, "%hhu", *pkt++);
+		snprintf( buf, sizeof(buf), "%hhu", *pkt++ );
 		add_rule(server, "frametime", buf, 0);
 
 		// Round
-		sprintf(buf, "%hhu", *pkt++);
+		snprintf( buf, sizeof(buf), "%hhu", *pkt++ );
 		add_rule(server, "round", buf, 0);
 
 		// RoundMax
-		sprintf(buf, "%hhu", *pkt++);
+		snprintf( buf, sizeof(buf), "%hhu", *pkt++ );
 		add_rule(server, "roundmax", buf, 0);
 
 		// RoundSeconds
 		tmp_short = ((unsigned short)pkt[0] << 8) | ((unsigned short)pkt[1]);
-		sprintf(buf, "%hu", tmp_short);
+		snprintf( buf, sizeof(buf), "%hhu", tmp_short );
 		add_rule(server, "roundseconds", buf, 0);
 		pkt += 2;
 

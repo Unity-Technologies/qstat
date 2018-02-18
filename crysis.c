@@ -46,15 +46,15 @@ send_crysis_request_packet(struct qserver *server)
 	case 0:
 		// Not seen a challenge yet, request it
 		server->challenge++;
-		sprintf(cmd, "challenge");
+		snprintf( cmd, sizeof(cmd), "challenge" );
 		break;
 
 	case 1:
 		server->challenge++;
 		password = get_param_value(server, "password", "");
-		sprintf(cmd, "%s:%s", server->challenge_string, password);
+		snprintf( cmd, sizeof(cmd), "%s:%s", server->challenge_string, password );
 		md5 = md5_hex(cmd, strlen(cmd));
-		sprintf(cmd, "authenticate %s", md5);
+		snprintf( cmd, sizeof(cmd), "authenticate %s", md5 );
 		free(md5);
 		break;
 
@@ -63,7 +63,7 @@ send_crysis_request_packet(struct qserver *server)
 		server->challenge++;
 		server->flags |= TF_STATUS_QUERY;
 		server->n_servers = 3;
-		sprintf(cmd, "status");
+		snprintf( cmd, sizeof(cmd), "status" );
 		break;
 
 	case 3:
@@ -71,7 +71,7 @@ send_crysis_request_packet(struct qserver *server)
 	}
 
 	server->saved_data.pkt_max = -1;
-	sprintf(buf, "POST /RPC2 HTTP/1.1\015\012Keep-Alive: 300\015\012User-Agent: qstat %s\015\012Content-Length: %d\015\012Content-Type: text/xml\015\012\015\012<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>%s</methodName><params /></methodCall>", VERSION, (int)(98 + strlen(cmd)), cmd);
+	snprintf(buf, sizeof(buf), "POST /RPC2 HTTP/1.1\015\012Keep-Alive: 300\015\012User-Agent: qstat %s\015\012Content-Length: %d\015\012Content-Type: text/xml\015\012\015\012<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>%s</methodName><params /></methodCall>", VERSION, (int)(98 + strlen(cmd)), cmd);
 
 	return (send_packet(server, buf, strlen(buf)));
 }

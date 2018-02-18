@@ -491,7 +491,7 @@ process_haze_packet(struct qserver *server)
 				case TEAM_OTHER_HEADER:
 				default:
 					// add as a server rule
-					sprintf(rule, "%s%d", header, total_teams);
+					snprintf( rule, sizeof(rule), "%s%d", header, total_teams );
 					add_rule(server, rule, val, NO_FLAGS);
 					break;
 				}
@@ -533,8 +533,9 @@ send_haze_request_packet(struct qserver *server)
 
 	if (server->challenge) {
 		// we've recieved a challenge response, send the query + challenge id
-		len = sprintf(
+		len = snprintf(
 			query_buf,
+			sizeof(query_buf),
 			"frdquery%c%c%c%c%c",
 			(unsigned char)(server->challenge >> 24),
 			(unsigned char)(server->challenge >> 16),

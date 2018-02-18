@@ -66,7 +66,7 @@ send_ts3_all_servers_packet(struct qserver *server)
 		password = get_param_value(server, "password", "");
 		if (0 != strlen(password)) {
 			username = get_param_value(server, "username", "serveradmin");
-			sprintf(buf, "login %s %s\015\012", username, password);
+			snprintf( buf, sizeof(buf), "login %s %s\015\012", username, password );
 			break;
 		}
 		// NOTE: no break so we fall through
@@ -76,11 +76,11 @@ send_ts3_all_servers_packet(struct qserver *server)
 		// NOTE: we currently don't support player info
 		server->flags |= TF_STATUS_QUERY;
 		server->n_servers = 3;
-		sprintf(buf, "serverlist\015\012");
+		snprintf( buf, sizeof(buf), "serverlist\015\012" );
 		break;
 
 	case 3:
-		sprintf(buf, "quit\015\012");
+		snprintf( buf, sizeof(buf), "quit\015\012", password, username );
 		break;
 
 	case 4:
@@ -110,7 +110,7 @@ send_ts3_single_server_packet(struct qserver *server)
 		password = get_param_value(server, "password", "");
 		if (0 != strlen(password)) {
 			username = get_param_value(server, "username", "serveradmin");
-			sprintf(buf, "login %s %s\015\012", username, password);
+			snprintf( buf, sizeof(buf), "login %s %s\015\012", password, username );
 			break;
 		}
 		// NOTE: no break so we fall through
@@ -128,7 +128,7 @@ send_ts3_single_server_packet(struct qserver *server)
 			server->flags |= TF_STATUS_QUERY;
 			server->n_servers = 4;
 		}
-		sprintf(buf, "use port=%d\015\012", serverport);
+		snprintf( buf, sizeof(buf), "use port=%d\015\012" );
 		break;
 
 	case 3:
@@ -138,13 +138,13 @@ send_ts3_single_server_packet(struct qserver *server)
 
 	case 4:
 		// Player Info, Quit or Done
-		sprintf(buf, (get_player_info) ? "clientlist\015\012" : "quit\015\012");
+		snprintf( buf, sizeof(buf), ( get_player_info ) ? "clientlist\015\012" : "quit\015\012" );
 		break;
 
 	case 5:
 		// Quit or Done
 		if (get_player_info) {
-			sprintf(buf, "quit\015\012");
+			snprintf( buf, sizeof(buf), "quit\015\012" );
 		} else {
 			return (DONE_FORCE);
 		}

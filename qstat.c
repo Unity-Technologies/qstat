@@ -305,7 +305,7 @@ standard_display_server(struct qserver *server)
 	char prefix[64];
 
 	if (display_prefix) {
-		sprintf(prefix, "%-4s ", server->type->type_prefix);
+		snprintf(prefix, sizeof(prefix), "%-4s ", server->type->type_prefix);
 	} else {
 		prefix[0] = '\0';
 	}
@@ -395,7 +395,7 @@ standard_display_server(struct qserver *server)
 		}
 	} else {
 		char name[512];
-		sprintf(name, "\"%s\"", server->server_name);
+		snprintf(name, sizeof(name), "\"%s\"", server->server_name);
 		xform_printf(OF,
 		    "%-16s %10s map %s at %22s %d/%d players %d ms\n",
 		    (hostname_lookup) ? server->host_name : server->arg,
@@ -471,17 +471,18 @@ display_q_player_info(struct qserver *server)
 	char fmt[128];
 	struct player *player;
 
-	strcpy(fmt, "\t#%-2d %3d frags %9s ");
+	strncpy(fmt, "\t#%-2d %3d frags %9s ", sizeof(fmt) -1);
+	fmt[sizeof(fmt) -1] = '\0';
 
 	if (color_names) {
-		strcat(fmt, "%9s:%-9s ");
+		strncat(fmt, "%9s:%-9s ", sizeof(fmt) - 1 - strlen(fmt));
 	} else {
-		strcat(fmt, "%2s:%-2s ");
+		strncat(fmt, "%2s:%-2s ", sizeof(fmt) - 1 - strlen(fmt));
 	}
 	if (player_address) {
-		strcat(fmt, "%22s ");
+		strncat(fmt, "%22s ", sizeof(fmt) - 1 - strlen(fmt));
 	} else {
-		strcat(fmt, "%s");
+		strncat(fmt, "%s", sizeof(fmt) - 1 - strlen(fmt));
 	}
 	strcat(fmt, "%s\n");
 
@@ -506,14 +507,15 @@ display_qw_player_info(struct qserver *server)
 	char fmt[128];
 	struct player *player;
 
-	strcpy(fmt, "\t#%-6d %5d frags %6s@%-5s %8s");
+	strncpy(fmt, "\t#%-6d %5d frags %6s@%-5s %8s", sizeof(fmt) - 1);
+	fmt[sizeof(fmt) -1] = '\0';
 
 	if (color_names) {
-		strcat(fmt, "%9s:%-9s ");
+		strncat(fmt, "%9s:%-9s ", sizeof(fmt) - 1 - strlen(fmt));
 	} else {
-		strcat(fmt, "%2s:%-2s ");
+		strncat(fmt, "%2s:%-2s ", sizeof(fmt) - 1 - strlen(fmt));
 	}
-	strcat(fmt, "%12s %s\n");
+	strncat(fmt, "%12s %s\n", sizeof(fmt) - 1 - strlen(fmt));
 
 	player = server->players;
 	for ( ; player != NULL; player = player->next) {
@@ -1181,8 +1183,9 @@ raw_display_qw_player_info(struct qserver *server)
 	char fmt[128];
 	struct player *player;
 
-	strcpy(fmt, "%d" "%s%s" "%s%d" "%s%s" "%s%s" "%s%s");
-	strcat(fmt, "%s%d" "%s%s" "%s%s");
+	strncpy(fmt, "%d""%s%s""%s%d""%s%s""%s%s""%s%s", sizeof(fmt) - 1);
+	fmt[sizeof(fmt) - 1] = '\0';
+	strncat(fmt, "%s%d""%s%s""%s%s", sizeof(fmt) - 1 - strlen(fmt));
 
 	player = server->players;
 	for ( ; player != NULL; player = player->next) {
@@ -2535,7 +2538,7 @@ display_progress()
 	} else {
 		int delta = time_delta(&now, &rate_start);
 		if (delta > 1500) {
-			sprintf(rate, "  %d servers/sec  ", (num_servers_returned + num_servers_timed_out) * 1000 / delta);
+			snprintf(rate, sizeof(rate), "  %d servers/sec  ", (num_servers_returned + num_servers_timed_out) *1000 / delta);
 		} else {
 			rate[0] = '\0';
 		}
@@ -3517,7 +3520,7 @@ main(int argc, char *argv[])
 			default_server_type = find_server_type_string(argv[arg]);
 			if (default_server_type == NULL) {
 				char opt[256], *o = &opt[0];
-				sprintf(opt, "-%s", argv[arg]);
+				snprintf(opt, sizeof(opt), "-%s", argv[arg]);
 				for ( ; *o; o++) {
 					*o = tolower(*o);
 				}
@@ -3576,6 +3579,7 @@ main(int argc, char *argv[])
 				usage("missing argument for -sort\n", argv, NULL);
 			}
 			strncpy(sort_keys, argv[arg], sizeof(sort_keys) - 1);
+			sort_keys[sizeof(sort_keys) - 1] = '\0';
 			pos = strspn(sort_keys, SUPPORTED_SORT_KEYS);
 			if (pos != strlen(sort_keys)) {
 				fprintf(stderr, "Unknown sort key \"%c\", valid keys are \"%s\"\n", sort_keys[pos], SUPPORTED_SORT_KEYS);
@@ -4032,7 +4036,7 @@ add_qserver(char *arg, server_type *type, char *outfilename, char *query_arg)
 		}
 		if (hostname && colon) {
 			server->host_name = (char *)malloc(strlen(hostname) + 5 + 2);
-			sprintf(server->host_name, "%s:%hu", hostname, port);
+			snprintf(server->host_name, sizeof(server->host_name), "%s:%hu", hostname, port);
 		} else {
 			server->host_name = strdup((hostname) ? hostname : arg);
 		}
@@ -4113,7 +4117,7 @@ add_qserver_byaddr(unsigned int ipaddr, unsigned short port, server_type *type, 
 	server = (struct qserver *)calloc(1, sizeof(struct qserver));
 	server->ipaddr = ipaddr;
 	ipaddr = ntohl(ipaddr);
-	sprintf(arg, "%d.%d.%d.%d:%hu", ipaddr >> 24, (ipaddr >> 16) & 0xff, (ipaddr >> 8) & 0xff, ipaddr & 0xff, port);
+	snprintf(arg, sizeof(arg), "%d.%d.%d.%d:%hu", ipaddr >> 24, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
 	server->arg = strdup(arg);
 
 	if (hostname_lookup) {
@@ -4122,7 +4126,7 @@ add_qserver_byaddr(unsigned int ipaddr, unsigned short port, server_type *type, 
 
 	if (hostname) {
 		server->host_name = (char *)malloc(strlen(hostname) + 6 + 2);
-		sprintf(server->host_name, "%s:%hu", hostname, port);
+		snprintf(server->host_name, sizeof(server->host_name), "%s:%hu", hostname, port);
 	} else {
 		server->host_name = strdup(arg);
 	}
@@ -4478,7 +4482,7 @@ connected_qserver(struct qserver *server, int polling)
 			}
 
 			qserver_sockaddr(server, &addr);
-			sprintf(error, "connect:%s:%u - timeout", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+			snprintf(error, sizeof(error), "connect:%s:%u - timeout", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 			server->server_name = TIMEOUT;
 			server->state = STATE_TIMEOUT;
 			goto connect_error;
@@ -4517,7 +4521,7 @@ connect_error:
 		// Default error case
 		if (0 == strlen(error)) {
 			qserver_sockaddr(server, &addr);
-			sprintf(error, "connect: %s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+			snprintf(error, sizeof(error), "connect: %s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 		}
 		server->server_name = SYSERROR;
 		server->state = STATE_SYS_ERROR;
@@ -4635,7 +4639,7 @@ bind_qserver2(struct qserver *server, int wait)
 			} else {
 				if (show_errors) {
 					char error[50];
-					sprintf(error, "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+					snprintf(error, sizeof(error), "connect:%s:%u", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 					perror(error);
 				}
 				server->server_name = SYSERROR;
@@ -5051,19 +5055,19 @@ build_hlmaster_packet(struct qserver *server, int *len)
 
 	gamedir = get_param_value(server, "game", NULL);
 	if (gamedir) {
-		pkt += sprintf(pkt, "\\gamedir\\%s", gamedir);
+		pkt += snprintf(pkt, sizeof(pkt), "\\gamedir\\%s", gamedir);
 	}
 
 	// not valid for steam?
 	map = get_param_value(server, "map", NULL);
 	if (map) {
-		pkt += sprintf(pkt, "\\map\\%s", map);
+		pkt += snprintf(pkt, sizeof(pkt), "\\map\\%s", map);
 	}
 
 	// steam
 	flags = get_param_value(server, "napp", NULL);
 	if (flags) {
-		pkt += sprintf(pkt, "\\napp\\%s", flags);
+		pkt += snprintf( pkt, sizeof(pkt), "\\napp\\%s", flags );
 	}
 
 	// not valid for steam?
@@ -5078,23 +5082,23 @@ build_hlmaster_packet(struct qserver *server, int *len)
 		}
 
 		if (strncmp(r, "notempty", flen) == 0) {
-			pkt += sprintf(pkt, "\\empty\\1");
+			pkt += snprintf(pkt, sizeof(pkt), "\\empty\\1");
 		} else if (strncmp(r, "notfull", flen) == 0) {
-			pkt += sprintf(pkt, "\\full\\1");
+			pkt += snprintf(pkt, sizeof(pkt), "\\full\\1");
 		} else if (strncmp(r, "dedicated", flen) == 0) {
 			if (server->type->flags & TF_MASTER_STEAM) {
-				pkt += sprintf(pkt, "\\type\\d");
+				pkt += snprintf(pkt, sizeof(pkt), "\\type\\d");
 			} else {
-				pkt += sprintf(pkt, "\\dedicated\\1");
+				pkt += snprintf(pkt, sizeof(pkt), "\\dedicated\\1");
 			}
 		} else if (strncmp(r, "linux", flen) == 0) {
-			pkt += sprintf(pkt, "\\linux\\1");
+			pkt += snprintf(pkt, sizeof(pkt), "\\linux\\1");
 		} else if (strncmp(r, "proxy", flen) == 0) {
 			// steam
-			pkt += sprintf(pkt, "\\proxy\\1");
+			pkt += snprintf(pkt, sizeof(pkt), "\\proxy\\1");
 		} else if (strncmp(r, "secure", flen) == 0) {
 			// steam
-			pkt += sprintf(pkt, "\\secure\\1");
+			pkt += snprintf(pkt, sizeof(pkt), "\\secure\\1");
 		}
 		r = sep + 1;
 	}
@@ -5149,7 +5153,8 @@ send_qwmaster_request_packet(struct qserver *server)
 			if (tag_len < 9) {
 				// initial case
 				tag_len = 9;
-				strcpy(server->master_query_tag, "0.0.0.0:0");
+				strncpy(server->master_query_tag, "0.0.0.0:0", sizeof(server->master_query_tag) -1);
+				server->master_query_tag[sizeof(server->master_query_tag) -1] = '\0';
 			}
 
 			// 1 byte packet id
@@ -5178,7 +5183,8 @@ send_qwmaster_request_packet(struct qserver *server)
 			if (master_protocol == NULL) {
 				master_protocol = server->type->master_protocol;
 			}
-			packet_len = sprintf(query_buf, server->type->master_packet,
+			packet_len = snprintf(query_buf, sizeof(query_buf),
+				server->type->master_packet,
 				master_protocol ? master_protocol : "",
 				server->type->master_query  ? server->type->master_query : ""
 				);
@@ -5499,7 +5505,8 @@ send_gamespy_master_request(struct qserver *server)
 		return (send_error(server, rc));
 	}
 
-	strcpy(request, server->type->status_packet);
+	strncpy(request, server->type->status_packet, sizeof(request) -1);
+	request[sizeof(request) -1] = '\0';
 
 	for (i = 0; gamespy_query_map[i].qstat_type; i++) {
 		if (strcasecmp(server->query_arg, gamespy_query_map[i].qstat_type) == 0) {
@@ -5508,11 +5515,11 @@ send_gamespy_master_request(struct qserver *server)
 	}
 
 	if (gamespy_query_map[i].gamespy_type == NULL) {
-		strcat(request, server->query_arg);
+		strncat(request, server->query_arg, sizeof(request) - 1 - strlen(request));
 	} else {
-		strcat(request, gamespy_query_map[i].gamespy_type);
+		strncat(request, gamespy_query_map[i].gamespy_type, sizeof(request) - 1 - strlen(request));
 	}
-	strcat(request, "\\final\\");
+	strncat(request, "\\final\\", sizeof(request) - 1 - strlen(request));
 	assert(strlen(request) < sizeof(request));
 
 	rc = send(server->fd, request, strlen(request), 0);
@@ -5550,7 +5557,7 @@ send_rule_request_packet(struct qserver *server)
 	}
 
 	if (server->type->id == Q_SERVER) {
-		strcpy((char *)q_rule.data, server->next_rule);
+		strlcpy((char*)q_rule.data, server->next_rule, sizeof(q_rule.data));
 		len = Q_HEADER_LEN + strlen((char *)q_rule.data) + 1;
 		q_rule.length = htons((short)len);
 	} else {
@@ -6310,7 +6317,8 @@ deal_with_q1qw_packet(struct qserver *server, char *rawpkt, int pktlen)
 					strncpy(server->error, pkt, nl - pkt);
 					server->error[nl - pkt] = '\0';
 				} else {
-					strcpy(server->error, pkt);
+					strncpy(server->error, pkt, sizeof(server->error) -1);
+					server->error[sizeof(server->error) -1] = '\0';
 				}
 				server->server_name = SERVERERROR;
 				complete = 1;
@@ -6537,8 +6545,10 @@ player_info:            debug(3, "player info");
 				nl = strchr(pkt, '\n');
 				if (nl != NULL) {
 					strncpy(server->error, pkt, nl - pkt);
+					server->error[sizeof(server->error) -1] = '\0';
 				} else {
-					strcpy(server->error, pkt);
+					strncpy(server->error, pkt, sizeof(server->error) -1);
+					server->error[sizeof(server->error) -1] = '\0';
 				}
 				server->server_name = SERVERERROR;
 				complete = 1;
@@ -6732,7 +6742,8 @@ deal_with_qwmaster_packet(struct qserver *server, char *rawpkt, int pktlen)
 		unsigned short port = htons(*((unsigned short *)(rawpkt + pktlen - 2)));
 
 		//fprintf( stderr, "NEXT IP=%s:%u\n", ip, port );
-		sprintf(server->master_query_tag, "%s:%u", ip, port);
+		snprintf(server->master_query_tag, sizeof(server->master_query_tag),
+			"%s:%u", ip, port);
 
 		// skip over the 2 byte id
 		rawpkt += 2;
@@ -7316,7 +7327,8 @@ player_add_info(struct player *player, char *key, char *value, int flags)
 					fprintf(stderr, "Failed to malloc combined value\n");
 					exit(1);
 				}
-				sprintf(full_value, "%s%s%s", info->value, multi_delimiter, value);
+				snprintf(full_value, sizeof(full_value), "%s%s%s",
+					info->value, multi_delimiter, value);
 
 				// We should be able to free this
 				free(info->value);
@@ -7390,7 +7402,8 @@ add_rule(struct qserver *server, char *key, char *value, int flags)
 					fprintf(stderr, "Failed to malloc combined value\n");
 					exit(1);
 				}
-				sprintf(full_value, "%s%s%s", rule->value, multi_delimiter, value);
+				snprintf(full_value, sizeof(full_value), "%s%s%s",
+					rule->value, multi_delimiter, value);
 
 				// We should be able to free this
 				free(rule->value);
@@ -7497,7 +7510,8 @@ change_server_port(struct qserver *server, unsigned short port, int force)
 		unsigned int ipaddr = ntohl(server->ipaddr);
 
 		// Update the servers hostname as required
-		sprintf(arg, "%d.%d.%d.%d:%hu", ipaddr >> 24, (ipaddr >> 16) & 0xff, (ipaddr >> 8) & 0xff, ipaddr & 0xff, port);
+		snprintf(arg, sizeof(arg), "%d.%d.%d.%d:%hu",
+			ipaddr >> 24, (ipaddr >> 16) &0xff, (ipaddr >> 8) &0xff, ipaddr &0xff, port);
 
 		if (show_game_port || force || server->flags & TF_SHOW_GAME_PORT) {
 			// Update the server arg
@@ -7505,7 +7519,7 @@ change_server_port(struct qserver *server, unsigned short port, int force)
 			server->arg = strdup(arg);
 
 			// Add a rule noting the previous query port
-			sprintf(arg, "%hu", server->port);
+			snprintf(arg, sizeof(arg), "%hu", server->port);
 			add_rule(server, "_queryport", arg, NO_FLAGS);
 
 			// Update the servers port
@@ -7523,14 +7537,15 @@ change_server_port(struct qserver *server, unsigned short port, int force)
 				if (colon) {
 					*colon = '\0';
 				}
-				sprintf(hostname, "%s:%hu", server->host_name, port);
+				snprintf(hostname, sizeof(hostname), "%s:%hu",
+					server->host_name, port);
 				free(server->host_name);
 				server->host_name = hostname;
 			}
 		}
 
 		// Add a rule noting the servers hostport
-		sprintf(arg, "%hu", port);
+		snprintf(arg, sizeof(arg), "%hu", port);
 		add_rule(server, "hostport", arg, OVERWITE_DUPLICATES);
 	}
 }
@@ -8237,7 +8252,7 @@ deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pkt += 2;
 		if (pkt < end) {
 			int protocol = *((unsigned char *)pkt);
-			sprintf(number, "%d", protocol);
+			snprintf(number, sizeof(number), "%d", protocol);
 			add_rule(server, "protocol", number, NO_FLAGS);
 			pkt++;
 		}
@@ -8279,11 +8294,11 @@ deal_with_halflife_packet(struct qserver *server, char *rawpkt, int pktlen)
 				}
 				pkt += strlen(pkt) + 1;
 				n = swap_long_from_little(pkt);
-				sprintf(number, "%d", n);
+				snprintf(number, sizeof(number), "%d", n);
 				add_rule(server, "modversion", number, NO_FLAGS);
 				pkt += 4;
 				n = swap_long_from_little(pkt);
-				sprintf(number, "%d", n);
+				snprintf(number, sizeof(number), "%d", n);
 				add_rule(server, "modsize", number, NO_FLAGS);
 				pkt += 4;
 				add_rule(server, "svonly", *pkt ? "1" : "0", NO_FLAGS);
@@ -8425,7 +8440,8 @@ deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 	server->num_players = *pkt++;
 	server->max_players = *pkt++;
 
-	sprintf(buf, "%u", (unsigned int)pkt[0] + (unsigned int)pkt[1] * 256);
+	snprintf(buf, sizeof(buf), "%u",
+		(unsigned int)pkt[0] + (unsigned int)pkt[1] *256);
 	add_rule(server, "cpu", buf, NO_FLAGS);
 	pkt++;          /* cpu speed, lsb */
 	pkt++;          /* cpu speed, msb */
@@ -8450,7 +8466,7 @@ deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 	if (n_teams == 255) {
 		return (PKT_ERROR);
 	}
-	sprintf(buf, "%d", n_teams);
+	snprintf(buf, sizeof(buf), "%d", n_teams);
 	add_rule(server, "numteams", buf, NO_FLAGS);
 
 	len = *pkt;     /* first title */
@@ -8629,16 +8645,16 @@ deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 
 		if (query_version == 5) {
 			net_protocol = swap_long_from_little(pkt);
-			sprintf(str, "%u", net_protocol);
+			snprintf(str, sizeof(str), "%u", net_protocol);
 			add_rule(server, "net_protocol", str, NO_FLAGS);
 			pkt += 4;
 		}
 		minimum_net_protocol = swap_long_from_little(pkt);
-		sprintf(str, "%u", minimum_net_protocol);
+		snprintf(str, sizeof(str), "%u", minimum_net_protocol);
 		add_rule(server, "minimum_net_protocol", str, NO_FLAGS);
 		pkt += 4;
 		build_version = swap_long_from_little(pkt);
-		sprintf(str, "%u", build_version);
+		snprintf(str, sizeof(str), "%u", build_version);
 		add_rule(server, "build_version", str, NO_FLAGS);
 		pkt += 4;
 
@@ -8667,7 +8683,7 @@ deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	pkt += *pkt + 1;
 
 	status = *(unsigned char *)pkt;
-	sprintf(str, "%u", status);
+	snprintf(str, sizeof(str), "%u", status);
 	add_rule(server, "status", str, NO_FLAGS);
 	if (status & TRIBES2_STATUS_DEDICATED) {
 		add_rule(server, "dedicated", "1", NO_FLAGS);
@@ -8701,11 +8717,11 @@ deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	pkt++;
 	server->max_players = *(unsigned char *)pkt;
 	pkt++;
-	sprintf(str, "%u", *(unsigned char *)pkt);
+	snprintf(str, sizeof(str), "%u", *(unsigned char*)pkt);
 	add_rule(server, "bot_count", str, NO_FLAGS);
 	pkt++;
 	cpu_speed = swap_short_from_little(pkt);
-	sprintf(str, "%hu", cpu_speed);
+	snprintf(str, sizeof(str), "%hu", cpu_speed);
 	add_rule(server, "cpu_speed", str, NO_FLAGS);
 	pkt += 2;
 
@@ -8734,7 +8750,7 @@ deal_with_tribes2_packet(struct qserver *server, char *pkt, int pktlen)
 	}
 	*term = '\0';
 	n_teams = atoi(pkt);
-	sprintf(str, "%d", n_teams);
+	snprintf(str, sizeof(str), "%d", n_teams);
 	add_rule(server, "numteams", str, NO_FLAGS);
 	pkt = term + 1;
 
@@ -8941,17 +8957,20 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	switch (ServerVersion) {
 	case VERSION_1_2_10:
-		strcpy(str, "1.2.10");
+		strncpy(str, "1.2.10", sizeof(str) -1);
+		str[sizeof(str) - 1] = '\0';
 		pkt += sizeof(Dat2Reply1_2_10);
 		break;
 
 	case VERSION_1_3:
-		strcpy(str, "1.3");
+		strncpy(str, "1.3", sizeof(str) -1);
+		str[sizeof(str) - 1] = '\0';
 		pkt += sizeof(Dat2Reply1_3);
 		break;
 
 	case VERSION_1_4:
-		strcpy(str, "1.4");
+		strncpy(str, "1.4", sizeof(str) -1);
+		str[sizeof(str) - 1] = '\0';
 		pkt += sizeof(Dat2Reply1_4);
 		break;
 	}
@@ -9080,6 +9099,7 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 		return (PKT_ERROR);
 	}
 	strncpy(str, pkt, iLen);
+	str[sizeof(str) - 1] = '\0';
 	add_rule(server, "version", str, NO_FLAGS);
 	pkt += iLen;/* version */
 
@@ -9119,19 +9139,23 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	switch (pkt[0]) {
 	case 3:
-		strcpy(str, "Joining");
+		strncpy(str, "Joining", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 4:
-		strcpy(str, "Playing");
+		strncpy(str, "Playing", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 5:
-		strcpy(str, "Debrief");
+		strncpy(str, "Debrief", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	default:
-		strcpy(str, "Undefined");
+		strncpy(str, "Undefined", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 	}
 	add_rule(server, "status", str, NO_FLAGS);
 
@@ -9141,19 +9165,22 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	switch (pkt[0]) {
 	case 2:
-		strcpy(str, "COOP");
+		strncpy(str, "COOP", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 3:
-		strcpy(str, "SOLO");
+		strncpy(str, "SOLO", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 4:
-		strcpy(str, "TEAM");
+		strncpy(str, "TEAM", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	default:
-		sprintf(str, "UNKOWN %u", pkt[0]);
+		snprintf(str, sizeof(str), "UNKOWN %u", pkt[0]);
 		break;
 	}
 
@@ -9186,23 +9213,28 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	switch (iSpawnType) {
 	case 0:
-		strcpy(str, "None");
+		strncpy(str, "None", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 1:
-		strcpy(str, "Individual");
+		strncpy(str, "Individual", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 2:
-		strcpy(str, "Team");
+		strncpy(str, "Team", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 3:
-		strcpy(str, "Infinite");
+		strncpy(str, "Infinite", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	default:
-		strcpy(str, "Unknown");
+		strncpy(str, "Unknown", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 	}
 
 	add_rule(server, "spawntype", str, NO_FLAGS);
@@ -9325,10 +9357,10 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	if ((iSpawnType == 1) || (iSpawnType == 2)) {
 		/* Individual or team */
-		sprintf(str, "%u", iTemp);
+		snprintf(str, sizeof(str), "%u", iTemp);
 	} else {
 		/* else not used */
-		sprintf(str, "%u", 0);
+		snprintf(str, sizeof(str), "%u", 0);
 	}
 	add_rule(server, "spawncount", str, NO_FLAGS);
 	pkt += 1;       // 5
@@ -9337,10 +9369,12 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 
 	iTemp = pkt[0]; // Allow Observers
 	if (iTemp) {
-		strcpy(str, "Yes");
+		strncpy(str, "Yes", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 	} else {
 		/* else not used */
-		strcpy(str, "No");
+		strncpy(str, "No", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 	}
 	add_rule(server, "allowobservers", str, NO_FLAGS);
 	pkt += 1;       // 10
@@ -9360,19 +9394,23 @@ deal_with_ghostrecon_packet(struct qserver *server, char *pkt, int pktlen)
 	iTemp = pkt[0]; // IFF
 	switch (iTemp) {
 	case 0:
-		strcpy(str, "None");
+		strncpy(str, "None", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 1:
-		strcpy(str, "Reticule");
+		strncpy(str, "Reticule", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	case 2:
-		strcpy(str, "Names");
+		strncpy(str, "Names", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 
 	default:
-		strcpy(str, "Unknown");
+		strncpy(str, "Unknown", sizeof(str) -1);
+		str[sizeof(str) -1] = '\0';
 		break;
 	}
 	add_rule(server, "iff", str, NO_FLAGS);
@@ -10101,11 +10139,11 @@ deal_with_bfris_packet(struct qserver *server, char *rawpkt, int pktlen)
 			char buf[24];
 
 			/* server revision */
-			sprintf(buf, "%d", (unsigned int)saved_data[11]);
+			snprintf(buf, sizeof(buf), "%d", (unsigned int)saved_data[11]);
 			add_rule(server, "Revision", buf, NO_FLAGS);
 
 			/* latency */
-			sprintf(buf, "%d", (unsigned int)saved_data[10]);
+			snprintf(buf, sizeof(buf), "%d", (unsigned int)saved_data[10]);
 			add_rule(server, "Latency", buf, NO_FLAGS);
 
 			/* player allocation */
@@ -10224,7 +10262,7 @@ add_uchar_rule(struct qserver *server, char *key, unsigned char value)
 {
 	char buf[24];
 
-	sprintf(buf, "%u", (unsigned)value);
+	snprintf(buf, sizeof(buf), "%u", (unsigned)value);
 	return (add_rule(server, key, buf, NO_FLAGS));
 }
 
@@ -10263,7 +10301,7 @@ deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 		add_rule(server, "gametype", pkt, NO_FLAGS);
 		pkt += strlen(pkt) + 1;
 
-		sprintf(buf, "%hu", swap_short_from_little(pkt));
+		snprintf(buf, sizeof(buf), "%hu", swap_short_from_little(pkt));
 		add_rule(server, "level_num", buf, NO_FLAGS);
 		pkt += 2;
 		server->num_players = swap_short_from_little(pkt);
@@ -10290,10 +10328,11 @@ deal_with_descent3_packet(struct qserver *server, char *rawpkt, int pktlen)
 		/* bright player ships */
 		add_uchar_rule(server, "mouselook", (unsigned char)((pkt[6] & 1) > 0)); /*
 		                                                                         *                                                                         mouselook enabled */
-		sprintf(buf, "%s%s", (pkt[4] & 16) ? "PP" : "CS", (pkt[6] & 1) ? "-ML" : "");
+		snprintf(buf, sizeof(buf), "%s%s",
+			(pkt[4] &16) ? "PP" : "CS", (pkt[6] &1) ? "-ML" : "");
 		add_rule(server, "servertype", buf, NO_FLAGS);
 
-		sprintf(buf, "%hhu", pkt[9]);
+		snprintf(buf, sizeof(buf), "%hhu", pkt[9]);
 		add_rule(server, "difficulty", buf, NO_FLAGS);
 
 		/* unknown/undecoded fields after known flags removed */
@@ -10629,7 +10668,7 @@ deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 		 */
 
 		server->protocol_version = protocolver;
-		sprintf(temp, "%d", protocolver);
+		snprintf(temp, sizeof(temp), "%d", protocolver);
 		add_rule(server, "protocol", temp, NO_FLAGS);
 
 		// server name
@@ -10661,7 +10700,7 @@ deal_with_hl2_packet(struct qserver *server, char *rawpkt, int pktlen)
 		ptr++;
 
 		// bot players
-		sprintf(temp, "%hhu", (*ptr));
+		snprintf(temp, sizeof(temp), "%hhu", (*ptr));
 		add_rule(server, "bot_players", temp, NO_FLAGS);
 		ptr++;
 
@@ -11075,7 +11114,7 @@ xml_escape(char *string)
 				if (isprint(c)) {
 					*b++ = c;
 				} else {
-					b += sprintf((char *)b, "&#%u;", c);
+					b += snprintf( (char *)b, sizeof(b), "&#%u;", c);
 				}
 			}
 		} else if (xml_encoding == ENCODING_UTF_8) {
@@ -11218,7 +11257,7 @@ strherror(int h_err)
 		return ("no address");
 
 	default:
-		sprintf(msg, "%d", h_err);
+		snprintf(msg, sizeof(msg), "%d", h_err);
 		return (msg);
 	}
 }
@@ -11384,28 +11423,34 @@ play_time(int seconds, int show_seconds)
 		char *fmt_second = show_seconds == 2 ? FMT_SECOND_2 : FMT_SECOND_1;
 		time_string[0] = '\0';
 		if (seconds / 3600) {
-			sprintf(time_string, fmt_hour, seconds / 3600);
+			snprintf(time_string, sizeof(time_string), fmt_hour, seconds / 3600);
 		} else if (show_seconds < 2) {
-			strcat(time_string, "   ");
+			strlcat(time_string, "   ", sizeof(time_string));
 		}
 		if ((seconds % 3600) / 60 || seconds / 3600) {
-			sprintf(time_string + strlen(time_string), fmt_minute, (seconds % 3600) / 60);
+			snprintf(time_string + strlen(time_string),
+				sizeof(time_string) - strlen(time_string),
+				fmt_minute, (seconds % 3600) / 60);
 		} else if (!show_seconds) {
-			sprintf(time_string + strlen(time_string), " 0m");
+			snprintf(time_string + strlen(time_string),
+				sizeof(time_string) - strlen(time_string),
+				" 0m");	
 		} else if (show_seconds < 2) {
-			strcat(time_string, "   ");
+			strlcat(time_string, "   ", sizeof(time_string));
 		}
 		if (show_seconds) {
 			sprintf(time_string + strlen(time_string), fmt_second, seconds % 60);
 		}
 	} else if (time_format == STOPWATCH_TIME) {
 		if (show_seconds) {
-			sprintf(time_string, "%02d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
+			snprintf(time_string, sizeof(time_string),
+				"%02d:%02d:%02d", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
 		} else {
-			sprintf(time_string, "%02d:%02d", seconds / 3600, (seconds % 3600) / 60);
+			snprintf(time_string, sizeof(time_string),
+				"%02d:%02d", seconds / 3600, (seconds % 3600) / 60);
 		}
 	} else {
-		sprintf(time_string, "%d", seconds);
+		snprintf(time_string, sizeof(time_string), "%d", seconds);
 	}
 
 	return (time_string);
@@ -11418,11 +11463,11 @@ ping_time(int ms)
 	static char time_string[24];
 
 	if (ms < 1000) {
-		sprintf(time_string, "%dms", ms);
+		snprintf(time_string, sizeof(time_string), "%dms", ms);
 	} else if (ms < 1000000) {
-		sprintf(time_string, "%ds", ms / 1000);
+		snprintf(time_string, sizeof(time_string), "%ds", ms / 1000);
 	} else {
-		sprintf(time_string, "%dm", ms / 1000 / 60);
+		snprintf(time_string, sizeof(time_string), "%dm", ms / 1000 / 60);
 	}
 	return (time_string);
 }

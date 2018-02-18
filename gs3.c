@@ -229,8 +229,8 @@ deal_with_gs3_status(struct qserver *server, char *rawpkt, int pktlen)
 						if (server->server_name) {
 							char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 							if (name) {
-								strcat(name, ": ");
-								strcat(name, val);
+								strlcat( name, ": ", sizeof(name) );
+								strlcat( name, val, sizeof(name) );
 								server->server_name = name;
 							}
 						}
@@ -381,8 +381,8 @@ process_gs3_packet(struct qserver *server)
 									if (server->server_name) {
 										char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 										if (name) {
-											strcat(name, ": ");
-											strcat(name, val);
+											strlcat( name, ": ", sizeof(name) );
+											strlcat( name, val, sizeof(name) );
 											server->server_name = name;
 										}
 									}
@@ -643,7 +643,7 @@ process_gs3_packet(struct qserver *server)
 				case TEAM_OTHER_HEADER:
 				default:
 					// add as a server rule
-					sprintf(rule, "%s%d", header, total_teams);
+					snprintf( rule, sizeof(rule), "%s%d", header, total_teams );
 					add_rule(server, rule, val, NO_FLAGS);
 					break;
 				}
@@ -675,8 +675,9 @@ send_gs3_request_packet(struct qserver *server)
 		server->flags |= TF_PLAYER_QUERY | TF_RULES_QUERY;
 		if (server->challenge) {
 			// we've recieved a challenge response, send the query + challenge id
-			len = sprintf(
+			len = snprintf(
 				query_buf,
+				sizeof(query_buf),
 				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\xff\xff\xff\x01",
 				0x00,
 				(unsigned char)(server->challenge >> 24),
@@ -694,8 +695,9 @@ send_gs3_request_packet(struct qserver *server)
 		server->flags |= TF_STATUS_QUERY;
 		if (server->challenge) {
 			// we've recieved a challenge response, send the query + challenge id
-			len = sprintf(
+			len = snprintf(
 				query_buf,
+				sizeof(query_buf),
 				"\xfe\xfd%c\x10\x20\x30\x40%c%c%c%c\x06\x01\x06\x05\x08\x0a\x04%c%c",
 				0x00,
 				(unsigned char)(server->challenge >> 24),

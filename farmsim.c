@@ -43,7 +43,7 @@ send_farmsim_request_packet(struct qserver *server)
 
 	server->saved_data.pkt_max = -1;
 	code = get_param_value(server, "code", "");
-	sprintf(buf, "GET /feed/dedicated-server-stats.xml?code=%s HTTP/1.1\015\012User-Agent: qstat\015\012\015\012", code);
+	snprintf(buf, sizeof(buf), "GET /feed/dedicated-server-stats.xml?code=%s HTTP/1.1\015\012User-Agent: qstat\015\012\015\012", code);
 
 	return (send_packet(server, buf, strlen(buf)));
 }

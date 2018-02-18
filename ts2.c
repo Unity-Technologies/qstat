@@ -32,11 +32,11 @@ send_ts2_request_packet(struct qserver *server)
 
 	if (get_player_info) {
 		server->flags |= TF_PLAYER_QUERY | TF_RULES_QUERY;
-		sprintf(buf, "si %d\npl %d\nquit\n", serverport, serverport);
+		snprintf( buf, sizeof(buf), "si %d\npl %d\nquit\n", serverport, serverport );
 		server->saved_data.pkt_index = 2;
 	} else {
 		server->flags |= TF_STATUS_QUERY;
-		sprintf(buf, "si %d\nquit\n", serverport);
+		snprintf( buf, sizeof(buf), "si %d\nquit\n", serverport );
 		server->saved_data.pkt_index = 1;
 	}
 

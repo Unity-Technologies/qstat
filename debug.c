@@ -114,7 +114,7 @@ malformed_packet(const struct qserver *server, const char *fmt, ...)
 		char fn[PATH_MAX] = { 0 };
 		int fd;
 
-		sprintf(fn, "%03u_%s.pkt", count++, tag);
+		snprintf(fn, sizeof(fn), "%03u_%s.pkt", count++, tag);
 		fprintf(stderr, "dumping to %s\n", fn);
 		fd = open(fn, O_WRONLY | O_CREAT | O_EXCL, 0644);
 		if (fd == -1) {
@@ -171,7 +171,7 @@ output_packet(struct qserver *server, const char *buf, int buflen, int to)
 	for (i = buflen; i; offset += 16) {
 		memset(line, ' ', 256);
 		h = 0;
-		h += sprintf(line, "%5d:", offset);
+		h+= snprintf( line, sizeof(line), "%5d:", offset);
 		a = astart = h + 16 * 2 + 16 / 4 + 2;
 		for (b = 16; b && i; b--, i--, p++) {
 			if ((b & 3) == 0) {

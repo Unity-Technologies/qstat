@@ -81,15 +81,15 @@ xform_html_entity(const char c, char *dest)
 	if (html_mode) {
 		switch (c) {
 		case '<':
-			strcpy(dest, "&lt;");
+			strlcpy(dest, "&lt;", sizeof(dest));
 			return (4);
 
 		case '>':
-			strcpy(dest, "&gt;");
+			strlcpy(dest, "&gt;", sizeof(dest));
 			return (4);
 
 		case '&':
-			strcpy(dest, "&amp;");
+			strlcpy(dest, "&amp;", sizeof(dest));
 			return (5);
 
 		default:
@@ -449,7 +449,7 @@ xform_name_u2(char *string, struct qserver *server)
 			// { '#', 'F', '8', '4', '0', '4', '0', 0x00 }
 			char color[8];
 			s += 1;
-			sprintf(color, "#%02hhx%02hhx%02hhx", s[0], s[1], s[2]);
+			snprintf(color, sizeof(color), "#%02hhx%02hhx%02hhx", s[0], s[1], s[2]);
 			q += xform_html_color(&q, color);
 			s += 3;
 		} else {
@@ -702,7 +702,7 @@ xform_name(char *string, struct qserver *server)
 
 	if (string == NULL) {
 		buf = xform_buf_get(1);
-		strcpy(buf, "?");
+		strlcpy(buf, "?", sizeof(buf));
 
 		return (buf);
 	}
@@ -725,7 +725,7 @@ xform_name(char *string, struct qserver *server)
 		*bufp = '\0';
 
 		if (*buf == '\0') {
-			strcpy(buf, "?");
+			strlcpy(buf, "?", sizeof(buf));
 			return (buf);
 		}
 		s = buf;
@@ -737,7 +737,7 @@ xform_name(char *string, struct qserver *server)
 		buf = xform_buf_get(strlen(s) * 2);
 		bufp = buf;
 		for ( ; *s; s++, bufp += 2) {
-			sprintf(bufp, "%02hhx", *s);
+			snprintf(bufp, sizeof(bufp), "%02hhx", *s);
 		}
 		*bufp = '\0';
 

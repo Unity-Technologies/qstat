@@ -200,8 +200,8 @@ qsc_load_default_config_files()
 		}
 		strncpy(path, var, len);
 		path[len] = '\0';
-		strcat(path, "/");
-		strcat(path, HOME_CONFIG_FILE);
+		strlcat( path, "/", sizeof(path));
+		strlcat( path, HOME_CONFIG_FILE, sizeof(path));
 /*	sprintf( path, "%s/%s", var, HOME_CONFIG_FILE); */
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
@@ -210,14 +210,16 @@ qsc_load_default_config_files()
 	}
 
 #ifdef sysconfdir
-		strcpy(path, sysconfdir "/qstat.cfg");
+		strncpy( path, sysconfdir "/qstat.cfg", sizeof(path) -1);
+		path[sizeof(path) -1] = '\0';
 		filename = path;
 #elif defined(_WIN32)
 		if ((filename == NULL) && _pgmptr && strchr(_pgmptr, '\\')) {
 			char *slash = strrchr(_pgmptr, '\\');
 			strncpy(path, _pgmptr, slash - _pgmptr);
 			path[slash - _pgmptr] = '\0';
-			strcat(path, "\\qstat.cfg");
+			strncat( path, "\\qstat.cfg", sizeof(path) -1);
+			path[sizeof(path) -1] = '\0';
 			filename = path;
 		}
 #endif
@@ -455,7 +457,8 @@ pf_top_level(char *text, void *_context)
 	force_upper_case(context->gametype->type_prefix);
 	context->gametype->type_option = (char *)malloc(strlen(game_type) + 2);
 	context->gametype->type_option[0] = '-';
-	strcpy(&context->gametype->type_option[1], game_type);
+	strlcpy( &context->gametype->type_option[1], game_type,
+			sizeof(context->gametype->type_option[1]));
 
 	parse_context = context;
 
@@ -556,7 +559,8 @@ get_config_key(char *first_token, const ConfigKey *keys)
 	char key_name[1024], *token;
 	int key = 0;
 
-	strcpy(key_name, first_token);
+	strncpy( key_name, first_token, sizeof(key_name) -1);
+	key_name[sizeof(key_name) -1] = '\0';
 	do {
 		int k;
 		for (k = 0; keys[k].key_name; k++) {
@@ -576,8 +580,8 @@ get_config_key(char *first_token, const ConfigKey *keys)
 			REPORT_ERROR((stderr, "Key name too long"));
 			return (-1);
 		}
-		strcat(key_name, " ");
-		strcat(key_name, token);
+		strlcat( key_name, " ", sizeof(key_name));
+		strlcat( key_name, token, sizeof(key_name));
 	} while (1);
 
 	if (key == 0) {

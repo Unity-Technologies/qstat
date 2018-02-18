@@ -43,7 +43,7 @@ deal_with_mumble_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	// version
 	server->protocol_version = ntohl(*(unsigned long *)pkt);
-	sprintf(version, "%u.%u.%u", (unsigned char)*pkt + 1, (unsigned char)*pkt + 2, (unsigned char)*pkt + 3);
+	snprintf(version,sizeof(version),"%u.%u.%u", (unsigned char)*pkt+1, (unsigned char)*pkt+2, (unsigned char)*pkt+3);
 	add_rule(server, "version", version, NO_FLAGS);
 	pkt += 4;
 
@@ -59,7 +59,7 @@ deal_with_mumble_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pkt += 4;
 
 	// allowed bandwidth
-	sprintf(bandwidth, "%d", ntohl(*(unsigned long *)pkt));
+	snprintf( bandwidth, sizeof(bandwidth), "%d", ntohl(*(unsigned long*)pkt));
 	add_rule(server, "allowed_bandwidth", bandwidth, NO_FLAGS);
 	pkt += 4;
 
