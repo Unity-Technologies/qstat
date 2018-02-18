@@ -11426,7 +11426,7 @@ play_time(int seconds, int show_seconds)
 		if (seconds / 3600) {
 			snprintf(time_string, sizeof(time_string), fmt_hour, seconds / 3600);
 		} else if (show_seconds < 2) {
-			strncat(time_string, "   ", sizeof(time_string) - 1 - strlen(time_string);
+			strncat(time_string, "   ", sizeof(time_string) - 1 - strlen(time_string));
 		}
 		if ((seconds % 3600) / 60 || seconds / 3600) {
 			snprintf(time_string + strlen(time_string),
