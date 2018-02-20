@@ -491,7 +491,7 @@ process_haze_packet(struct qserver *server)
 				case TEAM_OTHER_HEADER:
 				default:
 					// add as a server rule
-					snprintf( rule, sizeof(rule), "%s%d", header, total_teams );
+					snprintf(rule, sizeof(rule), "%s%d", header, total_teams);
 					add_rule(server, rule, val, NO_FLAGS);
 					break;
 				}

@@ -179,43 +179,43 @@ deal_with_cube2_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	server->protocol_version = attr[0];
 
-	snprintf( buf, sizeof(buf), "%d %s", attr[0], sb_getversion_s (attr[0]) );
+	snprintf(buf, sizeof(buf), "%d %s", attr[0], sb_getversion_s (attr[0]));
 	add_rule(server, "version", buf, NO_FLAGS);
 
-	snprintf( buf, sizeof(buf), "%d %s", attr[1], sb_getmode_s (attr[1]) );
+	snprintf(buf, sizeof(buf), "%d %s", attr[1], sb_getmode_s (attr[1]));
 	add_rule(server, "mode", buf, NO_FLAGS);
 
-	snprintf( buf, sizeof(buf), "%d", attr[2] );
+	snprintf(buf, sizeof(buf), "%d", attr[2]);
 	add_rule(server, "seconds_left", buf, NO_FLAGS);
 
 	server->max_players = attr[3];
 
 	switch (attr[5]) {
 	case MM_OPEN:
-		snprintf( buf, sizeof(buf), "%d open", attr[5] );
+		snprintf(buf, sizeof(buf), "%d open", attr[5]);
 		break;
 
 	case MM_VETO:
-		snprintf( buf, sizeof(buf), "%d veto", attr[5] );
+		snprintf(buf, sizeof(buf), "%d veto", attr[5]);
 		break;
 
 	case MM_LOCKED:
-		snprintf( buf, sizeof(buf), "%d locked", attr[5] );
+		snprintf(buf, sizeof(buf), "%d locked", attr[5]);
 		break;
 
 	case MM_PRIVATE:
-		snprintf( buf, sizeof(buf), "%d private", attr[5] );
+		snprintf(buf, sizeof(buf), "%d private", attr[5]);
 		break;
 
 	default:
-		snprintf( buf, sizeof(buf), "%d unknown", attr[5] );
+		snprintf(buf, sizeof(buf), "%d unknown", attr[5]);
 	}
 	add_rule(server, "mm", buf, NO_FLAGS);
 
 	for (i = 0; i < numattr && i < MAX_ATTR; i++) {
 		char buf2[MAX_STRING];
-		snprintf( buf, sizeof(buf), "attr%d", i );
-		snprintf( buf2, sizeof(buf2), "%d", attr[i] );
+		snprintf(buf, sizeof(buf), "attr%d", i);
+		snprintf(buf2, sizeof(buf2), "%d", attr[i]);
 		add_rule(server, buf, buf2, NO_FLAGS);
 	}
 

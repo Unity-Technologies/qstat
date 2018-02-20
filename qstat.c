@@ -5067,7 +5067,7 @@ build_hlmaster_packet(struct qserver *server, int *len)
 	// steam
 	flags = get_param_value(server, "napp", NULL);
 	if (flags) {
-		pkt += snprintf( pkt, sizeof(pkt), "\\napp\\%s", flags );
+		pkt += snprintf(pkt, sizeof(pkt), "\\napp\\%s", flags);
 	}
 
 	// not valid for steam?
@@ -11115,7 +11115,7 @@ xml_escape(char *string)
 				if (isprint(c)) {
 					*b++ = c;
 				} else {
-					b += snprintf( (char *)b, sizeof(b), "&#%u;", c);
+					b += snprintf((char *)b, sizeof(b), "&#%u;", c);
 				}
 			}
 		} else if (xml_encoding == ENCODING_UTF_8) {

@@ -33,11 +33,11 @@ send_wic_request_packet(struct qserver *server)
 
 	if (get_player_info) {
 		server->flags |= TF_PLAYER_QUERY | TF_RULES_QUERY;
-		snprintf( buf, sizeof(buf), "%s\x0d\x0a/listsettings\x0d\x0a/listplayers\x0d\x0a/exit\x0d\x0a", password );
+		snprintf(buf, sizeof(buf), "%s\x0d\x0a/listsettings\x0d\x0a/listplayers\x0d\x0a/exit\x0d\x0a", password);
 		server->saved_data.pkt_index = 2;
 	} else {
 		server->flags |= TF_STATUS_QUERY;
-		snprintf( buf, sizeof(buf), "%s\x0d\x0a/listsettings\x0d\x0a/exit\x0d\x0a", password );
+		snprintf(buf, sizeof(buf), "%s\x0d\x0a/listsettings\x0d\x0a/exit\x0d\x0a", password);
 		server->saved_data.pkt_index = 1;
 	}
 

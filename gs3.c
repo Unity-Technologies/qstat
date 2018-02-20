@@ -229,8 +229,8 @@ deal_with_gs3_status(struct qserver *server, char *rawpkt, int pktlen)
 						if (server->server_name) {
 							char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 							if (name) {
-								strncat( name, ": ", sizeof(name) - 1 - strlen(name) );
-								strncat( name, val, sizeof(name) - 1 - strlen(name) );
+								strncat(name, ": ", sizeof(name) - 1 - strlen(name));
+								strncat(name, val, sizeof(name) - 1 - strlen(name));
 								server->server_name = name;
 							}
 						}
@@ -381,8 +381,8 @@ process_gs3_packet(struct qserver *server)
 									if (server->server_name) {
 										char *name = (char *)realloc(server->server_name, strlen(server->server_name) + strlen(val) + 3);
 										if (name) {
-											strncat( name, ": ", sizeof(name) - 1 - strlen(name) );
-											strncat( name, val, sizeof(name) - 1 - strlen(name) );
+											strncat(name, ": ", sizeof(name) - 1 - strlen(name));
+											strncat(name, val, sizeof(name) - 1 - strlen(name));
 											server->server_name = name;
 										}
 									}
@@ -643,7 +643,7 @@ process_gs3_packet(struct qserver *server)
 				case TEAM_OTHER_HEADER:
 				default:
 					// add as a server rule
-					snprintf( rule, sizeof(rule), "%s%d", header, total_teams );
+					snprintf(rule, sizeof(rule), "%s%d", header, total_teams);
 					add_rule(server, rule, val, NO_FLAGS);
 					break;
 				}

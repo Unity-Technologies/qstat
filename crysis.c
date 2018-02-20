@@ -46,15 +46,15 @@ send_crysis_request_packet(struct qserver *server)
 	case 0:
 		// Not seen a challenge yet, request it
 		server->challenge++;
-		snprintf( cmd, sizeof(cmd), "challenge" );
+		snprintf(cmd, sizeof(cmd), "challenge");
 		break;
 
 	case 1:
 		server->challenge++;
 		password = get_param_value(server, "password", "");
-		snprintf( cmd, sizeof(cmd), "%s:%s", server->challenge_string, password );
+		snprintf(cmd, sizeof(cmd), "%s:%s", server->challenge_string, password);
 		md5 = md5_hex(cmd, strlen(cmd));
-		snprintf( cmd, sizeof(cmd), "authenticate %s", md5 );
+		snprintf(cmd, sizeof(cmd), "authenticate %s", md5);
 		free(md5);
 		break;
 
@@ -63,7 +63,7 @@ send_crysis_request_packet(struct qserver *server)
 		server->challenge++;
 		server->flags |= TF_STATUS_QUERY;
 		server->n_servers = 3;
-		snprintf( cmd, sizeof(cmd), "status" );
+		snprintf(cmd, sizeof(cmd), "status");
 		break;
 
 	case 3:

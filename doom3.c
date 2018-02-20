@@ -370,7 +370,7 @@ _deal_with_doom3_packet(struct qserver *server, char *rawpkt, int pktlen, unsign
 			server->max_players = atoi(val);
 		} else if (0 == strcasecmp(key, "ri_maxViewers")) {
 			char max[20];
-			snprintf( max, sizeof(max), "%d", server->max_players );
+			snprintf(max, sizeof(max), "%d", server->max_players);
 			add_rule(server, "si_maxplayers", max, NO_FLAGS);
 			server->max_players = atoi(val);
 		} else if (0 == strcasecmp(key, "ri_numViewers")) {

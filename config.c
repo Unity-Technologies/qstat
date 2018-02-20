@@ -200,8 +200,8 @@ qsc_load_default_config_files()
 		}
 		strncpy(path, var, len);
 		path[len] = '\0';
-		strncat( path, "/", sizeof(path) - 1 - strlen(path));
-		strncat( path, HOME_CONFIG_FILE, sizeof(path) - 1 - strlen(path));
+		strncat(path, "/", sizeof(path) - 1 - strlen(path));
+		strncat(path, HOME_CONFIG_FILE, sizeof(path) - 1 - strlen(path));
 /*	sprintf( path, "%s/%s", var, HOME_CONFIG_FILE); */
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
@@ -210,7 +210,7 @@ qsc_load_default_config_files()
 	}
 
 #ifdef sysconfdir
-		strncpy( path, sysconfdir "/qstat.cfg", sizeof(path) -1);
+		strncpy(path, sysconfdir "/qstat.cfg", sizeof(path) -1);
 		path[sizeof(path) -1] = '\0';
 		filename = path;
 #elif defined(_WIN32)
@@ -218,7 +218,7 @@ qsc_load_default_config_files()
 			char *slash = strrchr(_pgmptr, '\\');
 			strncpy(path, _pgmptr, slash - _pgmptr);
 			path[slash - _pgmptr] = '\0';
-			strncat( path, "\\qstat.cfg", sizeof(path) -1);
+			strncat(path, "\\qstat.cfg", sizeof(path) -1);
 			path[sizeof(path) -1] = '\0';
 			filename = path;
 		}
@@ -558,7 +558,7 @@ get_config_key(char *first_token, const ConfigKey *keys)
 	char key_name[1024], *token;
 	int key = 0;
 
-	strncpy( key_name, first_token, sizeof(key_name) -1);
+	strncpy(key_name, first_token, sizeof(key_name) -1);
 	key_name[sizeof(key_name) -1] = '\0';
 	do {
 		int k;
@@ -579,8 +579,8 @@ get_config_key(char *first_token, const ConfigKey *keys)
 			REPORT_ERROR((stderr, "Key name too long"));
 			return (-1);
 		}
-		strncat( key_name, " ", sizeof(key_name) - 1 - strlen(key_name));
-		strncat( key_name, token, sizeof(key_name) - 1 - strlen(key_name));
+		strncat(key_name, " ", sizeof(key_name) - 1 - strlen(key_name));
+		strncat(key_name, token, sizeof(key_name) - 1 - strlen(key_name));
 	} while (1);
 
 	if (key == 0) {

@@ -59,7 +59,7 @@ deal_with_mumble_packet(struct qserver *server, char *rawpkt, int pktlen)
 	pkt += 4;
 
 	// allowed bandwidth
-	snprintf( bandwidth, sizeof(bandwidth), "%d", ntohl(*(unsigned long*)pkt));
+	snprintf(bandwidth, sizeof(bandwidth), "%d", ntohl(*(unsigned long*)pkt));
 	add_rule(server, "allowed_bandwidth", bandwidth, NO_FLAGS);
 	pkt += 4;
 

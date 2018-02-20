@@ -44,7 +44,7 @@ send_tm_request_packet(struct qserver *server)
 	}
 
 	// build the query xml
-	len = snprintf( xmlp, sizeof(xmlp), TM_XML_PREFIX );
+	len = snprintf(xmlp, sizeof(xmlp), TM_XML_PREFIX);
 
 	if ((user != NULL) && (password != NULL)) {
 		len += sprintf(xmlp + len, TM_AUTH_TEMPLATE, user, password);
@@ -229,7 +229,7 @@ deal_with_tm_packet(struct qserver *server, char *rawpkt, int pktlen)
 				} else if (0 == strcmp("CurrentMaxPlayers", key)) {
 					server->max_players = atoi(value);
 				} else {
-					snprintf( fullname, sizeof(fullname), "server.%s", key );
+					snprintf(fullname, sizeof(fullname), "server.%s", key);
 					add_rule(server, fullname, value, NO_FLAGS);
 				}
 				break;
@@ -239,7 +239,7 @@ deal_with_tm_packet(struct qserver *server, char *rawpkt, int pktlen)
 				if (0 == strcmp("Name", key)) {
 					server->map_name = strdup(value);
 				} else {
-					snprintf( fullname, sizeof(fullname), "challenge.%s", key );
+					snprintf(fullname, sizeof(fullname), "challenge.%s", key);
 					add_rule(server, fullname, value, NO_FLAGS);
 				}
 				break;

@@ -171,7 +171,7 @@ output_packet(struct qserver *server, const char *buf, int buflen, int to)
 	for (i = buflen; i; offset += 16) {
 		memset(line, ' ', 256);
 		h = 0;
-		h+= snprintf( line, sizeof(line), "%5d:", offset);
+		h+= snprintf(line, sizeof(line), "%5d:", offset);
 		a = astart = h + 16 * 2 + 16 / 4 + 2;
 		for (b = 16; b && i; b--, i--, p++) {
 			if ((b & 3) == 0) {

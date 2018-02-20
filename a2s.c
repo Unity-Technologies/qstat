@@ -312,7 +312,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->max_players = (unsigned char)pkt[1];
 
 		// version
-		snprintf( buf, sizeof(buf), "%hhu", pkt[2] );
+		snprintf(buf, sizeof(buf), "%hhu", pkt[2]);
 		add_rule(server, "version", buf, 0);
 
 		// dedicated
@@ -373,13 +373,13 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 			}
 
 			// mod version
-			snprintf( buf, sizeof(buf), "%u", swap_long_from_little(pkt));
+			snprintf(buf, sizeof(buf), "%u", swap_long_from_little(pkt));
 			add_rule(server, "mod_ver", buf, 0);
 			pkt += 4;
 			pktlen -= 4;
 
 			// mod size
-			snprintf( buf, sizeof(buf), "%u", swap_long_from_little(pkt));
+			snprintf(buf, sizeof(buf), "%u", swap_long_from_little(pkt));
 			add_rule(server, "mod_size", buf, 0);
 			pkt += 4;
 			pktlen -= 4;
@@ -405,7 +405,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		pktlen--;
 
 		// Bots
-		snprintf( buf, sizeof(buf), "%hhu", *pkt );
+		snprintf(buf, sizeof(buf), "%hhu", *pkt);
 		add_rule(server, "bots", buf, 0);
 		pkt++;
 		pktlen--;
@@ -474,7 +474,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		server->num_players = (unsigned char)pkt[2];
 		server->max_players = (unsigned char)pkt[3];
 		// pkt[4] number of bots
-		snprintf( buf, sizeof(buf), "%hhu", pkt[4] );
+		snprintf(buf, sizeof(buf), "%hhu", pkt[4]);
 		add_rule(server, "bots", buf, 0);
 
 		add_rule(server, "dedicated", pkt[5] ? "1" : "0", 0);
@@ -524,7 +524,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 					goto out_too_short;
 				}
 				gameport = swap_short_from_little(pkt);
-				snprintf( buf, sizeof(buf), "%hu", gameport );
+				snprintf(buf, sizeof(buf), "%hu", gameport);
 				add_rule(server, "game_port", buf, 0);
 				change_server_port(server, gameport, 0);
 				pkt += 2;
@@ -547,7 +547,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 					goto out_too_short;
 				}
 				spectator_port = swap_short_from_little(pkt);
-				snprintf( buf, sizeof(buf), "%hu", spectator_port );
+				snprintf(buf, sizeof(buf), "%hu", spectator_port);
 				add_rule(server, "spectator_port", buf, 0);
 				pkt += 2;
 				pktlen -= 2;
