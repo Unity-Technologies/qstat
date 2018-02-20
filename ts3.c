@@ -138,7 +138,7 @@ send_ts3_single_server_packet(struct qserver *server)
 
 	case 4:
 		// Player Info, Quit or Done
-		snprintf(buf, sizeof(buf), ( get_player_info ) ? "clientlist\015\012" : "quit\015\012");
+		snprintf(buf, sizeof(buf), (get_player_info) ? "clientlist\015\012" : "quit\015\012");
 		break;
 
 	case 5:

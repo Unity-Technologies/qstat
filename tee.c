@@ -275,10 +275,10 @@ deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 	/* legacy server list format, only ipv4 addresses */
 	if (last_char == 't') {
 		len_address_packet = 6;
-	/* normal server list format, ipv4 and ipv6 addresses */
+		/* normal server list format, ipv4 and ipv6 addresses */
 	} else if (last_char == '2') {
 		len_address_packet = 18;
-	/* bad or unknown server list format */
+		/* bad or unknown server list format */
 	} else {
 		return (PKT_ERROR);
 	}
@@ -302,7 +302,7 @@ deal_with_teemaster_packet(struct qserver *server, char *rawpkt, int rawpktlen)
 			memcpy(current, rawpkt, 6);
 			memcpy(current + 5, rawpkt + 4, 1);
 			memcpy(current + 4, rawpkt + 5, 1);
-		/* ipv4 and ipv6 server list */
+			/* ipv4 and ipv6 server list */
 		} else {
 			/* ipv4 server address */
 			if (memcmp(rawpkt, ipv4_header, len_ipv4_header) == 0) {

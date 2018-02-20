@@ -82,7 +82,7 @@ static const char approved_response[] =
 static const char verified[] =
 {
 	0x0a, 0x00, 0x00, 0x00, 0x09, 'V', 'E', 'R',
-	'I',  'F',  'I',  'E',	'D', 0x00
+	'I',  'F',  'I',  'E',	'D',  0x00
 };
 
 #if 0
@@ -109,9 +109,9 @@ static char cdkey[CD_KEY_LENGTH + 1] = "";
 
 enum ut2004_state {
 	STATE_CHALLENGE = 0x00,
-	STATE_APPROVED  = 0x01,
-	STATE_VERIFIED  = 0x02,
-	STATE_LISTING   = 0x03,
+	STATE_APPROVED	= 0x01,
+	STATE_VERIFIED	= 0x02,
+	STATE_LISTING	= 0x03,
 };
 
 query_status_t

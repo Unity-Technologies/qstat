@@ -81,17 +81,17 @@ xform_html_entity(const char c, char *dest)
 	if (html_mode) {
 		switch (c) {
 		case '<':
-			strncpy(dest, "&lt;", sizeof(dest) - 1);
+			strncpy(dest, "&lt;", sizeof(dest));
 			dest[sizeof(dest) -1] = '\0';
 			return (4);
 
 		case '>':
-			strncpy(dest, "&gt;", sizeof(dest) - 1);
+			strncpy(dest, "&gt;", sizeof(dest));
 			dest[sizeof(dest) -1] = '\0';
 			return (4);
 
 		case '&':
-			strncpy(dest, "&amp;", sizeof(dest) - 1);
+			strncpy(dest, "&amp;", sizeof(dest));
 			dest[sizeof(dest) -1] = '\0';
 			return (5);
 
@@ -705,7 +705,7 @@ xform_name(char *string, struct qserver *server)
 
 	if (string == NULL) {
 		buf = xform_buf_get(1);
-		strncpy(buf, "?", sizeof(buf) -1);
+		strncpy(buf, "?", sizeof(buf));
 		buf[sizeof(buf) - 1] = '\0';
 
 		return (buf);
@@ -729,7 +729,7 @@ xform_name(char *string, struct qserver *server)
 		*bufp = '\0';
 
 		if (*buf == '\0') {
-			strncpy(buf, "?", sizeof(buf) - 1);
+			strncpy(buf, "?", sizeof(buf));
 			buf[sizeof(buf) - 1] = '\0';
 			return (buf);
 		}

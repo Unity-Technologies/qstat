@@ -117,7 +117,7 @@ static ConfigKey const new_keys[] =
 	{ CK_PLAYER_PACKET,   "player packet"	    },
 	{ CK_RULE_PACKET,     "rule packet"	    },
 	{ CK_PORT_OFFSET,     "status port offset"  },
-	{		   0, NULL		    },
+	{ 0,		      NULL		    },
 };
 
 static ConfigKey const modify_keys[] =
@@ -127,7 +127,7 @@ static ConfigKey const modify_keys[] =
 	{ CK_MASTER_PACKET,   "master packet"	    },
 	{ CK_FLAGS,	      "flags"		    },
 	{ CK_MASTER_TYPE,     "master for gametype" },
-	{		   0, NULL		    },
+	{ 0,		      NULL		    },
 };
 
 typedef struct {
@@ -153,7 +153,7 @@ ServerFlag const server_flags[] =
 	SERVER_FLAG(TF_RAW_STYLE_GHOSTRECON),
 	SERVER_FLAG(TF_NO_PORT_OFFSET),
 	SERVER_FLAG(TF_SHOW_GAME_PORT),
-	{ NULL, 0 }
+	{ NULL,				      0}
 };
 #undef SERVER_FLAG
 
@@ -210,7 +210,7 @@ qsc_load_default_config_files()
 	}
 
 #ifdef sysconfdir
-		strncpy(path, sysconfdir "/qstat.cfg", sizeof(path) -1);
+		strncpy(path, sysconfdir "/qstat.cfg", sizeof(path));
 		path[sizeof(path) -1] = '\0';
 		filename = path;
 #elif defined(_WIN32)
@@ -558,7 +558,7 @@ get_config_key(char *first_token, const ConfigKey *keys)
 	char key_name[1024], *token;
 	int key = 0;
 
-	strncpy(key_name, first_token, sizeof(key_name) -1);
+	strncpy(key_name, first_token, sizeof(key_name));
 	key_name[sizeof(key_name) -1] = '\0';
 	do {
 		int k;

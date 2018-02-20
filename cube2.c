@@ -179,10 +179,10 @@ deal_with_cube2_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	server->protocol_version = attr[0];
 
-	snprintf(buf, sizeof(buf), "%d %s", attr[0], sb_getversion_s (attr[0]));
+	snprintf(buf, sizeof(buf), "%d %s", attr[0], sb_getversion_s(attr[0]));
 	add_rule(server, "version", buf, NO_FLAGS);
 
-	snprintf(buf, sizeof(buf), "%d %s", attr[1], sb_getmode_s (attr[1]));
+	snprintf(buf, sizeof(buf), "%d %s", attr[1], sb_getmode_s(attr[1]));
 	add_rule(server, "mode", buf, NO_FLAGS);
 
 	snprintf(buf, sizeof(buf), "%d", attr[2]);
