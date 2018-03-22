@@ -6465,13 +6465,13 @@ deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen)
 			if ((server->server_name == NULL) && ((strcmp(key, "hostname") == 0) || (strcmp(key, "sv_hostname") == 0))) {
 				// Server name
 				server->server_name = value;
-			} else if ((strcmp(key, "mapname") == 0) || ((strcmp(key, "map") == 0) && (server->map_name == NULL))) {
+			} else if ((strcmp(key, "mapname") == 0) || (strcmp(key, "map_name") == 0) || ((strcmp(key, "map") == 0) && (server->map_name == NULL))) {
 				// Map name
 				if (NULL != server->map_name) {
 					free(server->map_name);
 				}
 				server->map_name = value;
-			} else if ((strcmp(key, "maxclients") == 0) || (strcmp(key, "sv_maxclients") == 0) || (strcmp(key, "max") == 0)) {
+			} else if ((strcmp(key, "maxclients") == 0) || (strcmp(key, "sv_maxclients") == 0) || (strcmp(key, "sv_max_clients") == 0) || (strcmp(key, "max") == 0)) {
 				// Max Players
 				server->max_players = atoi(value);
 				// Note: COD 4 infoResponse returns max as sv_maxclients - sv_privateClients where as statusResponse returns the true max
