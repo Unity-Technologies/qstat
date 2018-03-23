@@ -45,7 +45,7 @@ send_dirtybomb_request_packet(struct qserver *server)
 		chunks |= 0x04; // Player
 		chunks |= 0x08; // Team - Currently not supported
 	}
-	sprintf(buf, "%c%c%s%c", 0x01, len, password, chunks);
+	snprintf(buf, sizeof(buf), "%c%c%s%c", 0x01, len, password, chunks);
 
 	server->saved_data.pkt_max = -1;
 
