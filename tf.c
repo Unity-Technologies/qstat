@@ -21,9 +21,10 @@
 #include <inttypes.h>
 #include <string.h>
 
+#define SERVERINFO_REQUEST_PAD		77
 #define SERVERINFO_REQUEST		79
 #define SERVERINFO_RESPONSE		80
-#define SERVERINFO_VERSION		3
+#define SERVERINFO_VERSION		1
 #define SERVERINFO_VERSION_KEYED	4
 #define TEAM_IMC			"imc"
 #define TEAM_MILITIA			"militia"
@@ -154,9 +155,12 @@ send_tf_request_packet(struct qserver *server)
 	len = sizeof(serverinfo_pkt);
 	if (server->type->status_packet != NULL) {
 		// Custom packet type
-		buf[4] = server->type->status_packet[0];
-		// None standard packet types require the packet to be padded.
-		len = sizeof(buf);
+		len = server->type->status_len;
+		memcpy(buf, server->type->status_packet, len);
+
+		if (buf[4] == SERVERINFO_REQUEST_PAD) {
+			len = sizeof(buf);
+		}
 	}
 	key = get_param_value(server, "key", NULL);
 	if (key != NULL) {
