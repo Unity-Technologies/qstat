@@ -15,5 +15,7 @@ Makefile
 gnuconfig.h
 stamp-h1
 *.o
+*.obj
+*.pdb
 qstat
 qstat.exe
