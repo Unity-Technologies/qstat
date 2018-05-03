@@ -210,8 +210,8 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 	// Command (int8)
 	debug(2, "TF type = %hhu", *pkt);
 	if (server->type->status_packet != NULL) {
-		if (*pkt != server->type->status_packet[0] + 1) {
-			malformed_packet(server, "unknown type");
+		if (*pkt != server->type->status_packet[4] + 1) {
+			malformed_packet(server, "unknown custom type");
 			return (PKT_ERROR);
 		}
 	} else if (*pkt != SERVERINFO_RESPONSE) {
