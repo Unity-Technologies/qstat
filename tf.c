@@ -25,7 +25,7 @@
 #define SERVERINFO_REQUEST		79
 #define SERVERINFO_RESPONSE		80
 #define SERVERINFO_VERSION		1
-#define SERVERINFO_VERSION_KEYED	4
+#define SERVERINFO_VERSION_KEYED	5
 #define TEAM_IMC			"imc"
 #define TEAM_MILITIA			"militia"
 #define TEAM_UNKNOWN			"unknown"
@@ -79,7 +79,7 @@ pkt_rule(struct qserver *server, char **pkt, int *rem, char *rule)
 
 
 static query_status_t
-pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, int size)
+pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, int size, int isfloat)
 {
 	if (*rem - size < 0) {
 		malformed_packet(server, "short packet data");
@@ -102,7 +102,11 @@ pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, i
 			break;
 
 		case 4:
-			sprintf(buf, "%" PRIu32, *(uint32_t*)data);
+			if (isfloat) {
+				sprintf(buf, "%f", *(float*)data);
+			} else {
+				sprintf(buf, "%" PRIu32, *(uint32_t*)data);
+			}
 			break;
 
 		case 8:
@@ -119,30 +123,35 @@ pkt_data(struct qserver *server, char **pkt, int *rem, void *data, char *rule, i
 static query_status_t
 pkt_byte(struct qserver *server, char **pkt, int *rem, uint8_t *data, char *rule)
 {
-	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data)));
+	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data), 0));
 }
 
 
 static query_status_t
 pkt_short(struct qserver *server, char **pkt, int *rem, uint16_t *data, char *rule)
 {
-	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data)));
+	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data), 0));
 }
 
 
 static query_status_t
 pkt_long(struct qserver *server, char **pkt, int *rem, uint32_t *data, char *rule)
 {
-	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data)));
+	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data), 0));
 }
 
 
 static query_status_t
 pkt_longlong(struct qserver *server, char **pkt, int *rem, uint64_t *data, char *rule)
 {
-	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data)));
+	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data), 0));
 }
 
+static query_status_t
+pkt_float(struct qserver *server, char **pkt, int *rem, float *data, char *rule)
+{
+	return (pkt_data(server, pkt, rem, (void *)data, rule, sizeof(*data), 1));
+}
 
 query_status_t
 send_tf_request_packet(struct qserver *server)
@@ -186,6 +195,7 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 	uint16_t port, tmpu16;
 	uint32_t tmpu32;
 	uint64_t tmpu64;
+	float tmpf;
 
 	rem = pktlen;
 	pkt = rawpkt;
@@ -324,6 +334,28 @@ deal_with_tf_packet(struct qserver *server, char *rawpkt, int pktlen)
 	ret = pkt_string(server, &pkt, &rem, &server->map_name, NULL);
 	if (ret < 0) {
 		return (ret);
+	}
+
+	if (ver > 4) {
+		ret = pkt_float(server, &pkt, &rem, &tmpf, "avg_frame_time");
+		if (ret < 0) {
+			return (ret);
+		}
+
+		ret = pkt_float(server, &pkt, &rem, &tmpf, "max_frame_time");
+		if (ret < 0) {
+			return (ret);
+		}
+
+		ret = pkt_float(server, &pkt, &rem, &tmpf, "avg_user_cmd_time");
+		if (ret < 0) {
+			return (ret);
+		}
+
+		ret = pkt_float(server, &pkt, &rem, &tmpf, "max_user_cmd_time");
+		if (ret < 0) {
+			return (ret);
+		}
 	}
 
 	if (ver > 2) {
