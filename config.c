@@ -28,8 +28,14 @@
 
 #ifdef _WIN32
 	#define HOME_CONFIG_FILE	"qstat.cfg"
+	#define SEP			"\\"
 #else
 	#define HOME_CONFIG_FILE	".qstatrc"
+	#define SEP			"/"
+#endif
+
+#ifndef PATH_MAX
+	#define PATH_MAX 1024
 #endif
 
 static server_type **config_types;
@@ -177,12 +183,17 @@ print_location()
 }
 
 
+/*
+ * 1. $QSTAT_CONFIG
+ * 2. UNIX: $HOME/.qstatrc         WIN: $HOME/qstat.cfg
+ * 3. UNIX: sysconfdir/qstat.cfg   WIN: qstat.exe-dir/qstat.cfg
+ */
 int
 qsc_load_default_config_files()
 {
 	int rc = 0;
 	char *filename = NULL, *var;
-	char path[1024];
+	char path[PATH_MAX];
 
 	var = getenv("QSTAT_CONFIG");
 	if ((var != NULL) && (var[0] != '\0')) {
@@ -195,14 +206,13 @@ qsc_load_default_config_files()
 	var = getenv("HOME");
 	if ((var != NULL) && (var[0] != '\0')) {
 		int len = strlen(var);
-		if (len > 900) {
-			len = 900;
+		if (len > PATH_MAX - strlen(HOME_CONFIG_FILE) + 2) {
+			len = PATH_MAX - strlen(HOME_CONFIG_FILE) + 2;
 		}
 		strncpy(path, var, len);
 		path[len] = '\0';
-		strcat(path, "/");
+		strcat(path, SEP);
 		strcat(path, HOME_CONFIG_FILE);
-/*	sprintf( path, "%s/%s", var, HOME_CONFIG_FILE); */
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
 			return (rc);
@@ -210,55 +220,25 @@ qsc_load_default_config_files()
 	}
 
 #ifdef sysconfdir
-		strcpy(path, sysconfdir "/qstat.cfg");
-		filename = path;
+	strcpy(path, sysconfdir SEP "qstat.cfg");
+	filename = path;
 #elif defined(_WIN32)
-		if ((filename == NULL) && _pgmptr && strchr(_pgmptr, '\\')) {
-			char *slash = strrchr(_pgmptr, '\\');
-			strncpy(path, _pgmptr, slash - _pgmptr);
-			path[slash - _pgmptr] = '\0';
+	// Look in the binaries directory
+	GetModuleFileName(NULL, path, PATH_MAX);
+	var = strrchr(path, '\\');
+	if (var != NULL) {
+		*var = '\0';
+		if (strlen(path) < PATH_MAX - 11) {
 			strcat(path, "\\qstat.cfg");
 			filename = path;
 		}
+	}
 #endif
 
 	if (filename != NULL) {
 		rc = try_load_config_file(filename, 0);
-		if ((rc == 0) || (rc == -1)) {
-			return (rc);
-		}
 	}
 	return (rc);
-
-/*
- *  if ( rc == -2 && show_error)  {
- *  perror( filename);
- *  fprintf( stderr, "Error: Could not open config file \"%s\"\n",
- *      filename);
- *  }
- *  else if ( rc == -1 && show_error)
- *  fprintf( stderr, "Error: Error loading $QSTAT_CONFIG file\n");
- *  return rc;
- */
-
-#ifdef foo
-		filename = getenv("HOME");
-		if ((filename != NULL) && (filename[0] != '\0')) {
-			char path[1024];
-			snprintf(path, (sizeof(path) - 1), "%s/%s", var, HOME_CONFIG_FILE);
-		}
-
-/* 1. $QSTAT_CONFIG
- * 2. UNIX: $HOME/.qstatrc         WIN: $HOME/qstat.cfg
- * 3. UNIX: sysconfdir/qstat.cfg   WIN: qstat.exe-dir/qstat.cfg
- */
-
-		rc = load_config_file("qstat.cfg");
-		if (rc == -1) {
-			fprintf(stderr, "Warning: Error loading default qstat.cfg\n");
-		}
-		return (0);
-#endif
 }
 
 
