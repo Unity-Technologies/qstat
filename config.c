@@ -13,6 +13,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#ifndef _WIN32
+ #include <unistd.h>
+ #include <sys/param.h>
+#endif
+
 
 #include "config.h"
 
@@ -26,10 +31,14 @@
 	#define strcasecmp    stricmp
 #endif
 
+#define CONFIG_FILE			"qstat.cfg"
+
 #ifdef _WIN32
-	#define HOME_CONFIG_FILE	"qstat.cfg"
+	#define HOME_CONFIG_FILE	CONFIG_FILE
+	#define SEP			"\\"
 #else
 	#define HOME_CONFIG_FILE	".qstatrc"
+	#define SEP			"/"
 #endif
 
 static server_type **config_types;
@@ -177,12 +186,17 @@ print_location()
 }
 
 
+/*
+ * 1. $QSTAT_CONFIG
+ * 2. UNIX: $HOME/.qstatrc         WIN: $HOME/qstat.cfg
+ * 3. UNIX: sysconfdir/qstat.cfg   WIN: qstat.exe-dir/qstat.cfg
+ */
 int
 qsc_load_default_config_files()
 {
 	int rc = 0;
 	char *filename = NULL, *var;
-	char path[1024];
+	char path[PATH_MAX];
 
 	var = getenv("QSTAT_CONFIG");
 	if ((var != NULL) && (var[0] != '\0')) {
@@ -195,14 +209,13 @@ qsc_load_default_config_files()
 	var = getenv("HOME");
 	if ((var != NULL) && (var[0] != '\0')) {
 		int len = strlen(var);
-		if (len > 900) {
-			len = 900;
+		if (len > PATH_MAX - strlen(HOME_CONFIG_FILE) + 2) {
+			fprintf(stderr, "Path for HOME \"%s\" too long\n", var);
+			return (-1);
 		}
 		strncpy(path, var, len);
 		path[len] = '\0';
-		strcat(path, "/");
-		strcat(path, HOME_CONFIG_FILE);
-/*	sprintf( path, "%s/%s", var, HOME_CONFIG_FILE); */
+		strcat(path, SEP HOME_CONFIG_FILE);
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
 			return (rc);
@@ -210,55 +223,33 @@ qsc_load_default_config_files()
 	}
 
 #ifdef sysconfdir
-		strcpy(path, sysconfdir "/qstat.cfg");
-		filename = path;
+	strcpy(path, sysconfdir SEP CONFIG_FILE);
+	filename = path;
 #elif defined(_WIN32)
-		if ((filename == NULL) && _pgmptr && strchr(_pgmptr, '\\')) {
-			char *slash = strrchr(_pgmptr, '\\');
-			strncpy(path, _pgmptr, slash - _pgmptr);
-			path[slash - _pgmptr] = '\0';
-			strcat(path, "\\qstat.cfg");
-			filename = path;
-		}
+	// Look in the binaries directory
+	rc = GetModuleFileName(NULL, path, PATH_MAX);
+	if (rc == PATH_MAX) {
+		fprintf(stderr, "Module path too long\n");
+		return (1);
+	}
+	var = strrchr(path, '\\');
+	if (var == NULL) {
+		fprintf(stderr, "Unexpected module path \"%s\" (no seperator %s)\n", path, SEP);
+		return (-1);
+	}
+	*var = '\0';
+	if (strlen(path) >= PATH_MAX - 11) {
+		fprintf(stderr, "Module path \"%s\" too long\n", path);
+		return (-1);
+	}
+	strcat(path, SEP CONFIG_FILE);
+	filename = path;
 #endif
 
 	if (filename != NULL) {
 		rc = try_load_config_file(filename, 0);
-		if ((rc == 0) || (rc == -1)) {
-			return (rc);
-		}
 	}
 	return (rc);
-
-/*
- *  if ( rc == -2 && show_error)  {
- *  perror( filename);
- *  fprintf( stderr, "Error: Could not open config file \"%s\"\n",
- *      filename);
- *  }
- *  else if ( rc == -1 && show_error)
- *  fprintf( stderr, "Error: Error loading $QSTAT_CONFIG file\n");
- *  return rc;
- */
-
-#ifdef foo
-		filename = getenv("HOME");
-		if ((filename != NULL) && (filename[0] != '\0')) {
-			char path[1024];
-			snprintf(path, (sizeof(path) - 1), "%s/%s", var, HOME_CONFIG_FILE);
-		}
-
-/* 1. $QSTAT_CONFIG
- * 2. UNIX: $HOME/.qstatrc         WIN: $HOME/qstat.cfg
- * 3. UNIX: sysconfdir/qstat.cfg   WIN: qstat.exe-dir/qstat.cfg
- */
-
-		rc = load_config_file("qstat.cfg");
-		if (rc == -1) {
-			fprintf(stderr, "Warning: Error loading default qstat.cfg\n");
-		}
-		return (0);
-#endif
 }
 
 
