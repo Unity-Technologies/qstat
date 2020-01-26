@@ -19,9 +19,9 @@
 #include "qstat.h"
 #include "qserver.h"
 
-int json_display;
-int json_encoding;
-int json_printed;
+extern int json_display;
+extern int json_encoding;
+extern int json_printed;
 
 void json_footer();
 void json_header();
