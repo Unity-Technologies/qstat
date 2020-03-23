@@ -127,7 +127,7 @@ malformed_packet(const struct qserver *server, const char *fmt, ...)
 		close(fd);
 	}
 
-
+	int do_dump;
 	ssize_t
 	send_dump(int s, const void *buf, size_t len, int flags)
 	{
