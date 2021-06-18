@@ -5,6 +5,11 @@
 
 #include "utils.h"
 
+#ifndef _WIN32
+ #include <err.h>
+ #include <sysexits.h>
+#endif
+
 #if !HAVE_STRNSTR
 
 /*
@@ -138,9 +143,15 @@ str_replace(char *source, char *find, char *replace)
 	int rlen = strlen(replace);
 	int flen = strlen(find);
 
+	if (rlen > flen) {
+		err(EX_SOFTWARE, "str_replace: replace is larger than find");
+	}
+
 	while (NULL != s) {
-		strncpy(s, replace, rlen);
-		strcpy(s + rlen, s + flen);
+		strncpy(s, replace, rlen); // -Wstringop-truncation warning here is a false positive.
+		if (rlen < flen) {
+			strcpy(s + rlen, s + flen);
+		}
 		s += rlen;
 		s = strstr(s, find);
 	}
