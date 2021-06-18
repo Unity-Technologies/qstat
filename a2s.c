@@ -96,6 +96,17 @@ send_a2s_rule_request_packet(struct qserver *server)
 			}
 			status->sent_challenge = 1;
 			break;
+		} else if (!status->have_info) {
+			// We received a challenge in response to our initial info packet
+			// to prevent amplification attack, resend with the challenge.
+			// See the following for details: https://steamcommunity.com/discussions/forum/14/2974028351344359625/
+			char buf[sizeof(A2S_INFO) - 1 + 4] = A2S_INFO;
+			memcpy(buf + sizeof(A2S_INFO) - 1, &status->challenge, 4);
+			debug(3, "resending info query");
+			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
+				return (SOCKET_ERROR);
+			}
+			break;
 		} else if (get_server_rules && !status->have_rules) {
 			char buf[sizeof(A2S_RULES) - 1 + 4] = A2S_RULES;
 			memcpy(buf + sizeof(A2S_RULES) - 1, &status->challenge, 4);
