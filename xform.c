@@ -17,16 +17,8 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#ifndef _WIN32
- #include <err.h>
- #include <sysexits.h>
-#endif
-
+#include "utils.h"
 #include "xform.h"
-
-#ifndef EX_OSERR
-	#define EX_OSERR    71
-#endif
 
 /*
  * Flag controlling if xform methods do any processing except transforming
