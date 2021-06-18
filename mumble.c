@@ -33,7 +33,7 @@ deal_with_mumble_packet(struct qserver *server, char *rawpkt, int pktlen)
 	// skip unimplemented ack, crc, etc
 	char *pkt = rawpkt;
 	char bandwidth[11];
-	char version[11];
+	char version[12];
 
 	server->ping_total += time_delta(&packet_recv_time, &server->packet_time1);
 	if ((24 != pktlen) || (0 != memcmp(pkt + 4, server->type->status_packet + 4, 8))) {
