@@ -1,0 +1,60 @@
+name: Tag Release
+
+on: 
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen.sh
+      - name: configure
+        run: ./configure
+      - name: make
+        run: make
+      - name: make check
+        run: make check
+      - name: make distcheck
+        run: make distcheck
+      - uses: actions/upload-artifact@v2
+        with:
+          name: linux64-qstat
+          path: qstat
+
+  build_windows:
+    runs-on: 	windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: nmake
+        run: |
+          nmake -f Makefile.noauto windows windows_debug
+      - uses: actions/upload-artifact@v2
+        with:
+          name: windows-qstat.exe
+          path: qstat.exe
+
+  # TODO(steve / austin?) build for mac-os which would cover freebsd
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: windows-qstat.exe
+      - uses: actions/download-artifact@v2
+        with:
+          name: linux-qstat
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            linux-qstat
+            windows-qstat.exe
