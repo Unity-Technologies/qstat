@@ -144,7 +144,7 @@
 
 server_type *types;
 int n_server_types;
-char *qstat_version = VERSION;
+char *qstat_version = QSTAT_VERSION;
 
 /*
  * Values set by command-line arguments
@@ -2726,7 +2726,7 @@ usage(char *msg, char **argv, char *a1)
 	printf("Sort keys:\n");
 	printf("  servers: p=by-ping, g=by-game, i=by-IP-address, h=by-hostname, n=by-#-players, l=by-list-order\n");
 	printf("  players: P=by-ping, F=by-frags, T=by-team, N=by-name\n");
-	printf("\nqstat version %s\n", VERSION);
+	printf("\nqstat version %s\n", QSTAT_VERSION);
 	exit(0);
 }
 
@@ -3332,7 +3332,7 @@ main(int argc, char *argv[])
 			if (json_display == 1) {
 				json_version();
 			} else {
-				printf("%s\n", VERSION);
+				printf("%s\n", QSTAT_VERSION);
 			}
 		} else if (strcmp(argv[arg], "-f") == 0) {
 			arg++;

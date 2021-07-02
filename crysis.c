@@ -71,7 +71,7 @@ send_crysis_request_packet(struct qserver *server)
 	}
 
 	server->saved_data.pkt_max = -1;
-	sprintf(buf, "POST /RPC2 HTTP/1.1\015\012Keep-Alive: 300\015\012User-Agent: qstat %s\015\012Content-Length: %d\015\012Content-Type: text/xml\015\012\015\012<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>%s</methodName><params /></methodCall>", VERSION, (int)(98 + strlen(cmd)), cmd);
+	sprintf(buf, "POST /RPC2 HTTP/1.1\015\012Keep-Alive: 300\015\012User-Agent: qstat %s\015\012Content-Length: %d\015\012Content-Type: text/xml\015\012\015\012<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>%s</methodName><params /></methodCall>", QSTAT_VERSION, (int)(98 + strlen(cmd)), cmd);
 
 	return (send_packet(server, buf, strlen(buf)));
 }

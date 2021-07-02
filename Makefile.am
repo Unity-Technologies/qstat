@@ -1,10 +1,43 @@
 SUBDIRS = template info
 
-CPPFLAGS = -Dsysconfdir=\"$(sysconfdir)\" @CPPFLAGS@
+CFLAGS = -Dsysconfdir=\"$(sysconfdir)\" @CFLAGS@
+
+.PHONY: $(builddir)/.compiler_flags
+$(builddir)/.compiler_flags:
+	echo '$(CFLAGS)' | cmp -s - $@ || echo '$(CFLAGS)' > $@
+
+.PHONY: $(builddir)/.version
+$(builddir)/.version:
+	echo ".version: $(srcdir)"
+	git status --porcelain
+	echo "status: done: $@ , srcdir: $(srcdir)"
+	ver=$$($(srcdir)/scripts/version.sh); \
+	echo $$ver | cmp -s - $@ || echo $$ver > $@
+
+$(builddir)/version.h: $(builddir)/.version $(srcdir)/version.h.tmpl
+	ver=$$(cat $<); \
+	file=$$(sed "s/CHANGEME/$$ver/g" $(srcdir)/version.h.tmpl); \
+	echo "$$file" | cmp -s - $@ || echo "$$file" > $@
+
+clean-local:
+	-rm -f $(builddir)/.version $(builddir)/version.h
+
+distclean-local: clean-local
+	-rm -f $(builddir)/.compiler_flags
+
+BUILT_SOURCES = \
+	.compiler_flags \
+	.version \
+	version.h
 
 bin_PROGRAMS = qstat
 
+qstat_DEPENDENCIES = \
+	$(builddir)/.compiler_flags
+
 qstat_SOURCES = \
+	version.h.tmpl \
+	version.h \
 	xform.c xform.h \
 	config.c config.h \
 	debug.c debug.h \
@@ -46,12 +79,9 @@ qstat_SOURCES = \
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
 
-EXTRA_DIST = CHANGES.txt COMPILE.txt LICENSE.txt \
+EXTRA_DIST = CHANGES.txt COMPILE.md LICENSE.txt \
 	Makefile.noauto \
 	ChangeLog \
 	qstatdoc.html \
-	contrib.cfg
-
-cl:
-	cvs2cl.pl --utc --no-wrap --separate-header --no-times -f ChangeLog.cvs
-	rm -f ChangeLog.cvs.bak qstat.core
+	contrib.cfg \
+	scripts/version.sh
