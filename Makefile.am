@@ -8,9 +8,6 @@ $(builddir)/.compiler_flags:
 
 .PHONY: $(builddir)/.version
 $(builddir)/.version:
-	echo ".version: $(srcdir)"
-	git status --porcelain
-	echo "status: done: $@ , srcdir: $(srcdir)"
 	ver=$$($(srcdir)/scripts/version.sh); \
 	echo $$ver | cmp -s - $@ || echo $$ver > $@
 
@@ -20,10 +17,9 @@ $(builddir)/version.h: $(builddir)/.version $(srcdir)/version.h.tmpl
 	echo "$$file" | cmp -s - $@ || echo "$$file" > $@
 
 clean-local:
-	-rm -f $(builddir)/.version $(builddir)/version.h
+	-rm -f $(builddir)/.compiler_flags $(builddir)/.version $(builddir)/version.h
 
 distclean-local: clean-local
-	-rm -f $(builddir)/.compiler_flags
 
 BUILT_SOURCES = \
 	.compiler_flags \
