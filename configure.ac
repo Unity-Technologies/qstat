@@ -1,4 +1,4 @@
-AC_INIT([qstat],[2.15],[qstat-users@yahoogroups.com])
+AC_INIT([qstat], m4_esyscmd([./scripts/version.sh | tr -d '\n']),[https://github.com/multiplay/qstat/issues])
 AC_CONFIG_SRCDIR([qstat.c])
 AM_CONFIG_HEADER([gnuconfig.h])
 

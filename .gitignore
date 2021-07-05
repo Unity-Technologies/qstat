@@ -19,3 +19,6 @@ stamp-h1
 *.pdb
 qstat
 qstat.exe
+.compiler_flags
+.version
+version.h

@@ -8,7 +8,9 @@
 #define QSTAT_UTILS_H
 
 #ifndef _WIN32
- #include "gnuconfig.h"
+ #ifdef HAVE_CONFIG_H
+	#include "gnuconfig.h"
+ #endif
 #endif
 
 // BSD has strnstr
