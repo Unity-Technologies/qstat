@@ -8,7 +8,6 @@ on:
 jobs:
   build_linux:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: autogen
@@ -16,18 +15,15 @@ jobs:
       - name: configure
         run: ./configure
       - name: make
-        run: make
-      - name: make check
-        run: make check
-      - name: make distcheck
-        run: make distcheck
+        run: QSTAT_VERSION=${{ github.event.release.tag_name }} make
       - uses: actions/upload-artifact@v2
         with:
-          name: linux64-qstat
+          name: linux_amd64
           path: qstat
-
   build_windows:
     runs-on: 	windows-latest
+    env:
+      QSTAT_VERSION: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v2
       - uses: ilammy/msvc-dev-cmd@v1
@@ -36,25 +32,28 @@ jobs:
           nmake -f Makefile.noauto windows windows_debug
       - uses: actions/upload-artifact@v2
         with:
-          name: windows-qstat.exe
+          name: windows_amd64
           path: qstat.exe
-
-  # TODO(steve / austin?) build for mac-os which would cover freebsd
-
+  # TODO(austin) build for mac-os which would cover freebsd
+  # https://github.com/vmactions/freebsd-vm
   release:
     runs-on: ubuntu-latest
+    needs:
+      -  build_windows
+      -  build_linux
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: windows-qstat.exe
-      - uses: actions/download-artifact@v2
+          path: bin
+      - name: zip
+        run: zip -r release.zip bin/* qstat.cfg contrib.cfg LICENSE.*
+      - name: Release
+        uses: "softprops/action-gh-release@v1"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: linux-qstat
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
+          tag_name:  "${{ github.event.release.tag_name }}"
           files: |
-            linux-qstat
-            windows-qstat.exe
+            release.zip
