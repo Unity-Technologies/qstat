@@ -5,18 +5,15 @@
  * http://www.qstat.org
  *
  * Copyright 1996,1997,1998,1999,2000,2001,2002 by Steve Jankowski
+ * Copyright 2007-2021 Steven Hartland
  */
 
 #ifndef __H_QSTAT
 #define __H_QSTAT
-
 #ifdef HAVE_CONFIG_H
  #include "gnuconfig.h"
-#else
- #ifndef VERSION
-		#define VERSION    "2.15"
- #endif
 #endif
+#include "version.h"
 
 #ifdef __EMX__
  #include <sys/select.h>

@@ -1,0 +1,32 @@
+name: Build CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen.sh
+      - name: autoreconf force
+        run: autoreconf --force
+      - name: configure
+        run: ./configure
+      - name: make check
+        run: make check
+      - name: make distcheck
+        run: make distcheck
+
+  build_windows:
+    runs-on:    windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: nmake debug build
+        run: |
+          nmake -f Makefile.noauto windows_debug
