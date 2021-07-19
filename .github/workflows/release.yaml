@@ -1,0 +1,59 @@
+name: Tag Release
+
+on: 
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen.sh
+      - name: configure
+        run: ./configure
+      - name: make
+        run: QSTAT_VERSION=${{ github.event.release.tag_name }} make
+      - uses: actions/upload-artifact@v2
+        with:
+          name: linux_amd64
+          path: qstat
+  build_windows:
+    runs-on: 	windows-latest
+    env:
+      QSTAT_VERSION: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: nmake
+        run: |
+          nmake -f Makefile.noauto windows windows_debug
+      - uses: actions/upload-artifact@v2
+        with:
+          name: windows_amd64
+          path: qstat.exe
+  # TODO(austin) build for mac-os which would cover freebsd
+  # https://github.com/vmactions/freebsd-vm
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      -  build_windows
+      -  build_linux
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          path: bin
+      - name: zip
+        run: zip -r release.zip bin/* qstat.cfg contrib.cfg LICENSE.*
+      - name: Release
+        uses: "softprops/action-gh-release@v1"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          prerelease: false
+          tag_name:  "${{ github.event.release.tag_name }}"
+          files: |
+            release.zip
