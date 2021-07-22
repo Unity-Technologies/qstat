@@ -3686,7 +3686,7 @@ server_type *find_server_type_string(char *type_string);
 			0,                              /* master */
 			0,                              /* default_port */
 			0,                              /* port_offset */
-			0,                              /* flags */
+			TF_QUERY_ARG,                   /* flags */
 			"game_mode",                    /* game_rule */
 			"TFPROTOCOL",                   /* template_var */
 			NULL,                           /* status_packet */
