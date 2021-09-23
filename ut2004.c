@@ -131,7 +131,7 @@ send_ut2004master_request_packet(struct qserver *server)
 			return (PKT_ERROR);
 		}
 
-		if (*param == '/') {
+		if (strstr(param, "/") != NULL || strstr(param, "\\") != NULL) {
 			FILE *fp = fopen(param, "r");
 			if (!fp || (fread(cdkey, 1, CD_KEY_LENGTH, fp) != CD_KEY_LENGTH)) {
 				debug(0, "Error: can't key from %s", param);
