@@ -6433,7 +6433,7 @@ deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen)
 	debug(2, "deal_with_q2_packet %p, %d", server, pktlen);
 
 	while (*pkt && pkt - rawpkt < pktlen) {
-		// we have variable, value pairs seperated by slash
+		// we have variable, value pairs separated by slash
 		if (*pkt == '\\') {
 			pkt++;
 			if ((*pkt == '\n') && (server->type->id == SOF_SERVER)) {
@@ -6521,7 +6521,22 @@ player_info:            debug(3, "player info");
 				break;
 			}
 
-			rc = sscanf(pkt, "%d %n", &frags, &len);
+			// Detect if we have a leading float or int?
+			rc = sscanf(pkt, "%d.%d %n", &frags, &ping, &len);
+			ping = 0; // Just a temp variable so reset.
+			if (rc == 2) {
+				// Xonotic in CA mode shows damage (float) instead of frags (int)
+				// 1.0 == 100 dmg.
+				float frags_f;
+
+				if ((rc = sscanf(pkt, "%f %n", &frags_f, &len)) == 1) {
+					frags = (int)(frags_f*100);
+				}
+			} else {
+				// Just an int.
+				rc = sscanf(pkt, "%d %n", &frags, &len);
+			}
+
 			if ((rc == 1) && (pkt[len] != '"')) {
 				pkt += len;
 				rc = sscanf(pkt, "%d %n", &ping, &len);
