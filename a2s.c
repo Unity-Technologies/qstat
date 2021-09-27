@@ -260,7 +260,6 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		status->have_challenge = 1;
 		debug(3, "challenge %x", status->challenge);
 		return (send_a2s_rule_request_packet(server));
-		break;
 
 	case A2S_INFORESPONSE_HL1:
 		if (pktlen < 28) {
