@@ -50,7 +50,8 @@ send_a2s_request_packet(struct qserver *server)
 {
 	struct a2s_status *status = (struct a2s_status *)server->master_query_tag;
 
-	if (qserver_send_initial(server, A2S_INFO, sizeof(A2S_INFO)) == -1) {
+	debug(3, "sending info query");
+	if (qserver_send_initial(server, A2S_INFO, sizeof(A2S_INFO)) == SOCKET_ERROR) {
 		return (DONE_FORCE);
 	}
 
@@ -68,8 +69,10 @@ query_status_t
 send_a2s_rule_request_packet(struct qserver *server)
 {
 	struct a2s_status *status = (struct a2s_status *)server->master_query_tag;
+	debug(3, "rule request");
 
-	if (!get_server_rules && !get_player_info) {
+	if (!get_server_rules && !get_player_info && status->have_info) {
+		debug(3, "force done");
 		return (DONE_FORCE);
 	}
 
@@ -91,16 +94,26 @@ send_a2s_rule_request_packet(struct qserver *server)
 			// as that's whats documented: https://developer.valvesoftware.com/wiki/Server_queries#Request_Format_5
 			status->challenge = -1;
 			memcpy(buf + sizeof(A2S_PLAYER) - 1, &status->challenge, 4);
-			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
+			if (qserver_send_initial(server, buf, sizeof(buf)) == SOCKET_ERROR) {
 				return (SOCKET_ERROR);
 			}
 			status->sent_challenge = 1;
+			break;
+		} else if (status->sent_info && !status->have_info) {
+			// Need to resend info due to enhanced DDoS protection
+			// See: https://steamcommunity.com/discussions/forum/14/2974028351344359625/
+			char buf[sizeof(A2S_INFO) + 4] = A2S_INFO;
+			memcpy(buf + sizeof(A2S_INFO), &status->challenge, 4);
+			debug(3, "sending info query with challenge");
+			if (qserver_send_initial(server, buf, sizeof(buf)) == SOCKET_ERROR) {
+				return (SOCKET_ERROR);
+			}
 			break;
 		} else if (get_server_rules && !status->have_rules) {
 			char buf[sizeof(A2S_RULES) - 1 + 4] = A2S_RULES;
 			memcpy(buf + sizeof(A2S_RULES) - 1, &status->challenge, 4);
 			debug(3, "sending rule query");
-			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
+			if (qserver_send_initial(server, buf, sizeof(buf)) == SOCKET_ERROR) {
 				return (SOCKET_ERROR);
 			}
 			status->sent_rules = 1;
@@ -109,7 +122,7 @@ send_a2s_rule_request_packet(struct qserver *server)
 			char buf[sizeof(A2S_PLAYER) - 1 + 4] = A2S_PLAYER;
 			memcpy(buf + sizeof(A2S_PLAYER) - 1, &status->challenge, 4);
 			debug(3, "sending player query");
-			if (SOCKET_ERROR == qserver_send_initial(server, buf, sizeof(buf))) {
+			if (qserver_send_initial(server, buf, sizeof(buf)) == SOCKET_ERROR) {
 				return (SOCKET_ERROR);
 			}
 			status->sent_player = 1;
@@ -246,8 +259,7 @@ deal_with_a2s_packet(struct qserver *server, char *rawpkt, int pktlen)
 		}
 		status->have_challenge = 1;
 		debug(3, "challenge %x", status->challenge);
-		send_a2s_rule_request_packet(server);
-		break;
+		return (send_a2s_rule_request_packet(server));
 
 	case A2S_INFORESPONSE_HL1:
 		if (pktlen < 28) {
