@@ -25,6 +25,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
+      - name: install automake
+        run: brew install automake
       - name: autogen
         run: ./autogen.sh
       - name: configure
