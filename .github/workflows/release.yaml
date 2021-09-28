@@ -20,6 +20,23 @@ jobs:
         with:
           name: linux_amd64
           path: qstat
+
+  build_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen.sh
+      - name: configure
+        run: ./configure
+      - name: make
+        run: QSTAT_VERSION=${{ github.event.release.tag_name }} make
+      - uses: actions/upload-artifact@v2
+        with:
+          name: darwin_amd64
+          path: qstat
+
+
   build_windows:
     runs-on: 	windows-latest
     env:
@@ -41,6 +58,7 @@ jobs:
     needs:
       -  build_windows
       -  build_linux
+      -  build_macos
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
