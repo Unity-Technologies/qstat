@@ -3206,9 +3206,9 @@ do_work(void)
 			}
 
 #ifdef ENABLE_DUMP
-				if (do_dump) {
-					dump_packet(pkt, pktlen);
-				}
+			if (do_dump) {
+				dump_packet(pkt, pktlen);
+			}
 #endif
 			if (server->flags & FLAG_BROADCAST) {
 				struct qserver *broadcast = server;
@@ -5581,7 +5581,7 @@ setup_retry:
 query_status_t
 send_player_request_packet(struct qserver *server)
 {
-	int rc;
+	query_status_t rc;
 
 	debug(3, "send_player_request_packet %p", server);
 
@@ -5605,12 +5605,15 @@ send_player_request_packet(struct qserver *server)
 		return (0);
 	}
 
-	if (server->type->id == Q_SERVER) {
+	switch (server->type->id) {
+	case Q_SERVER:
+	case H2_SERVER:
 		q_player.data[0] = server->next_player_info;
 	}
-	rc = send(server->fd, (const char *)server->type->player_packet, server->type->player_len, 0);
-	if (rc == SOCKET_ERROR) {
-		return (send_error(server, rc));
+
+	rc = send_packet_raw(server, (const char *)server->type->player_packet, server->type->player_len);
+	if (rc < INPROGRESS) {
+		return (rc);
 	}
 
 setup_retry:
@@ -5623,7 +5626,7 @@ setup_retry:
 	server->retry2--;
 	server->n_packets++;
 
-	return (1);
+	return (DONE_AUTO);
 }
 
 
