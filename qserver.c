@@ -26,26 +26,9 @@
 query_status_t
 qserver_send_initial(struct qserver *server, const char *data, size_t len)
 {
-	int status = INPROGRESS;
+	query_status_t status;
 
-	if (data) {
-		int ret;
-		debug(2, "[%s] send", server->type->type_prefix);
-		if (4 <= get_debug_level()) {
-			output_packet(server, data, len, 1);
-		}
-
-		if (server->flags & FLAG_BROADCAST) {
-			ret = send_broadcast(server, data, len);
-		} else {
-			ret = send(server->fd, data, len, 0);
-		}
-
-		if (ret == SOCKET_ERROR) {
-			send_error(server, ret);
-			status = SYS_ERROR;
-		}
-	}
+	status = send_packet_raw(server, data, len);
 
 	if ((server->retry1 == n_retries) || server->flags & FLAG_BROADCAST) {
 		gettimeofday(&server->packet_time1, NULL);
@@ -59,25 +42,12 @@ qserver_send_initial(struct qserver *server, const char *data, size_t len)
 	return (status);
 }
 
-
 query_status_t
 qserver_send(struct qserver *server, const char *data, size_t len)
 {
-	int status = INPROGRESS;
+	query_status_t status;
 
-	if (data) {
-		int ret;
-		if (server->flags & FLAG_BROADCAST) {
-			ret = send_broadcast(server, data, len);
-		} else {
-			ret = send(server->fd, data, len, 0);
-		}
-
-		if (ret == SOCKET_ERROR) {
-			send_error(server, ret);
-			status = SYS_ERROR;
-		}
-	}
+	status = send_packet_raw(server, data, len);
 
 	server->retry1 = n_retries - 1;
 	gettimeofday(&server->packet_time1, NULL);
@@ -86,7 +56,6 @@ qserver_send(struct qserver *server, const char *data, size_t len)
 
 	return (status);
 }
-
 
 int
 send_broadcast(struct qserver *server, const char *pkt, size_t pktlen)
@@ -104,7 +73,6 @@ send_broadcast(struct qserver *server, const char *pkt, size_t pktlen)
 
 	return (sendto(server->fd, (const char *)pkt, pktlen, 0, (struct sockaddr *)&addr, sizeof(addr)));
 }
-
 
 int
 register_send(struct qserver *server)
@@ -124,9 +92,8 @@ register_send(struct qserver *server)
 	return (INPROGRESS);
 }
 
-
 query_status_t
-send_packet(struct qserver *server, const char *data, size_t len)
+send_packet_raw(struct qserver *server, const char *data, size_t len)
 {
 	debug(2, "[%s] send", server->type->type_prefix);
 	if (4 <= get_debug_level()) {
@@ -146,11 +113,21 @@ send_packet(struct qserver *server, const char *data, size_t len)
 		}
 	}
 
-	register_send(server);
-
 	return (INPROGRESS);
 }
 
+query_status_t
+send_packet(struct qserver *server, const char *data, size_t len)
+{
+	query_status_t rc;
+
+	rc = send_packet_raw(server, data, len);
+	if (rc == SYS_ERROR) {
+		return (rc);
+	}
+
+	return (register_send(server));
+}
 
 query_status_t
 send_error(struct qserver *server, int rc)
@@ -164,6 +141,6 @@ send_error(struct qserver *server, int rc)
 	    (ipaddr >> 8) & 0xff,
 	    ipaddr & 0xff,
 	    errstr
-	    );
+	);
 	return (SYS_ERROR);
 }
