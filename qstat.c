@@ -6453,7 +6453,7 @@ deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen)
 			pkt += strlen(key) + 1;
 
 			// Find the value
-			end = strpbrk(pkt, "\\\n");
+			end = strpbrk(pkt, strcmp(key, "fs_manifest") ? "\\\n" : "\\");
 			if (NULL == end) {
 				// Last value
 				end = rawpkt + pktlen;

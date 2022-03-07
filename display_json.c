@@ -1008,6 +1008,11 @@ json_escape(char *string)
 			*b++ = '"';
 			continue;
 
+		case '\n':
+			*b++ = '\\';
+			*b++ = 'n';
+			continue;
+
 		case '\\':
 			*b++ = '\\';
 			*b++ = '\\';
