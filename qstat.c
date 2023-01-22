@@ -8462,6 +8462,7 @@ deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 
 	len = *pkt;     /* description (contains Admin: and Email: ) */
 	debug(2, "%.*s\n", len, pkt + 1);
+	add_nrule(server, "info", (char*)pkt + 1, len); //imago
 	pkt += len + 1;
 
 	n_teams = *pkt++;       /* number of teams */
