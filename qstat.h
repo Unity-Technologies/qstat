@@ -76,6 +76,13 @@ typedef struct _server_type server_type;
 	#define GCC_FORMAT_PRINTF(a, b)
 #endif
 
+# if defined(_MSC_VER)
+# ifndef _CRT_SECURE_NO_DEPRECATE
+# define _CRT_SECURE_NO_DEPRECATE (1)
+# endif
+# pragma warning(disable : 4996)
+# endif
+
 typedef enum {
 	INPROGRESS = 0,
 	DONE_AUTO = 1,

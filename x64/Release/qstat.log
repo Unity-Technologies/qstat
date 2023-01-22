@@ -1,0 +1,232 @@
+﻿  a2s.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\a2s.c(276,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(285,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(294,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(304,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(313,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(366,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(375,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(380,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(449,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(458,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(468,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(477,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(522,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(573,25): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(598,25): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(639,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(647,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(692,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\a2s.c(704,45): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+  armyops.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  bfbc2.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  config.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\config.c(211,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\config.c(308,19): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\config.c(621,34): warning C4244: 'function': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\config.c(1028,54): warning C4244: 'function': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\config.c(1035,32): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\config.c(1113,18): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+  crysis.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\crysis.c(56,28): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\crysis.c(128,16): warning C4244: '+=': conversion from '__int64' to 'int', possible loss of data
+  cube2.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\cube2.c(67,25): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+  debug.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  dirtybomb.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\dirtybomb.c(39,14): warning C4267: '=': conversion from 'size_t' to 'char', possible loss of data
+  display_json.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  doom3.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\doom3.c(41,22): warning C4267: '+=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\doom3.c(94,15): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\doom3.c(96,17): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\doom3.c(323,16): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\doom3.c(331,16): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+  farmsim.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  fl.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\fl.c(251,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(260,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(270,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(279,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(288,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(297,23): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(386,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(394,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(441,24): warning C4244: '-=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\fl.c(464,27): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+  gps.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\gps.c(55,19): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  gs2.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\gs2.c(80,19): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(93,19): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(203,21): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(307,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(150,24): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(220,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs2.c(265,24): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  gs3.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\gs3.c(132,53): warning C4244: 'function': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(326,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(335,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(529,21): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(631,21): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(455,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\gs3.c(594,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  haze.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\haze.c(172,14): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(242,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(251,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(286,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(295,20): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(385,21): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(479,21): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(307,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(333,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\haze.c(448,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  hcache.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  ksp.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  md5.c
+  mumble.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  Compiling...
+  ottd.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\ottd.c(68,22): warning C4018: '<=': signed/unsigned mismatch
+D:\Games\qstat-imago\ottd.c(224,17): warning C4018: '<': signed/unsigned mismatch
+  packet_manip.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  qserver.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\qserver.c(74,48): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qserver.c(100,31): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qserver.c(108,33): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+  qstat.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\qstat.c(2585,17): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(2832,16): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(2834,16): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(3971,20): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(4199,17): warning C4018: '<': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(4553,22): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(4555,22): warning C4244: '=': conversion from 'SOCKET' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(4825,16): warning C4018: '<': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(5075,15): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5077,17): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5106,13): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5148,24): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5301,14): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5310,14): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5331,15): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5333,17): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5382,15): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5384,17): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5439,44): warning C4244: 'function': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5518,39): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5554,52): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(5774,40): warning C4018: '>': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(6180,50): warning C4244: 'function': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7007,32): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7103,40): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7108,49): warning C4018: '>=': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(7127,33): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7133,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7139,34): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7172,22): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7196,25): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7257,22): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(7263,23): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(8337,31): warning C4018: '>': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(8358,49): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(8362,9): warning C4018: '>': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(8743,35): warning C4244: '-=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\qstat.c(8765,16): warning C4018: '<': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(8798,16): warning C4018: '<': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(8822,17): warning C4018: '<': signed/unsigned mismatch
+D:\Games\qstat-imago\qstat.c(8937,47): warning C4267: '=': conversion from 'size_t' to 'unsigned short', possible loss of data
+D:\Games\qstat-imago\qstat.c(9133,38): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9230,32): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9306,31): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9320,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9324,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9328,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9332,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(9372,33): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(10140,79): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(10171,80): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(10231,44): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\qstat.c(10784,49): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+  starmade.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  tee.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  template.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\template.c(317,12): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\template.c(1063,14): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\template.c(1092,26): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\template.c(1111,17): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\template.c(1113,29): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\template.c(1116,15): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  terraria.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  tf.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  tm.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  ts2.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+  ts3.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\ts3.c(184,41): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+D:\Games\qstat-imago\ts3.c(231,25): warning C4018: '>=': signed/unsigned mismatch
+D:\Games\qstat-imago\ts3.c(271,25): warning C4018: '>': signed/unsigned mismatch
+  ut2004.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\ut2004.c(243,6): warning C4267: '=': conversion from 'size_t' to 'char', possible loss of data
+D:\Games\qstat-imago\ut2004.c(286,15): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(288,17): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(368,15): warning C4244: '=': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(370,17): warning C4267: '=': conversion from 'size_t' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(399,26): warning C4244: 'function': conversion from '__int64' to 'unsigned int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(445,55): warning C4267: 'function': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\ut2004.c(531,15): warning C4018: '>': signed/unsigned mismatch
+D:\Games\qstat-imago\ut2004.c(554,14): warning C4018: '<=': signed/unsigned mismatch
+D:\Games\qstat-imago\ut2004.c(590,30): warning C4244: 'initializing': conversion from '__int64' to 'unsigned int', possible loss of data
+  utils.c
+D:\Games\qstat-imago\utils.c(143,19): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\Games\qstat-imago\utils.c(144,19): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  ventrilo.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\ventrilo.c(133,7): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
+D:\Games\qstat-imago\ventrilo.c(163,7): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
+D:\Games\qstat-imago\ventrilo.c(189,7): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
+D:\Games\qstat-imago\ventrilo.c(211,7): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
+  wic.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\wic.c(73,19): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  xform.c
+D:\Games\qstat-imago\qstat.h(41,22): warning C4244: '=': conversion from 'time_t' to 'long', possible loss of data
+D:\Games\qstat-imago\xform.c(172,10): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 553 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  qstat.vcxproj -> D:\Games\qstat-imago\x64\Release\qstat.exe

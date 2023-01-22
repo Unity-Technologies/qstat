@@ -225,24 +225,7 @@ qsc_load_default_config_files()
 	strcpy(path, sysconfdir SEP CONFIG_FILE);
 	filename = path;
 #elif defined(_WIN32)
-	// Look in the binaries directory
-	rc = GetModuleFileName(NULL, path, PATH_MAX);
-	if (rc == PATH_MAX) {
-		fprintf(stderr, "Module path too long\n");
-		return (1);
-	}
-	var = strrchr(path, '\\');
-	if (var == NULL) {
-		fprintf(stderr, "Unexpected module path \"%s\" (no seperator %s)\n", path, SEP);
-		return (-1);
-	}
-	*var = '\0';
-	if (strlen(path) >= PATH_MAX - 11) {
-		fprintf(stderr, "Module path \"%s\" too long\n", path);
-		return (-1);
-	}
-	strcat(path, SEP CONFIG_FILE);
-	filename = path;
+	filename = CONFIG_FILE;
 #endif
 
 	if (filename != NULL) {

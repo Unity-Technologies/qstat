@@ -70,6 +70,13 @@
  #include <stdint.h>
 #endif
 
+# if defined(_MSC_VER)
+# ifndef _CRT_SECURE_NO_DEPRECATE
+# define _CRT_SECURE_NO_DEPRECATE (1)
+# endif
+# pragma warning(disable : 4996)
+# endif
+
 char *str_replace(char *, char *, char *);
 
 #endif
