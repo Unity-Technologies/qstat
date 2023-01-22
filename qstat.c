@@ -8540,9 +8540,11 @@ deal_with_tribes_packet(struct qserver *server, char *rawpkt, int pktlen)
 		debug(2, "player#%d, info <%.*s>\n", pnum, len, pkt + 1);
 		end = (unsigned char *)strchr((char *)pkt + 9, 0x9);
 		if (end) {
-			strncpy(buf, (char *)pkt + 9, end - (pkt + 9));
-			buf[end - (pkt + 9)] = '\0';
-			player->frags = atoi(buf);
+			//strncpy(buf, (char *)pkt + 9, end - (pkt + 9));
+			//buf[end - (pkt + 9)] = '\0';
+			char* pbuf = strtok(end, "\t"); //imago
+			//strncpy(buf, (char*)end + 3,)
+			player->frags = atoi(pbuf);
 			debug(2, "player#%d, score <%.*s>\n", pnum, (unsigned)(end - (pkt + 9)), pkt + 9);
 		}
 
