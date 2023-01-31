@@ -3,9 +3,6 @@
  * 
  *
  * Zandronum protocol
- * Copyright 2018 DayenTech
- *
- * Licensed under the Artistic License, see LICENSE.txt for license terms
  *
  * Currently does not include querying master server
  */
