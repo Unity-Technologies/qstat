@@ -51,6 +51,10 @@ SRC = \
 	skulltag_huffman.c \
 	zandronum.c
 
+SOURCES = \
+	version.h \
+	$(SRC)
+
 OBJ = $(SRC:.c=.obj)
 O   = $(SRC:.c=.o)
 
@@ -59,34 +63,72 @@ WINDOWS_LIBS = wsock32.lib
 OS2_LIBS     = so32dll.lib tcp32dll.lib
 EMX_LIBS     = -lsocket
 
+ifdef MAKEDIR: # gmake: false; nmake: unused target
+!ifdef MAKEDIR # gmake: not seen; nmake: true
+# nmake specific code
+
+LINK = link.exe
+LFLAGS = /nologo
+CFLAGS = $(CFLAGS) /nologo
+PHONY = .phony
+
+.phony:
+
+.version: $(PHONY)
+	call scripts/gen-version.cmd
+
+version.h: .version
+
+!else # and now the other
+else
+# gnu make targets
+.PHONY: .compiler_flags
+.compiler_flags:
+	echo '$(CFLAGS)' | cmp -s - $@ || echo '$(CFLAGS)' > $@
+
+.PHONY: .version
+.version:
+	@ver=$$(./scripts/version.sh); \
+	echo "$$ver" | cmp -s - $@ || echo "$$ver" > $@
+
+version.h: .version
+	@ver=$$(cat .version); \
+	file=$$(sed "s/CHANGEME/$$ver/g" ./version.h.tmpl); \
+	echo "$$file" | cmp -s - $@ || echo "$$file" > $@
+
+endif    # gmake: close condition; nmake: not seen
+!endif : # gmake: unused target; nmake close conditional
+
 all: qstat
 
-qstat: $(O)
+qstat: .compiler_flags version.h $(O)
 	$(CC) $(CFLAGS) -o qstat $(O) $(LDFLAGS) $(LDLIBS)
 
-solaris: $(SRC)
+solaris: .compiler_flags $(SOURCES)
 	$(CC) $(CFLAGS) -o qstat $(SRC) $(LDFLAGS) $(LDLIBS) $(SOLARIS_LIBS)
 
 aix sgi freebsd macosx osx openbsd irix linux: qstat
 
-hp hpux: $(SRC)
+hp hpux: .compiler_flags $(SOURCES)
 	$(CC) $(CFLAGS) -Ae -o qstat $(SRC) $(LDFLAGS) $(LDLIBS)
 
 win32: windows
 
-windows: $(OBJ)
-	$(CC) /Feqstat.exe $(OBJ) $(LDFLAGS) $(LDLIBS) $(WINDOWS_LIBS)
+.c.obj:
+	$(CC) $(CFLAGS) -c $<
 
-windows_debug: $(SRC)
-	rm -f *.pdb
+# windows dynamic rebuild but doesn't handle a QSTAT_VERSION change.
+# use the clean target to force a rebuild.
+qstat.exe: version.h $(OBJ)
+	$(LINK) $(LFLAGS) $(OBJ) $(WINDOWS_LIBS) /out:$@
+
+# windows release forced
+windows: $(SOURCES)
+	$(CC) $(CFLAGS) $(SRC) /Feqstat.exe $(WINDOWS_LIBS)
+
+# windows debug forced
+windows_debug: $(SOURCES)
 	$(CC) $(CFLAGS) /Zi $(SRC) /Feqstat.exe $(WINDOWS_LIBS) /link /fixed:no /incremental:no
 
-os2: $(SRC)
-	$(CC) /Q /W0 /C+ $(SRC)
-	ilink /PM:VIO $(OBJ) /out:qstat.exe $(LDFLAGS) $(LDLIBS) $(OS2_LIBS)
-
-os2emx: $(SRC)
-	$(CC) $(CFLAGS) -o qstat.exe $(SRC) $(LDFLAGS) $(LDLIBS) $(EMX_LIBS)
-
 clean:
-	rm -f qstat core qstat.exe *.pdb $(O) $(OBJ)
+	-rm -f qstat core qstat.exe *.pdb .compiler_flags .version version.h $(O) $(OBJ)

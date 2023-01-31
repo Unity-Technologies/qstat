@@ -144,7 +144,7 @@
 
 server_type *types;
 int n_server_types;
-char *qstat_version = VERSION;
+char *qstat_version = QSTAT_VERSION;
 
 /*
  * Values set by command-line arguments
@@ -2726,7 +2726,7 @@ usage(char *msg, char **argv, char *a1)
 	printf("Sort keys:\n");
 	printf("  servers: p=by-ping, g=by-game, i=by-IP-address, h=by-hostname, n=by-#-players, l=by-list-order\n");
 	printf("  players: P=by-ping, F=by-frags, T=by-team, N=by-name\n");
-	printf("\nqstat version %s\n", VERSION);
+	printf("\nqstat version %s\n", QSTAT_VERSION);
 	exit(0);
 }
 
@@ -3206,9 +3206,9 @@ do_work(void)
 			}
 
 #ifdef ENABLE_DUMP
-				if (do_dump) {
-					dump_packet(pkt, pktlen);
-				}
+			if (do_dump) {
+				dump_packet(pkt, pktlen);
+			}
 #endif
 			if (server->flags & FLAG_BROADCAST) {
 				struct qserver *broadcast = server;
@@ -3332,7 +3332,7 @@ main(int argc, char *argv[])
 			if (json_display == 1) {
 				json_version();
 			} else {
-				printf("%s\n", VERSION);
+				printf("%s\n", QSTAT_VERSION);
 			}
 		} else if (strcmp(argv[arg], "-f") == 0) {
 			arg++;
@@ -5581,7 +5581,7 @@ setup_retry:
 query_status_t
 send_player_request_packet(struct qserver *server)
 {
-	int rc;
+	query_status_t rc;
 
 	debug(3, "send_player_request_packet %p", server);
 
@@ -5605,12 +5605,15 @@ send_player_request_packet(struct qserver *server)
 		return (0);
 	}
 
-	if (server->type->id == Q_SERVER) {
+	switch (server->type->id) {
+	case Q_SERVER:
+	case H2_SERVER:
 		q_player.data[0] = server->next_player_info;
 	}
-	rc = send(server->fd, (const char *)server->type->player_packet, server->type->player_len, 0);
-	if (rc == SOCKET_ERROR) {
-		return (send_error(server, rc));
+
+	rc = send_packet_raw(server, (const char *)server->type->player_packet, server->type->player_len);
+	if (rc < INPROGRESS) {
+		return (rc);
 	}
 
 setup_retry:
@@ -5623,7 +5626,7 @@ setup_retry:
 	server->retry2--;
 	server->n_packets++;
 
-	return (1);
+	return (DONE_AUTO);
 }
 
 
@@ -6433,7 +6436,7 @@ deal_with_q2_packet(struct qserver *server, char *rawpkt, int pktlen)
 	debug(2, "deal_with_q2_packet %p, %d", server, pktlen);
 
 	while (*pkt && pkt - rawpkt < pktlen) {
-		// we have variable, value pairs seperated by slash
+		// we have variable, value pairs separated by slash
 		if (*pkt == '\\') {
 			pkt++;
 			if ((*pkt == '\n') && (server->type->id == SOF_SERVER)) {
@@ -6521,7 +6524,22 @@ player_info:            debug(3, "player info");
 				break;
 			}
 
-			rc = sscanf(pkt, "%d %n", &frags, &len);
+			// Detect if we have a leading float or int?
+			rc = sscanf(pkt, "%d.%d %n", &frags, &ping, &len);
+			ping = 0; // Just a temp variable so reset.
+			if (rc == 2) {
+				// Xonotic in CA mode shows damage (float) instead of frags (int)
+				// 1.0 == 100 dmg.
+				float frags_f;
+
+				if ((rc = sscanf(pkt, "%f %n", &frags_f, &len)) == 1) {
+					frags = (int)(frags_f*100);
+				}
+			} else {
+				// Just an int.
+				rc = sscanf(pkt, "%d %n", &frags, &len);
+			}
+
 			if ((rc == 1) && (pkt[len] != '"')) {
 				pkt += len;
 				rc = sscanf(pkt, "%d %n", &ping, &len);

@@ -59,7 +59,7 @@ json_protocols()
 void
 json_version()
 {
-	printf("{\n\t\"version\": \"%s\"\n}\n", VERSION);
+	printf("{\n\t\"version\": \"%s\"\n}\n", QSTAT_VERSION);
 	exit(0);
 }
 

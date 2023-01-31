@@ -220,6 +220,11 @@ int register_send(struct qserver *server);
 query_status_t send_packet(struct qserver *server, const char *data, size_t len);
 
 /**
+ * Sends a packet to the server either direct or via broadcast.
+ */
+query_status_t send_packet_raw(struct qserver *server, const char *data, size_t len);
+
+/**
  * Logs the error from a socket send
  */
 query_status_t send_error(struct qserver *server, int rc);

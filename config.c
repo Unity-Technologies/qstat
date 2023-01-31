@@ -208,13 +208,12 @@ qsc_load_default_config_files()
 
 	var = getenv("HOME");
 	if ((var != NULL) && (var[0] != '\0')) {
-		int len = strlen(var);
+		int len = strlen(var) + 1;
 		if (len > PATH_MAX - strlen(HOME_CONFIG_FILE) + 2) {
 			fprintf(stderr, "Path for HOME \"%s\" too long\n", var);
 			return (-1);
 		}
 		strncpy(path, var, len);
-		path[len] = '\0';
 		strcat(path, SEP HOME_CONFIG_FILE);
 		rc = try_load_config_file(path, 0);
 		if ((rc == 0) || (rc == -1)) {
