@@ -1,5 +1,6 @@
 /*
  * simple zandronum query - no master stuff
+ * Creaetd for the DayenTech community
  *
  */
 

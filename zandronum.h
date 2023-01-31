@@ -1,7 +1,7 @@
 /*
  * qstat
  * 
- *
+ * Created for the DayenTech community
  * Zandronum protocol
  *
  * Currently does not include querying master server
