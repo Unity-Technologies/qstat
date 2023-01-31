@@ -124,6 +124,7 @@ typedef query_status_t (*PacketFunc)(struct qserver *, char *rawpkt, int pktlen)
 #include "ksp.h"
 #include "tf.h"
 #include "armyops.h"
+#include "zandronum.h"
 
 /*
  * Various magic numbers.
@@ -270,8 +271,9 @@ typedef query_status_t (*PacketFunc)(struct qserver *, char *rawpkt, int pktlen)
 #define KSP_PROTOCOL_SERVER			77
 #define TF_PROTOCOL_SERVER			78
 #define TEE_MASTER				79
+#define ZANDRONUM_SERVER		80
 
-#define LAST_BUILTIN_SERVER			80
+#define LAST_BUILTIN_SERVER			81
 
 #define TF_SINGLE_QUERY				(1 << 1)
 #define TF_OUTFILE				(1 << 2)
@@ -3747,6 +3749,42 @@ server_type *find_server_type_string(char *type_string);
 			NULL,                           /* rule_query_func */
 			NULL,                           /* player_query_func */
 			deal_with_teemaster_packet,     /* packet_func */
+		},
+		{
+			/* Zandronum server */
+			ZANDRONUM_SERVER,               /* id */
+			"ZAND",                         /* type_prefix */
+			"zand",                         /* type_string */
+			"-zand",                        /* type_option */
+			"Zandronum",                    /* game_name */
+			0,                              /* master */
+			10666,                          /* default_port */
+			0,                              /* port_offset */
+			0,                              /* flags */
+			"gametype",                     /* game_rule */
+			"ZANDRONUM",                    /* template_var */
+			NULL,                           /* status_packet */
+			0,                              /* status_len */
+			NULL,                           /* player_packet */
+			0,                              /* player_len */
+			NULL,                           /* rule_packet */
+			0,                              /* rule_len */
+			NULL,                           /* master_packet */
+			0,                              /* master_len */
+			NULL,                           /* master_protocol */
+			NULL,                           /* master_query */
+			NULL,                           /* display_player_func */
+			NULL,                           /* display_rule_func */
+			NULL,                           /* display_raw_player_func */
+			NULL,                           /* display_raw_rule_func */
+			xml_display_player_info,        /* display_xml_player_func */
+			NULL,                           /* display_xml_rule_func */
+			json_display_player_info,       /* display_json_player_func */
+			NULL,                           /* display_json_rule_func */
+			send_zandronum_request_packet,  /* status_query_func */
+			NULL,                           /* rule_query_func */
+			NULL,                           /* player_query_func */
+			deal_with_zandronum_packet,     /* packet_func */
 		},
 		{
 			Q_UNKNOWN_TYPE, /* id */

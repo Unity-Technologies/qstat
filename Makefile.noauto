@@ -47,7 +47,9 @@ SRC = \
 	farmsim.c \
 	ksp.c \
 	tf.c \
-	armyops.c
+	armyops.c \
+	skulltag_huffman.c \
+	zandronum.c
 
 SOURCES = \
 	version.h \

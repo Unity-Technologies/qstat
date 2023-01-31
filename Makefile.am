@@ -70,7 +70,9 @@ qstat_SOURCES = \
 	farmsim.c farmsim.h \
 	ksp.c ksp.h \
 	tf.c tf.h \
-	armyops.c armyops.h
+	armyops.c armyops.h \
+	skulltag_huffman.c skulltag_huffman.h \
+	zandronum.c zandronum.h
 
 dist_configfiles_DATA = qstat.cfg
 configfilesdir = $(sysconfdir)
